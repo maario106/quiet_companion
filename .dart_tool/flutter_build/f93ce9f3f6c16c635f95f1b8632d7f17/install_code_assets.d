@@ -1,0 +1,1 @@
+ /home/mario/quiet_companion/.dart_tool/flutter_build/f93ce9f3f6c16c635f95f1b8632d7f17/native_assets.json: 
