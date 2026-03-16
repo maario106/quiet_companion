@@ -34,7 +34,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatControllerProvider);
-    final isThinking = chatState.status == ChatStatus.pensando;
+    final isThinking = chatState.status == ChatStatus.thinking;
 
     return Scaffold(
       appBar: AppBar(

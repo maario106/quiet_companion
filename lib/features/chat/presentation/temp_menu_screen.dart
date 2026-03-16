@@ -25,7 +25,7 @@ class TempMenuScreen extends StatelessWidget {
               style: TextStyle(fontSize: AppTheme.fontMedium, color: AppTheme.textPrimary),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 40), 
 
             // Botón hacia el Boceto Visual
             ElevatedButton.icon(
