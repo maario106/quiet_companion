@@ -1,48 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:quiet_companion/core/services/gemini_service.dart'; // Asegúrate de que esta ruta sea correcta
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ChatScreen extends StatefulWidget {
+import 'package:quiet_companion/features/chat/domain/chat_controller.dart';
+import 'package:quiet_companion/features/chat/domain/chat_state.dart';
+
+class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
+
 }
 
-class _ChatScreenState extends State<ChatScreen> {
-  // 1. Instanciamos nuestro nuevo servicio. La pantalla ya no sabe nada de API Keys ni de Prompts
-  final GeminiService _geminiService = GeminiService();
+class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   final TextEditingController _textController = TextEditingController();
 
-  String _AIreply = "¡Hola! ¿De qué quieres que hablemos hoy?";
-  bool _isThinking = false;
-
-  // Ya no necesitamos el initState() ni inicializar el modelo aquí.
-
-  // 2. Mantenemos nuestra función local para gestionar el "Estado" (lo que se ve en pantalla)
-  Future<void> _sendMessage() async {
+  void _sendMessage() {
     final message = _textController.text.trim();
     if (message.isEmpty) return;
 
-    // Actualizamos la UI para mostrar que estamos pensando y limpiamos la caja de texto
-    setState(() {
-      _isThinking = true;
-      _AIreply = "Pensando...";
-      _textController.clear();
-    });
+    _textController.clear();
+    ref.read(chatControllerProvider.notifier).sendMessage(message);
+  }
 
-    // 3. ¡LA MAGIA! Le pasamos la pelota al servicio y esperamos su respuesta.
-    final respuesta = await _geminiService.sendMessage(message);
-
-    // 4. Actualizamos la UI con la respuesta final que nos ha devuelto el servicio
-    setState(() {
-      _AIreply = respuesta;
-      _isThinking = false;
-    });
+  // Buena práctica: limpiar el controlador de texto al destruir la pantalla
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final chatState = ref.watch(chatControllerProvider);
+    final isThinking = chatState.status == ChatStatus.pensando;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi Acompañante'),
@@ -59,7 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Center(
                 child: SingleChildScrollView(
                   child: Text(
-                    _AIreply,
+                    chatState.responseAI,
                     style: const TextStyle(
                       fontSize: 32, // Letra gigante por accesibilidad
                       fontWeight: FontWeight.w500,
@@ -87,7 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       filled: true,
                       fillColor: Colors.grey[100],
                     ),
-                    enabled: !_isThinking,
+                    enabled: !isThinking,
                     // 5. Volvemos a llamar a nuestra función interna
                     onSubmitted: (_) => _sendMessage(),
                   ),
@@ -98,8 +91,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   width: 60,
                   child: FloatingActionButton(
                     // 5. Volvemos a llamar a nuestra función interna
-                    onPressed: _isThinking ? null : _sendMessage,
-                    child: _isThinking
+                    onPressed: isThinking ? null : _sendMessage,
+                    child: isThinking
                         ? const CircularProgressIndicator(color: Colors.white)
                         : const Icon(Icons.send, size: 30),
                   ),
