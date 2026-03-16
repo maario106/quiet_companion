@@ -35,3 +35,17 @@ google-services.json
 
 # Para evitar subir las variables privadas
 .env
+
+# Archivos y carpetas generados por Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_export_environment.sh
+    
+# Excepciones de iOS/Mac (por si acaso)
+*.xcworkspace/
+xcuserdata/
