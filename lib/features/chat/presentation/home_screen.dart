@@ -1,20 +1,87 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
-class HomeScreen extends StatelessWidget {
+import 'package:quiet_companion/features/chat/domain/chat_state.dart';
+import 'package:quiet_companion/features/chat/domain/chat_controller.dart';
+
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // TODO botón de teclado de futuro
+  final TextEditingController _textController = TextEditingController();
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Listen to the GLOBAL STATE
+    final chatState = ref.watch(chatControllerProvider);
+    final status = chatState.status;
+
+    // DYNAMIC VISUAL LOGIC: Ready the texts according to the State
+    String title = '';
+    String subtitle = '';
+
+    switch(status) {
+      case ChatStatus.initial:
+        title = '!Hola, Pedro!'; // TODO: Firebase data
+        subtitle = chatState.responseAI;
+        break;
+      case ChatStatus.listening:
+        title = 'Te escucho...';
+        subtitle = chatState.userMessage.isEmpty ? 'Habla ahora...' : chatState.userMessage;
+        break;
+      case ChatStatus.thinking:
+        title = 'Pensando...';
+        subtitle = 'Dame un segundo';
+        break;
+      case ChatStatus.talking:
+        title = 'Respondiendo...';
+        subtitle = chatState.responseAI;
+        break;
+      case ChatStatus.error:
+        title = 'Ups...';
+        subtitle = chatState.responseAI;
+        break;
+    }
+
+    // VISUAL LOGIC BUTTON: Dynamic colors and icons
+    Color micColor = AppTheme.primaryColor;
+    IconData micIcon = Icons.mic_none;
+    bool isWorking = false; // To avoid the button being clicked a million times
+
+    if (status == ChatStatus.listening) {
+      micColor = AppTheme.emergencyColor; // Rojo "grabando"
+      micIcon = Icons.mic;
+    } else if (status == ChatStatus.thinking) {
+      micColor = Colors.orange;
+      micIcon = Icons.hourglass_empty;
+      isWorking = true;
+    } else if (status == ChatStatus.talking) {
+      micColor = Colors.green;
+      micIcon = Icons.volume_up;
+      isWorking = true;
+    }
+
     return Scaffold(
       // Top bar transparente con iconos a los lados
       appBar: AppBar(
-        // leading: IconButton(
-        //   icon: const Icon(Icons.home_outlined),
-        //   onPressed: () {
-        //     // TODO Acción de home
-        //   },
-        // ),
+        leading: IconButton(
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () {
+            // TODO Acción de home
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
@@ -31,11 +98,12 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // DYNAMIC TEXTS (Reactive to RiverPod)
               // SALUDO
-              const Text(
-                // TODO insertar nombre usuario
-                'Hola!',
-                style: TextStyle(
+              Text(
+                // TODO insertar nombre usuario con Firebase
+                title,
+                style: const TextStyle(
                   fontSize: AppTheme.fontHuge,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
@@ -43,25 +111,35 @@ class HomeScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              const Text(
-                // TODO: Esta frase podrá editarla el familiar/usuario configurador?
-                '¿Cómo va el día?',
-                style: TextStyle(
-                  fontSize: AppTheme.fontLarge,
-                  color: AppTheme.textSecondary,
+              // For longer AI responses.
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontLarge,
+                      color: AppTheme.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
 
-              const Spacer(flex: 2),
+              const SizedBox(height: 20),
 
               // BOTÓN GIGANTE DE MICRÓFONO
               GestureDetector(
                 onTap: () {
-                  // TODO: Conectar la transición a la pantalla de "Escuchando"
-                  print("Botón de micro pulsado");
+                  if(isWorking) return;
+
+                  if (status == ChatStatus.initial || status == ChatStatus.error) {
+                    ref.read(chatControllerProvider.notifier).startListening();
+                  } else if (status == ChatStatus.listening) {
+                    ref.read(chatControllerProvider.notifier).stopListeningAndSend();
+                  }
                 },
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
                   width: 200,
                   height: 200,
                   decoration: BoxDecoration(
@@ -69,14 +147,14 @@ class HomeScreen extends StatelessWidget {
                     // TODO: comprobar qué pasa con withOpacity pq en TECNOSONRISAS tb salía así pero funcionaba
                     color: AppTheme.primaryColor.withOpacity(0.1),
                     border: Border.all(
-                      color: AppTheme.primaryColor,
-                      width: 4,
+                      color: micColor,
+                      width: status == ChatStatus.listening ? 8 : 4,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.mic_none,
+                  child: Icon(
+                    micIcon,
                     size: 100,
-                    color: AppTheme.primaryColor,
+                    color: micColor,
                   ),
                 ),
               ),
@@ -93,7 +171,8 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 onPressed: () {
-                    // TODO: Lógica para abrir el teclado
+                  // TODO: Lógica para abrir el teclado
+                   print("Abrir Teclado");
                 },
                 child: const Text(
                   '¿Utilizar teclado?',
@@ -104,7 +183,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
 
-              const Spacer(flex: 3),
+              const SizedBox(height: 20),
 
               // BOTONES INFERIORES (Emergencia y Ajustes)
               Row(
