@@ -49,3 +49,5 @@ flutter_export_environment.sh
 # Excepciones de iOS/Mac (por si acaso)
 *.xcworkspace/
 xcuserdata/
+
+CLAUDE.md
