@@ -51,3 +51,4 @@ flutter_export_environment.sh
 xcuserdata/
 
 CLAUDE.md
+.claude/

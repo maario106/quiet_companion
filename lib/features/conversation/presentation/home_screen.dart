@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
-import 'package:quiet_companion/features/chat/domain/chat_state.dart';
-import 'package:quiet_companion/features/chat/domain/chat_controller.dart';
+import 'package:quiet_companion/features/conversation/domain/chat_state.dart';
+import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});

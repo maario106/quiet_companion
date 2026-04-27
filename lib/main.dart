@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/config/app_router.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // FIREBASE
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  // Me aseguro de que los bindings de Flutter estén listos antes de cargar el .env
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
@@ -18,22 +17,22 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
 
   runApp(
-      ProviderScope(
-        child: const AsistenteTFGApp(),
-      ),
+    const ProviderScope(
+      child: AsistenteTFGApp(),
+    ),
   );
 }
 
-
-class AsistenteTFGApp extends StatelessWidget {
+class AsistenteTFGApp extends ConsumerWidget {
   const AsistenteTFGApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: 'Asistente TFG',
       theme: AppTheme.lightTheme,
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }
