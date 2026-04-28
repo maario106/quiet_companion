@@ -96,3 +96,46 @@ Ordered milestones to finish HU-4 (Adaptive Configuration). Each step's verifica
 ### Suggested agent assignment
 - **Direct edits:** Tasks 1.1, 1.2, 2.3, 3.2, 3.3 — surgical edits.
 - **Dev agent (opus):** Tasks 2.1, 2.2 — they introduce new files + cross-cutting wiring where architectural awareness helps.
+
+---
+
+## Beyond HU-4 — Future Work (not yet planned, just tracked)
+
+HU-4 is a slice of a larger product. The items below are **not** scheduled as part of this plan and should be promoted to their own PLAN.md sections when picked up. They are listed here so they don't get lost between conversations.
+
+### A. Navigation & UX polish
+- **Problem:** Most screens lack a home / back / log-out affordance. Once the user lands somewhere, the only recourse is to kill the app.
+- **Scope:**
+  - Add a persistent `AppBar` (or equivalent voice-first equivalent for the elder) with a back/home action on every secondary screen.
+  - Add a log-out flow on the `DashboardScreen` (and an equivalent "switch elder" path for the elder if they want to start over).
+  - Audit the elder's `HomeScreen` for buttons that currently do nothing — either wire them up or hide them.
+- **Why not now:** unrelated to adaptive config; safer to do once HU-4's data wiring is stable so we don't churn the same files twice.
+
+### B. Emergency Call feature (new HU)
+- **Problem:** the emergency-call button is referenced in the UX brief but there is no feature implementing it.
+- **Scope:**
+  - New feature `lib/features/emergency/` (data + domain + presentation slices).
+  - Reads the linked Companion's phone number (requires adding a `phoneNumber` field to `UserModel` for companions; collected at registration).
+  - One-tap action that launches the dialer via `url_launcher` (`tel:` scheme) or `flutter_phone_direct_caller`. Tap-only — no LongPress per the accessibility rules.
+  - Permission handling: `permission_handler` for `CALL_PHONE` if going the direct-call route.
+- **Open questions:** confirm whether legal/regulatory constraints in Spain permit a direct-dial without a confirmation step. Default to dialer-launch (user confirms in the system UI) until that's settled.
+
+### C. Conversation persistence + summarization
+- **Problem:** Gemini conversations are entirely ephemeral. Once the elder closes the app the session evaporates, so there is nothing to analyze later.
+- **Scope:**
+  - Define `users/{uid}/conversations/{conversationId}` with `{ startedAt, endedAt, summary, messageCount }`. **Do not persist raw transcripts** unless we add explicit consent — only store a Gemini-generated summary.
+  - Trigger summarization on session end (app lifecycle `paused` or an explicit "end conversation" action).
+  - Summarization prompt belongs in `gemini-prompt-architect`'s domain — write it before wiring the persistence call.
+- **Open questions:** is summarization done client-side (extra Gemini call from the device) or via a Cloud Function triggered on conversation close? Cloud Function is safer (key isolation, retry, atomicity) but adds infra.
+
+### D. Emotional analysis pipeline (HU-5)
+- **Problem:** the Companion's emotional dashboard is the headline value-prop of the app and is currently 0% built.
+- **Scope:**
+  - Depends on (C). Reads each new `conversations/{id}.summary` and produces a sentiment / emotion classification (e.g. `{ valence, arousal, flags: [loneliness, agitation, ...] }`).
+  - Pipeline candidates:
+    - **Gemini** with a strict-JSON classification prompt (cheapest, single vendor).
+    - **HuggingFace Inference API** with a Spanish-language emotion model (more nuanced labels, second vendor risk).
+  - Write the classification back to the same conversation doc so the Dashboard can stream-aggregate trends.
+  - Cloud Function on `onCreate(users/{uid}/conversations/{conversationId})` is the natural trigger.
+- **UI:** new section in `DashboardScreen` rendering a 7-day mood trend + flagged sessions list.
+- **Why this is HU-5, not HU-4:** entirely independent data flow; can be built in parallel with HU-4 if (C) is in place.
