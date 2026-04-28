@@ -43,7 +43,7 @@ class _DashboardContent extends ConsumerWidget {
           _SettingSlider(
             label: 'Volumen de la voz',
             value: prefs.volume,
-            onChanged: (val) {
+            onChangeEnd: (val) {
               ref.read(dashboardControllerProvider.notifier)
                   .updateElderPreferences(prefs.copyWith(volume: val));
             },
@@ -54,7 +54,7 @@ class _DashboardContent extends ConsumerWidget {
             value: prefs.speechRate,
             min: 0.1,
             max: 1.0,
-            onChanged: (val) {
+            onChangeEnd: (val) {
               ref.read(dashboardControllerProvider.notifier)
                   .updateElderPreferences(prefs.copyWith(speechRate: val));
             },
@@ -65,7 +65,7 @@ class _DashboardContent extends ConsumerWidget {
             value: prefs.textSizeMultiplier,
             min: 1.0,
             max: 2.0,
-            onChanged: (val) {
+            onChangeEnd: (val) {
               ref.read(dashboardControllerProvider.notifier)
                   .updateElderPreferences(prefs.copyWith(textSizeMultiplier: val));
             },
@@ -76,34 +76,73 @@ class _DashboardContent extends ConsumerWidget {
   }
 }
 
-class _SettingSlider extends StatelessWidget {
+class _SettingSlider extends StatefulWidget {
   final String label;
   final double value;
   final double min;
   final double max;
-  final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChanged;
+  final ValueChanged<double> onChangeEnd;
 
   const _SettingSlider({
     required this.label,
     required this.value,
     this.min = 0.0,
     this.max = 1.0,
-    required this.onChanged,
+    this.onChanged,
+    required this.onChangeEnd,
   });
+
+  @override
+  State<_SettingSlider> createState() => _SettingSliderState();
+}
+
+class _SettingSliderState extends State<_SettingSlider> {
+  late double _localValue;
+  bool _isDragging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _localValue = widget.value;
+  }
+
+  @override
+  void didUpdateWidget(covariant _SettingSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reconcile with external updates (e.g. Firestore stream pushing a new value
+    // or controller rollback) only when the user is not actively dragging.
+    if (!_isDragging && widget.value != oldWidget.value) {
+      _localValue = widget.value;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 16)),
+        Text(widget.label, style: const TextStyle(fontSize: 16)),
         Slider(
-          value: value,
-          min: min,
-          max: max,
+          value: _localValue,
+          min: widget.min,
+          max: widget.max,
           divisions: 10,
-          label: value.toStringAsFixed(1),
-          onChanged: onChanged,
+          label: _localValue.toStringAsFixed(1),
+          onChanged: (val) {
+            setState(() {
+              _isDragging = true;
+              _localValue = val;
+            });
+            widget.onChanged?.call(val);
+          },
+          onChangeEnd: (val) {
+            setState(() {
+              _isDragging = false;
+              _localValue = val;
+            });
+            widget.onChangeEnd(val);
+          },
         ),
         const SizedBox(height: 16),
       ],

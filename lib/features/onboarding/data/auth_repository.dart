@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quiet_companion/core/constants/firestore_paths.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
 class AuthRepository {
@@ -35,24 +36,24 @@ class AuthRepository {
   }
 
   Future<void> saveUser(UserModel user) async {
-    await _firestore.collection('users').doc(user.id).set(user.toMap());
+    await _firestore.collection(FirestorePaths.usersCollection).doc(user.id).set(user.toMap());
   }
 
   Future<UserModel?> getUser(String uid) async {
-    final snapshot = await _firestore.collection('users').doc(uid).get();
+    final snapshot = await _firestore.collection(FirestorePaths.usersCollection).doc(uid).get();
     if (!snapshot.exists || snapshot.data() == null) return null;
     return UserModel.fromMap(uid, snapshot.data()!);
   }
 
   Stream<UserModel?> streamUser(String uid) {
-    return _firestore.collection('users').doc(uid).snapshots().map((snapshot) {
+    return _firestore.collection(FirestorePaths.usersCollection).doc(uid).snapshots().map((snapshot) {
       if (!snapshot.exists || snapshot.data() == null) return null;
       return UserModel.fromMap(uid, snapshot.data()!);
     });
   }
 
   Future<void> ensureCompanionUserDoc(String uid) async {
-    final docRef = _firestore.collection('users').doc(uid);
+    final docRef = _firestore.collection(FirestorePaths.usersCollection).doc(uid);
     final snapshot = await docRef.get();
     if (snapshot.exists && snapshot.data() != null) return;
     final user = UserModel(
@@ -67,7 +68,7 @@ class AuthRepository {
   Future<void> linkCompanionToElder(String code, String companionId) async {
     // 1. Buscamos si existe un Mayor con ese código exacto
     final query = await _firestore
-        .collection('users')
+        .collection(FirestorePaths.usersCollection)
         .where('linkCode', isEqualTo: code)
         .where('role', isEqualTo: UserRole.elder.name) // Asegúrate de cómo guardas los enums
         .limit(1)
@@ -83,7 +84,7 @@ class AuthRepository {
 
     // 3. Preparamos una operación Atómica (Batch). O se hace todo, o no se hace nada.
     final batch = _firestore.batch();
-    final companionRef = _firestore.collection('users').doc(companionId);
+    final companionRef = _firestore.collection(FirestorePaths.usersCollection).doc(companionId);
 
     // Actualizamos al Mayor
     batch.update(elderDoc.reference, {

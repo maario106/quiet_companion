@@ -85,7 +85,7 @@ class ChatController extends StateNotifier<ChatState> {
 final chatControllerProvider = StateNotifierProvider<ChatController, ChatState>((ref) {
   final geminiService = GeminiService();
   final speechService = SpeechService();
-  final ttsService = TtsService();
+  final ttsService = ref.watch(ttsServiceProvider);
 
   return ChatController(geminiService, speechService, ttsService);
 });

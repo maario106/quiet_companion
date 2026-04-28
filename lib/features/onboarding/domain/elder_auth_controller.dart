@@ -13,7 +13,7 @@ class ElderAuthController extends StateNotifier<AuthState> {
 
   final AuthRepository _authRepository;
 
-  StreamSubscription<UserModel?> _userSubscription;
+  late StreamSubscription<UserModel?> _userSubscription;
 
   Future<void> initSession() async {
     state = state.copyWith(status: AuthStatus.checking);

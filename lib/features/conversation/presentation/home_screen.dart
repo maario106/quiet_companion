@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
 import 'package:quiet_companion/features/conversation/domain/chat_state.dart';
@@ -28,13 +29,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final chatState = ref.watch(chatControllerProvider);
     final status = chatState.status;
 
+    // Multiplicador de tamaño de texto controlado por el familiar desde el dashboard.
+    final textScale = ref
+            .watch(currentUserProvider)
+            .valueOrNull
+            ?.preferences
+            .textSizeMultiplier ??
+        1.0;
+
     // DYNAMIC VISUAL LOGIC: Ready the texts according to the State
     String title = '';
     String subtitle = '';
 
     switch(status) {
       case ChatStatus.initial:
-        title = '!Hola, Pedro!'; // TODO: Firebase data
+        title = '¡Hola!'; // TODO: incluir nombre del usuario cuando UserModel tenga `name`
         subtitle = chatState.responseAI;
         break;
       case ChatStatus.listening:
@@ -101,10 +110,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // DYNAMIC TEXTS (Reactive to RiverPod)
               // SALUDO
               Text(
-                // TODO insertar nombre usuario con Firebase
                 title,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontHuge,
+                style: TextStyle(
+                  fontSize: AppTheme.fontHuge * textScale,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
                 ),
@@ -116,8 +124,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: SingleChildScrollView(
                   child: Text(
                     subtitle,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontLarge,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontLarge * textScale,
                       color: AppTheme.textSecondary,
                     ),
                     textAlign: TextAlign.center,
@@ -174,10 +182,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // TODO: Lógica para abrir el teclado
                    print("Abrir Teclado");
                 },
-                child: const Text(
+                child: Text(
                   '¿Utilizar teclado?',
                   style: TextStyle(
-                    fontSize: AppTheme.fontButton,
+                    fontSize: AppTheme.fontButton * textScale,
                     color: AppTheme.textSecondary,
                   ),
                 ),

@@ -34,6 +34,7 @@ class DashboardController extends StateNotifier<DashboardState> {
   Future<void> updateElderPreferences(UserPreferences newPrefs) async {
     if (state.linkedElder == null) return;
 
+    final previousElder = state.linkedElder;
     final updatedElder = state.linkedElder!.copyWith(preferences: newPrefs);
 
     // Optimizamos la UI: actualizamos localmente primero
@@ -42,7 +43,12 @@ class DashboardController extends StateNotifier<DashboardState> {
     try {
       await _repository.saveUser(updatedElder);
     } catch (e) {
-      state = state.copyWith(errorMessage: 'Error al guardar: $e');
+      // Honest rollback: revert linkedElder to its previous snapshot so the UI
+      // does not display a value that failed to persist.
+      state = state.copyWith(
+        linkedElder: previousElder,
+        errorMessage: 'Error al guardar: $e',
+      );
     }
   }
 }
