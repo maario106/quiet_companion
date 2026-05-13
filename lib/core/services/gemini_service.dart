@@ -1,41 +1,130 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:quiet_companion/core/config/env.dart';
 
+const _guardarNombreFn = 'guardarNombre';
+
+/// Result of a single Gemini turn.
+///
+/// [text] is the text reply to speak/display.
+/// [nombreToSave] is non-null when the model called `guardarNombre` — the
+/// controller must persist this value and then call [startSession] again with
+/// the updated name so the model stops asking.
+class GeminiResponse {
+  final String? text;
+  final String? nombreToSave;
+
+  const GeminiResponse({this.text, this.nombreToSave});
+}
+
 class GeminiService {
-  late final GenerativeModel _model;
+  ChatSession? _session;
 
-  GeminiService() {
-    final systemInstruction = Content.system(
-        "Eres un acompañante virtual diseñado específicamente para conversar con personas mayores "
-            "y combatir la soledad. Tu objetivo principal es hacer compañía, escuchar activamente, "
-            "y ser muy respetuoso y cálido.\n\n"
-            "REGLAS:\n"
-            "1. Respuestas MUY breves (máximo 2 o 3 frases). Van a ser leídas por voz.\n"
-            "2. Termina siempre con una pregunta sencilla para mantener la conversación.\n"
-            "3. Actúa como un oyente humano empático. No digas que eres una IA.\n"
-            "4. Si el usuario menciona problemas de salud, dile amablemente que lo consulte con su familia o médico."
-    );
+  static final _tools = [
+    Tool(functionDeclarations: [
+      FunctionDeclaration(
+        _guardarNombreFn,
+        'Guarda el nombre del mayor en el sistema. Llama a esta función en '
+        'cuanto el mayor confirme su nombre.',
+        Schema.object(
+          properties: {
+            'nombre': Schema.string(
+              description: 'Nombre del mayor, tal como él lo ha dicho.',
+            ),
+          },
+          requiredProperties: ['nombre'],
+        ),
+      ),
+    ]),
+  ];
 
-    _model = GenerativeModel(
+  static final _safetySettings = [
+    SafetySetting(HarmCategory.harassment, HarmBlockThreshold.high),
+    SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.high),
+    SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.high),
+    SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.high),
+  ];
+
+  GenerativeModel _buildModel(String? elderName) {
+    final nameContext = elderName != null
+        ? 'Ya conoces el nombre del mayor: se llama $elderName. '
+            'Salúdale por su nombre y NO vuelvas a preguntárselo.'
+        : 'Aún no sabes el nombre del mayor. '
+            'Pregúntaselo de forma natural en los primeros turnos de la conversación. '
+            'En cuanto te lo diga, confirma el nombre y llama a la función '
+            '`$_guardarNombreFn` con ese nombre.';
+
+    return GenerativeModel(
       model: 'gemini-2.5-flash',
       apiKey: Env.geminiApiKey,
-      systemInstruction: systemInstruction,
-      safetySettings: [
-        SafetySetting(HarmCategory.harassment, HarmBlockThreshold.high),
-        SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.high),
-        SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.high),
-        SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.high),
-      ],
+      systemInstruction: Content.system(
+        'Eres un acompañante virtual diseñado específicamente para conversar con personas mayores '
+        'y combatir la soledad. Tu objetivo principal es hacer compañía, escuchar activamente, '
+        'y ser muy respetuoso y cálido.\n\n'
+        '$nameContext\n\n'
+        'REGLAS:\n'
+        '1. Respuestas MUY breves (máximo 2 o 3 frases). Van a ser leídas por voz.\n'
+        '2. Termina siempre con una pregunta sencilla para mantener la conversación.\n'
+        '3. Actúa como un oyente humano empático. No digas que eres una IA.\n'
+        '4. Si el usuario menciona problemas de salud, dile amablemente que lo consulte con su familia o médico.',
+      ),
+      tools: _tools,
+      safetySettings: _safetySettings,
     );
   }
 
-  Future<String> sendMessage(String text) async {
+  /// (Re)starts the chat session with updated name context.
+  ///
+  /// Call this once on first use and again whenever [elderName] changes (e.g.
+  /// after persisting the name from a `guardarNombre` function call).
+  void startSession(String? elderName) {
+    _session = _buildModel(elderName).startChat();
+  }
+
+  /// Sends a user message and returns the model's response.
+  ///
+  /// If the model calls `guardarNombre`, a [FunctionResponse] is automatically
+  /// sent back so the conversation continues. The final spoken text and the
+  /// name to persist are both returned in [GeminiResponse].
+  Future<GeminiResponse> sendMessage(String text) async {
+    if (_session == null) startSession(null);
+    final session = _session!;
+
     try {
-      final response = await _model.generateContent([Content.text(text)]);
-      return response.text ?? 'No se ha podido generar una respuesta.';
-    } catch (e) {
-      print('ERROR GEMINI: $e');
-      return 'Upss, ha habido un problema con la conexión. ¿Puedes repetir?';
+      final response = await session.sendMessage(Content.text(text));
+
+      String? nombreToSave;
+      String? replyText = response.text;
+
+      final calls = response.functionCalls.toList();
+      if (calls.isNotEmpty) {
+        for (final call in calls) {
+          if (call.name == _guardarNombreFn) {
+            nombreToSave = call.args['nombre'] as String?;
+          }
+        }
+
+        if (nombreToSave != null) {
+          final followUp = await session.sendMessage(
+            Content.functionResponse(
+              _guardarNombreFn,
+              {'guardado': true, 'nombre': nombreToSave},
+            ),
+          );
+          replyText = followUp.text ?? replyText;
+        }
+      }
+
+      return GeminiResponse(
+        text: replyText ?? 'No se ha podido generar una respuesta.',
+        nombreToSave: nombreToSave,
+      );
+    } catch (_) {
+      return const GeminiResponse(
+        text: 'Upss, ha habido un problema con la conexión. ¿Puedes repetir?',
+      );
     }
   }
 }
+
+final geminiServiceProvider = Provider<GeminiService>((ref) => GeminiService());
