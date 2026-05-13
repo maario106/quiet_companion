@@ -128,7 +128,77 @@ HU-4 is a slice of a larger product. The items below are **not** scheduled as pa
   - Summarization prompt belongs in `gemini-prompt-architect`'s domain — write it before wiring the persistence call.
 - **Open questions:** is summarization done client-side (extra Gemini call from the device) or via a Cloud Function triggered on conversation close? Cloud Function is safer (key isolation, retry, atomicity) but adds infra.
 
-### D. Emotional analysis pipeline (HU-5)
+### D. User Context Profile — aprendizaje progresivo del mayor
+
+**Prerequisite:** HU-1→4 testing and documentation complete. Does **not** depend on (C); the real-time path works independently. The hybrid extension in D.6 does depend on (C) being in place.
+
+**Goal:** Gemini accumulates personal facts about the elder (family members, city, hobbies, doctor, routines…) across conversations and injects them into each new session so the elder is always greeted by a companion that "remembers" them.
+
+**Design decision (recorded here, to be re-evaluated before implementation):**
+The default approach is **real-time function calling** — the same pattern already used by `guardarNombre`. The hybrid extension (post-session sweep) is optional and should only be added if real-time calling proves to miss meaningful context. If the hybrid is adopted, it must remain invisible to the elder — the natural conversational feel cannot degrade.
+
+---
+
+#### D.1 — Data model: `context` map on the user document
+
+- Add `context: Map<String, String>?` to `UserModel` (optional, null-safe, empty map on first load).
+- Update `fromMap` / `toMap` / `copyWith` in `lib/core/models/user_model.dart`.
+- No Firestore migration needed — existing docs without the field read as null, treated as empty map.
+- Keep entries as free-form key-value strings (e.g. `"nieto": "Pablo, 8 años"`, `"ciudad": "Sevilla"`). Avoid rigid schemas — Gemini will coin keys naturally.
+- **Acceptance:** `UserModel.fromMap({'context': {'ciudad': 'Sevilla'}})` produces `context == {'ciudad': 'Sevilla'}`. Round-trips through `toMap` correctly.
+
+#### D.2 — `GeminiService`: add `guardarContexto` function declaration
+
+- Add a second `FunctionDeclaration guardarContexto(clave: string, valor: string)` to the existing `Tool` alongside `guardarNombre`.
+- In `sendMessage`, handle `guardarContexto` the same way as `guardarNombre`: send `FunctionResponse` automatically, return `contextUpdate: MapEntry<String, String>?` in `GeminiResponse`.
+- Update system prompt in `startSession` to include an injected context block:
+  ```
+  Lo que ya sabes de [nombre]:
+  - Ciudad: Sevilla
+  - Nieto: Pablo, 8 años
+  - Hobby: jardinería
+  ```
+  If `context` is empty, omit the block entirely (don't mention there is no context).
+- Instruct the model in the system prompt: learn facts naturally during conversation; do not interrogate the elder; call `guardarContexto` only when confident, not on speculation.
+- **Acceptance:** say "vivo en Granada" during a conversation → `guardarContexto("ciudad", "Granada")` is called → next `startSession` injects "Ciudad: Granada".
+
+#### D.3 — `ChatController`: persist context updates
+
+- In `sendMessage`, after receiving `GeminiResponse`, check for `contextUpdate`.
+- If present: call `userRepository.updateContext(uid, key, value)` — a Firestore `update({'context.$key': value})` (dot-notation merge, no other fields touched).
+- No session restart needed (unlike `guardarNombre`) — context is injected at session start, not mid-session.
+- **Acceptance:** `context` map in Firestore grows incrementally across conversations.
+
+#### D.4 — `UserRepository`: add `updateContext`
+
+- New method `Future<void> updateContext(String uid, String key, String value)`.
+- Uses `doc.update({'context.$key': value})` — Firestore dot-notation ensures atomic field-level write with no overwrite of sibling keys.
+- **File:** `lib/core/repositories/user_repository.dart`.
+
+#### D.5 — Dashboard: companion read-only context view
+
+- Add a collapsible card in `DashboardScreen` showing the elder's context map as a key-value list.
+- Read-only initially. Edit affordance can be added later if needed (low priority — the elder's natural speech is the primary input).
+- Companion can use this view to understand what the app has learned and spot errors.
+- **Accessibility:** companion UI, so elder accessibility rules do not apply here. Standard Material text sizes.
+
+#### D.6 — (Optional extension) Hybrid: post-session extraction sweep
+
+**Only implement if real-time calling misses meaningful context after real-world testing.**
+
+How to evaluate: after a week of real usage, check if the context map captures the conversational detail you'd expect. If important facts (e.g. "her daughter visited yesterday") never get saved because Gemini didn't trigger `guardarContexto`, the hybrid is worth adding.
+
+**If implemented:**
+- On app lifecycle `paused` or an explicit session-end signal, send the conversation transcript (kept in-memory during the session as a `List<({String role, String text})>`) to a second Gemini call with a focused extraction prompt:
+  > "Del siguiente fragmento de conversación, extrae todos los datos personales nuevos del usuario que no estén ya en su perfil conocido: [contexto actual]. Devuelve JSON `{\"clave\": \"valor\"}` únicamente para datos nuevos o corregidos. Si no hay nada nuevo, devuelve `{}`."
+- Merge the returned map into Firestore using the same `updateContext` method.
+- This step runs silently after the conversation; the elder never sees it.
+- **Risk:** adds a second Gemini API call per session — evaluate cost vs. quality gain before shipping.
+- **Acceptance:** a fact mentioned once during a conversation (e.g. "tengo una gata que se llama Luna") appears in the context map even if `guardarContexto` was never called during the conversation.
+
+---
+
+### E. Emotional analysis pipeline (HU-5)
 - **Problem:** the Companion's emotional dashboard is the headline value-prop of the app and is currently 0% built.
 - **Scope:**
   - Depends on (C). Reads each new `conversations/{id}.summary` and produces a sentiment / emotion classification (e.g. `{ valence, arousal, flags: [loneliness, agitation, ...] }`).
