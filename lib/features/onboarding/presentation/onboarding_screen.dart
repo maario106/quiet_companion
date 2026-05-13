@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
-import 'package:quiet_companion/features/onboarding/domain/companion_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_state.dart';
-import 'package:quiet_companion/features/onboarding/domain/companion_auth_state.dart';
 
 class OnboardingScreen extends ConsumerWidget {
   const OnboardingScreen({super.key});
@@ -19,123 +17,114 @@ class OnboardingScreen extends ConsumerWidget {
 
     if (authState.status == AuthStatus.checking) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.elderBackground,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.elderBackground,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                '¡Bienvenid@!',
-                style: TextStyle(
-                  fontSize: AppTheme.fontHuge,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                isPending
-                    ? 'Dile este código a tu familiar:'
-                    : '¿Cómo prefieres usar la aplicación?',
-                style: const TextStyle(
-                  fontSize: AppTheme.fontLarge,
-                  color: AppTheme.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 60),
-              if (!isPending) ...[
-                _ModeButton(
-                  label: 'Usar por mi cuenta',
-                  onTap: () => ref
-                      .read(elderAuthControllerProvider.notifier)
-                      .selectIndependentMode(),
-                ),
-                const SizedBox(height: 24),
-                _ModeButton(
-                  label: 'Vincular con mi familiar',
-                  onTap: () => ref
-                      .read(elderAuthControllerProvider.notifier)
-                      .selectLinkedMode(),
-                ),
-                const SizedBox(height: 40),
-                // Botón discreto para el familiar (No usa _ModeButton)
-                TextButton(
-                  onPressed: () => context.push('/companion/choice'),
-                  child: const Text(
-                    'Soy el acompañante',
+        child: Center(
+          child: ConstrainedBox(
+            constraints:
+                BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
+            child: Padding(
+              padding: EdgeInsets.all(AppTheme.screenPadding(context)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    '¡Bienvenid@!',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontHuge,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.elderTextPrimary,
+                    ),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: AppTheme.fontMedium, // Tamaño legible pero no gigante
-                      color: AppTheme.textSecondary,
-                      decoration: TextDecoration.underline, // Indica claramente que es pulsable
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isPending
+                        ? 'Dile este código a tu familiar:'
+                        : '¿Cómo prefieres usar la aplicación?',
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontLarge,
+                      color: AppTheme.elderTextSecondary,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
-              if (isPending) ...[
-                Text(
-                  linkCode ?? '',
-                  style: const TextStyle(
-                    fontSize: 72,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Tu familiar deberá introducir este código en su aplicación.',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontMedium,
-                    color: AppTheme.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                _ModeButton(
-                  label: 'Continuar',
-                  onTap: () {
-                    ref.read(elderAuthControllerProvider.notifier).checkPairingStatus();
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => ref
-                      .read(elderAuthControllerProvider.notifier)
-                      .cancelLinkedMode(),
-                  child: const Text(
-                    'Cancelar',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontButton,
-                      color: AppTheme.textSecondary,
+                  const SizedBox(height: 60),
+                  if (!isPending) ...[
+                    _ModeButton(
+                      label: 'Usar por mi cuenta',
+                      onTap: () => ref
+                          .read(elderAuthControllerProvider.notifier)
+                          .selectIndependentMode(),
                     ),
-                  ),
-                ),
-              ],
-              if (authState.status == AuthStatus.error) ...[
-                const SizedBox(height: 24),
-                Text(
-                  authState.errorMessage,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontButton,
-                    color: AppTheme.emergencyColor,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ],
+                    const SizedBox(height: 24),
+                    _ModeButton(
+                      label: 'Vincular con mi familiar',
+                      onTap: () => ref
+                          .read(elderAuthControllerProvider.notifier)
+                          .selectLinkedMode(),
+                    ),
+                    const SizedBox(height: 40),
+                    TextButton(
+                      onPressed: () => context.push('/companion/choice'),
+                      child: const Text('Soy el acompañante'),
+                    ),
+                  ],
+                  if (isPending) ...[
+                    Text(
+                      linkCode ?? '',
+                      style: const TextStyle(
+                        fontSize: 72,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.elderTextPrimary,
+                        letterSpacing: 16,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Tu familiar deberá introducir este código en su aplicación.',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontMedium,
+                        color: AppTheme.elderTextSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 40),
+                    _ModeButton(
+                      label: 'Continuar',
+                      onTap: () => ref
+                          .read(elderAuthControllerProvider.notifier)
+                          .checkPairingStatus(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => ref
+                          .read(elderAuthControllerProvider.notifier)
+                          .cancelLinkedMode(),
+                      child: const Text('Cancelar'),
+                    ),
+                  ],
+                  if (authState.status == AuthStatus.error) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      authState.errorMessage,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontButton,
+                        color: AppTheme.elderEmergency,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -151,26 +140,9 @@ class _ModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 88,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-          ),
-          padding: EdgeInsets.symmetric(vertical: 20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: AppTheme.fontButton,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+    return ElevatedButton(
+      onPressed: onTap,
+      child: Text(label),
     );
   }
 }

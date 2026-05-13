@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/features/conversation/presentation/home_screen.dart';
 import 'package:quiet_companion/features/dashboard/presentation/dashboard_screen.dart';
@@ -30,13 +32,27 @@ class RouterNotifier extends ChangeNotifier {
       notifyListeners();
     });
 
+    _ref.listen<AsyncValue<User?>>(firebaseAuthUserProvider, (_, next) {
+      if (next.valueOrNull == null) {
+        _ref.read(companionAuthControllerProvider.notifier).signOut();
+      }
+      notifyListeners();
+    });
+
+    _ref.listen<AsyncValue<UserModel?>>(currentUserProvider, (_, next) {
+      _elderUser = next.valueOrNull;
+      notifyListeners();
+    });
+
     _elderState = _ref.read(elderAuthControllerProvider);
     _companionState = _ref.read(companionAuthControllerProvider);
+    _elderUser = _ref.read(currentUserProvider).valueOrNull;
   }
 
   final Ref _ref;
   late AuthState _elderState;
   late CompanionAuthState _companionState;
+  UserModel? _elderUser;
 
   static const _companionPaths = {
     '/companion/choice',
@@ -66,8 +82,12 @@ class RouterNotifier extends ChangeNotifier {
     // Si el usuario navega a mano a las pantallas de login del familiar, le dejamos pasar
     if (_companionPaths.contains(location)) return null;
 
-    final elderAutonomy = _elderState.user?.autonomy;
-    final elderLinkCode = _elderState.user?.linkCode;
+    // Prefer live Firestore data (currentUserProvider) for routing decisions.
+    // Fall back to controller state during the gap before the stream first emits.
+    // Role guard ensures a companion's UserModel is never used for elder routing.
+    final elderSource = (_elderUser?.role == UserRole.elder) ? _elderUser : _elderState.user;
+    final elderAutonomy = elderSource?.autonomy;
+    final elderLinkCode = elderSource?.linkCode;
 
     bool isFullyOnboarded = false;
 
@@ -113,23 +133,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/companion/choice',
-        builder: (context, state) => const CompanionAuthChoiceScreen(),
+        builder: (context, state) => Theme(
+          data: AppTheme.companionTheme,
+          child: const CompanionAuthChoiceScreen(),
+        ),
       ),
       GoRoute(
         path: '/companion/register',
-        builder: (context, state) => const CompanionRegisterScreen(),
+        builder: (context, state) => Theme(
+          data: AppTheme.companionTheme,
+          child: const CompanionRegisterScreen(),
+        ),
       ),
       GoRoute(
         path: '/companion/login',
-        builder: (context, state) => const CompanionLoginScreen(),
+        builder: (context, state) => Theme(
+          data: AppTheme.companionTheme,
+          child: const CompanionLoginScreen(),
+        ),
       ),
       GoRoute(
         path: '/companion/pairing',
-        builder: (context, state) => const EnterPairingCodeScreen(),
+        builder: (context, state) => Theme(
+          data: AppTheme.companionTheme,
+          child: const EnterPairingCodeScreen(),
+        ),
       ),
       GoRoute(
         path: '/dashboard',
-        builder: (context, state) => const DashboardScreen(),
+        builder: (context, state) => Theme(
+          data: AppTheme.companionTheme,
+          child: const DashboardScreen(),
+        ),
       ),
     ],
   );

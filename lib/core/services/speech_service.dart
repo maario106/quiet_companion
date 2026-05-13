@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class SpeechService {
@@ -6,11 +7,7 @@ class SpeechService {
   SpeechService();
 
   Future<bool> initiate() async {
-    bool available = await _speechToText.initialize(
-      onStatus: (status) => print('🎤 Estado del micro: $status'),
-      onError: (error) => print('Error del micro; $error'),
-    );
-    return available;
+    return await _speechToText.initialize();
   }
 
   void beginListening(Function(String) onResult){
@@ -32,3 +29,5 @@ class SpeechService {
 
   bool get isListening => _speechToText.isListening;
 }
+
+final speechServiceProvider = Provider<SpeechService>((ref) => SpeechService());

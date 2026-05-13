@@ -1,14 +1,29 @@
-import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quiet_companion/core/models/user_model.dart';
 import 'companion_auth_state.dart';
 import '../data/auth_repository.dart';
-import 'package:quiet_companion/core/models/user_model.dart';
 
 class CompanionAuthController extends StateNotifier<CompanionAuthState> {
   CompanionAuthController(this._authRepository)
-      : super(const CompanionAuthState());
+      : super(const CompanionAuthState()) {
+    _init();
+  }
 
   final AuthRepository _authRepository;
+
+  Future<void> _init() async {
+    final uid = _authRepository.currentUid();
+    if (uid == null) return;
+    final userData = await _authRepository.getUser(uid);
+    if (userData == null || userData.role != UserRole.companion) return;
+    state = state.copyWith(
+      status: userData.linkedElderId != null
+          ? CompanionAuthStatus.linked
+          : CompanionAuthStatus.authenticated,
+      companionId: uid,
+      linkedElderId: userData.linkedElderId,
+    );
+  }
 
   Future<void> signIn(String email, String password) async {
     state = state.copyWith(status: CompanionAuthStatus.loading, errorMessage: '');
@@ -19,7 +34,9 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
       final userData = await _authRepository.getUser(uid);
 
       state = state.copyWith(
-        status: CompanionAuthStatus.authenticated,
+        status: userData?.linkedElderId != null
+            ? CompanionAuthStatus.linked
+            : CompanionAuthStatus.authenticated,
         companionId: uid,
         linkedElderId: userData?.linkedElderId,
       );
@@ -46,6 +63,10 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
         errorMessage: e.toString(),
       );
     }
+  }
+
+  void signOut() {
+    state = const CompanionAuthState();
   }
 
   Future<void> linkWithCode(String code) async {

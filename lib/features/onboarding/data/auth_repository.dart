@@ -35,6 +35,10 @@ class AuthRepository {
     return credential.user!.uid;
   }
 
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
+
   Future<void> saveUser(UserModel user) async {
     await _firestore.collection(FirestorePaths.usersCollection).doc(user.id).set(user.toMap());
   }
@@ -52,6 +56,12 @@ class AuthRepository {
     });
   }
 
+  String? currentUid() => _auth.currentUser?.uid;
+
+  Stream<String?> authStateUid() {
+    return _auth.authStateChanges().map((user) => user?.uid);
+  }
+
   Future<void> ensureCompanionUserDoc(String uid) async {
     final docRef = _firestore.collection(FirestorePaths.usersCollection).doc(uid);
     final snapshot = await docRef.get();
@@ -62,6 +72,13 @@ class AuthRepository {
       autonomy: AutonomyStatus.none,
     );
     await docRef.set(user.toMap(), SetOptions(merge: true));
+  }
+
+  Future<void> updateName(String uid, String name) async {
+    await _firestore
+        .collection(FirestorePaths.usersCollection)
+        .doc(uid)
+        .update({'name': name});
   }
 
   // TODO: Considerar sustituir esta función por una cloud function más segura.

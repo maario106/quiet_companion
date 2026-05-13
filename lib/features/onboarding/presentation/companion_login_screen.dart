@@ -44,9 +44,10 @@ class _CompanionLoginScreenState extends ConsumerState<CompanionLoginScreen> {
 
     final state = ref.watch(companionAuthControllerProvider);
     final isLoading = state.status == CompanionAuthStatus.loading;
+    final padding = AppTheme.screenPadding(context);
+    final maxWidth = AppTheme.contentMaxWidth(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -54,100 +55,79 @@ class _CompanionLoginScreenState extends ConsumerState<CompanionLoginScreen> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Iniciar sesión',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontLarge,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  autocorrect: false,
-                  enabled: !isLoading,
-                  style: const TextStyle(fontSize: AppTheme.fontMedium),
-                  decoration: const InputDecoration(
-                    labelText: 'Correo electrónico',
-                    labelStyle: TextStyle(fontSize: AppTheme.fontMedium),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    final v = value?.trim() ?? '';
-                    if (v.isEmpty) return 'Introduce un correo';
-                    if (!v.contains('@')) return 'Correo no válido';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  enabled: !isLoading,
-                  style: const TextStyle(fontSize: AppTheme.fontMedium),
-                  decoration: const InputDecoration(
-                    labelText: 'Contraseña',
-                    labelStyle: TextStyle(fontSize: AppTheme.fontMedium),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Introduce tu contraseña';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  height: 88,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(16)),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(padding),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Iniciar sesión',
+                      style: TextStyle(
+                        fontSize: AppTheme.companionFontTitle,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.companionTextPrimary,
                       ),
                     ),
-                    child: isLoading
-                        ? const SizedBox(
-                            height: 28,
-                            width: 28,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
-                            ),
-                          )
-                        : const Text(
-                            'Iniciar sesión',
-                            style: TextStyle(
-                              fontSize: AppTheme.fontButton,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-                if (state.status == CompanionAuthStatus.error) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    state.errorMessage,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontButton,
-                      color: AppTheme.emergencyColor,
+                    const SizedBox(height: 32),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      enabled: !isLoading,
+                      decoration:
+                          const InputDecoration(labelText: 'Correo electrónico'),
+                      validator: (value) {
+                        final v = value?.trim() ?? '';
+                        if (v.isEmpty) return 'Introduce un correo';
+                        if (!v.contains('@')) return 'Correo no válido';
+                        return null;
+                      },
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ],
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      enabled: !isLoading,
+                      decoration:
+                          const InputDecoration(labelText: 'Contraseña'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Introduce tu contraseña';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    FilledButton(
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.5, color: Colors.white),
+                            )
+                          : const Text('Iniciar sesión'),
+                    ),
+                    if (state.status == CompanionAuthStatus.error) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        state.errorMessage,
+                        style: const TextStyle(
+                          fontSize: AppTheme.companionFontBody,
+                          color: AppTheme.companionError,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),

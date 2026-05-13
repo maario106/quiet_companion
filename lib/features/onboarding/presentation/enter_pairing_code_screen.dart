@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
+import 'package:quiet_companion/core/widgets/sign_out_button.dart';
 import 'package:quiet_companion/features/onboarding/domain/companion_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/companion_auth_state.dart';
 
@@ -43,105 +44,96 @@ class _EnterPairingCodeScreenState
 
     final state = ref.watch(companionAuthControllerProvider);
     final isLoading = state.status == CompanionAuthStatus.loading;
+    final padding = AppTheme.screenPadding(context);
+    final maxWidth = AppTheme.contentMaxWidth(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        actions: const [SignOutButton()],
+      ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Introduce el código',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontLarge,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Pídele a tu familiar el código de 4 letras que aparece en su aplicación.',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontMedium,
-                    color: AppTheme.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                TextFormField(
-                  controller: _codeController,
-                  enabled: !isLoading,
-                  textAlign: TextAlign.center,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 4,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                    UpperCaseTextFormatter(),
-                  ],
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontHuge,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 12,
-                    color: AppTheme.textPrimary,
-                  ),
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    final v = value?.trim() ?? '';
-                    if (v.length != 4) return 'El código tiene 4 caracteres';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  height: 88,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(16)),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Padding(
+              padding: EdgeInsets.all(padding),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Introduce el código',
+                      style: TextStyle(
+                        fontSize: AppTheme.companionFontTitle,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.companionTextPrimary,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    child: isLoading
-                        ? const SizedBox(
-                            height: 28,
-                            width: 28,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
-                            ),
-                          )
-                        : const Text(
-                            'Vincular',
-                            style: TextStyle(
-                              fontSize: AppTheme.fontButton,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Pídele a tu familiar el código de 4 letras que aparece en su aplicación.',
+                      style: TextStyle(
+                        fontSize: AppTheme.companionFontBody,
+                        color: AppTheme.companionTextSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 40),
+                    // Code input keeps elder-sized text — it displays elder content
+                    TextFormField(
+                      controller: _codeController,
+                      enabled: !isLoading,
+                      textAlign: TextAlign.center,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 4,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'[A-Za-z0-9]')),
+                        UpperCaseTextFormatter(),
+                      ],
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontHuge,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 12,
+                        color: AppTheme.companionTextPrimary,
+                      ),
+                      decoration: const InputDecoration(counterText: ''),
+                      validator: (value) {
+                        final v = value?.trim() ?? '';
+                        if (v.length != 4) return 'El código tiene 4 caracteres';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    FilledButton(
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.5, color: Colors.white),
+                            )
+                          : const Text('Vincular'),
+                    ),
+                    if (state.status == CompanionAuthStatus.error) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        state.errorMessage,
+                        style: const TextStyle(
+                          fontSize: AppTheme.companionFontBody,
+                          color: AppTheme.companionError,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
                 ),
-                if (state.status == CompanionAuthStatus.error) ...[
-                  const SizedBox(height: 24),
-                  Text(
-                    state.errorMessage,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontButton,
-                      color: AppTheme.emergencyColor,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
         ),

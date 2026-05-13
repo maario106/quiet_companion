@@ -8,32 +8,37 @@ import 'package:quiet_companion/core/models/user_model.dart';
 class ElderAuthController extends StateNotifier<AuthState> {
   ElderAuthController(this._authRepository)
       : super(const AuthState(status: AuthStatus.checking)){
-    initSession();
+    _init();
   }
 
   final AuthRepository _authRepository;
+  StreamSubscription<String?>? _authSubscription;
 
-  late StreamSubscription<UserModel?> _userSubscription;
+  void _init() {
+    _authSubscription = _authRepository.authStateUid().listen((uid) async {
+      if (uid == null) {
+        state = const AuthState(status: AuthStatus.checking);
+        try {
+          await _authRepository.signInAnonymously();
+        } catch (e) {
+          state = state.copyWith(
+            status: AuthStatus.error,
+            errorMessage: e.toString(),
+          );
+        }
+        return;
+      }
 
-  Future<void> initSession() async {
-    state = state.copyWith(status: AuthStatus.checking);
-    try {
-      final uid = await _authRepository.signInAnonymously();
-      _userSubscription = _authRepository.streamUser(uid).listen((existingUser) {
-        final user = existingUser ?? UserModel(id: uid, role: UserRole.elder);
-        state = state.copyWith(status: AuthStatus.authenticated, user: user);
-      });
-    } catch (e) {
-      state = state.copyWith(
-        status: AuthStatus.error,
-        errorMessage: e.toString(),
-      );
-    }
+      // One-time fetch — real-time user data flows through currentUserProvider.
+      final existingUser = await _authRepository.getUser(uid);
+      final user = existingUser ?? UserModel(id: uid, role: UserRole.elder);
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+    });
   }
 
   @override
   void dispose() {
-    _userSubscription?.cancel();
+    _authSubscription?.cancel();
     super.dispose();
   }
 
