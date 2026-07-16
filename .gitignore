@@ -43,13 +43,16 @@ google-services.json
 .packages
 .pub-cache/
 .pub/
-build/
 flutter_export_environment.sh
 
 # Excepciones de iOS/Mac (por si acaso)
 *.xcworkspace/
 xcuserdata/
 
+# Agents
 CLAUDE.md
 .claude/
+
+# Documentación
 scripts/
+doc/
