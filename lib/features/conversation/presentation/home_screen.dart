@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:go_router/go_router.dart';
+import 'package:quiet_companion/core/config/settings_rows.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
@@ -50,7 +51,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
     final elderName = currentUser?.name;
-    final isDependent = currentUser?.autonomy == AutonomyStatus.dependent;
+    // Misma función pura que decide qué renderiza SettingsScreen: el botón
+    // solo se muestra si hay al menos una fila de ajustes visible. Un botón
+    // que abre una pantalla vacía es tan malo como uno que no responde.
+    final showSettings =
+        currentUser != null && visibleSettingsRows(currentUser).isNotEmpty;
     final textScale = currentUser?.preferences.textSizeMultiplier ?? 1.0;
 
     final padding = AppTheme.screenPadding(context);

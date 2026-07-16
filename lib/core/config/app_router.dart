@@ -7,6 +7,9 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/features/conversation/presentation/home_screen.dart';
 import 'package:quiet_companion/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:quiet_companion/features/emergency/presentation/emergency_contact_setup_screen.dart';
+import 'package:quiet_companion/features/emergency/presentation/emergency_screen.dart';
+import 'package:quiet_companion/features/settings/presentation/settings_screen.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/companion_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_state.dart';
@@ -17,8 +20,6 @@ import 'package:quiet_companion/features/onboarding/presentation/companion_regis
 import 'package:quiet_companion/features/onboarding/presentation/enter_pairing_code_screen.dart';
 import 'package:quiet_companion/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:quiet_companion/features/onboarding/presentation/splash_screen.dart';
-
-
 
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
