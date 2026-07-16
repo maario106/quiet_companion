@@ -194,14 +194,19 @@ void main() {
         final fakeRepo = FakeAuthRepository();
         fakeRepo.elderUsers['elder-refresh'] = elder;
 
-        final controller = DashboardController(fakeRepo, null);
+        // El id debe coincidir con la clave del fake: es el camino que
+        // refreshElderData usa realmente (getUser(_elderId)).
+        final controller = DashboardController(fakeRepo, 'elder-refresh');
         await controller.refreshElderData();
 
         expect(controller.state.status, equals(DashboardStatus.loaded));
         expect(controller.state.linkedElder?.name, equals('María'));
       });
 
-      test('sets error state if getUser returns null', () async {
+      // Con elderId null, getUser ni se llama: falla el `_elderId!` del
+      // controller y el catch pone error. Descripción ajustada a lo que
+      // realmente verifica.
+      test('sets error state when refreshed without a linked elderId', () async {
         final fakeRepo = FakeAuthRepository();
         final controller = DashboardController(fakeRepo, null);
 
