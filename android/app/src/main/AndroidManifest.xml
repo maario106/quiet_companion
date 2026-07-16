@@ -43,5 +43,12 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Visibilidad de paquetes (Android 11+): sin esto, canLaunchUrl
+             devuelve siempre false para tel: y el botón de emergencia
+             parecería roto en cualquier móvil moderno. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="tel" />
+        </intent>
     </queries>
 </manifest>
