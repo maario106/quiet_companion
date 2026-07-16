@@ -16,6 +16,18 @@ class AppTheme {
   static const Color textPrimary     = elderTextPrimary;
   static const Color textSecondary   = elderTextSecondary;
 
+  // ── EMERGENCY SCREEN TOKENS ───────────────────────────────────
+  // Contraste comprobado sobre elderBackground (#FFF8F0), criterio AAA ≥ 7:1:
+  // emergency112 7.6:1 · emergencyContactCall 7.5:1. Blanco sobre ambos ≥ 7:1.
+  // Visualmente distintos entre sí: 112 rojo profundo, contacto verde
+  // (convención universal de "llamar"), ambos coherentes con elderPrimary.
+  static const Color emergency112        = Color(0xFFA4031F);
+  static const Color emergencyContactCall = Color(0xFF1B5E20);
+
+  /// Altura mínima de los botones de llamada (doble del mínimo WCAG) y de
+  /// las filas de la lista de ajustes del mayor.
+  static const double emergencyButtonMinHeight = 88.0;
+
   // ── COMPANION PALETTE ─────────────────────────────────────────
   static const Color companionPrimary       = Color(0xFF8B5A2B);
   static const Color companionBackground    = Color(0xFFF5F7FA);

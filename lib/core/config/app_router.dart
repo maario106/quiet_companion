@@ -132,6 +132,28 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
+        path: '/emergency',
+        // Fullscreen dialog: ruta completa, sin barrera de diálogo que sea
+        // superficie de error en mitad de una emergencia.
+        pageBuilder: (context, state) => const MaterialPage(
+          fullscreenDialog: true,
+          child: EmergencyScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+        routes: [
+          // Anidada bajo /settings aunque el widget viva en features/emergency:
+          // la jerarquía de rutas refleja la navegación del usuario, no el
+          // sistema de ficheros.
+          GoRoute(
+            path: 'emergency-contact',
+            builder: (context, state) => const EmergencyContactSetupScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
         path: '/companion/choice',
         builder: (context, state) => Theme(
           data: AppTheme.companionTheme,

@@ -1,0 +1,249 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:quiet_companion/core/models/emergency_contact.dart';
+import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/models/user_preferences.dart';
+import 'package:quiet_companion/core/providers/current_user_provider.dart';
+import 'package:quiet_companion/core/services/emergency_call_service.dart';
+import 'package:quiet_companion/core/services/speech_service.dart';
+import 'package:quiet_companion/core/services/tts_service.dart';
+import 'package:quiet_companion/features/emergency/presentation/emergency_screen.dart';
+
+class FakeEmergencyCallService implements EmergencyCallService {
+  final List<String> dialed = [];
+  bool result = true;
+
+  @override
+  Future<bool> dial(String phone) async {
+    dialed.add(phone);
+    return result;
+  }
+}
+
+class FakeTtsService implements TtsService {
+  final List<String> spoken = [];
+  int stopCalls = 0;
+
+  @override
+  Future<void> applyPreferences(UserPreferences prefs) async {}
+
+  @override
+  Future<void> speak(String text) async {
+    spoken.add(text);
+  }
+
+  @override
+  Future<void> stop() async {
+    stopCalls++;
+  }
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class FakeSpeechService implements SpeechService {
+  int stopListeningCalls = 0;
+
+  @override
+  Future<bool> initiate() async => true;
+
+  @override
+  void beginListening(Function(String) onResult) {}
+
+  @override
+  void stopListening() {
+    stopListeningCalls++;
+  }
+
+  @override
+  bool get isListening => false;
+}
+
+const _elderWithCompanionContact = UserModel(
+  id: 'elder-1',
+  role: UserRole.elder,
+  autonomy: AutonomyStatus.dependent,
+  emergencyContact: EmergencyContact(
+    name: 'María',
+    phone: '+34600123456',
+    source: EmergencyContactSource.companion,
+  ),
+);
+
+const _elderWithManualContact = UserModel(
+  id: 'elder-2',
+  role: UserRole.elder,
+  autonomy: AutonomyStatus.independent,
+  emergencyContact: EmergencyContact(
+    name: 'María',
+    phone: '+34600123456',
+    source: EmergencyContactSource.manual,
+  ),
+);
+
+const _elderWithoutContact = UserModel(
+  id: 'elder-3',
+  role: UserRole.elder,
+  autonomy: AutonomyStatus.independent,
+);
+
+Widget _buildSubject({
+  required UserModel user,
+  required FakeEmergencyCallService callService,
+  FakeTtsService? tts,
+  FakeSpeechService? speech,
+  Widget? home,
+}) {
+  return ProviderScope(
+    overrides: [
+      currentUserProvider.overrideWith((ref) => Stream.value(user)),
+      emergencyCallServiceProvider.overrideWithValue(callService),
+      ttsServiceProvider.overrideWithValue(tts ?? FakeTtsService()),
+      speechServiceProvider.overrideWithValue(speech ?? FakeSpeechService()),
+    ],
+    child: MaterialApp(home: home ?? const EmergencyScreen()),
+  );
+}
+
+void main() {
+  group('EmergencyScreen', () {
+    testWidgets('contacto source companion: 3 botones, nombre visible, '
+        'tap marca su teléfono', (tester) async {
+      final callService = FakeEmergencyCallService();
+      await tester.pumpWidget(_buildSubject(
+        user: _elderWithCompanionContact,
+        callService: callService,
+      ));
+      await tester.pumpAndSettle();
+
+      // bySubtype: ElevatedButton.icon construye una subclase privada.
+      expect(find.bySubtype<ElevatedButton>(), findsNWidgets(2));
+      expect(find.byType(TextButton), findsOneWidget);
+      expect(find.text('Llamar a María'), findsOneWidget);
+      expect(find.text('Llamar al 112'), findsOneWidget);
+      expect(find.text('Cancelar'), findsOneWidget);
+
+      await tester.tap(find.text('Llamar a María'));
+      await tester.pump();
+
+      expect(callService.dialed, equals(['+34600123456']));
+    });
+
+    testWidgets('contacto source manual: render idéntico al caso companion',
+        (tester) async {
+      final callService = FakeEmergencyCallService();
+      await tester.pumpWidget(_buildSubject(
+        user: _elderWithManualContact,
+        callService: callService,
+      ));
+      await tester.pumpAndSettle();
+
+      // source no ramifica el render: mismos botones que con companion.
+      expect(find.bySubtype<ElevatedButton>(), findsNWidgets(2));
+      expect(find.byType(TextButton), findsOneWidget);
+      expect(find.text('Llamar a María'), findsOneWidget);
+      expect(find.text('Llamar al 112'), findsOneWidget);
+      expect(find.text('Cancelar'), findsOneWidget);
+    });
+
+    testWidgets('sin contacto: 2 botones, no existe el de contacto, '
+        'tap en 112 marca 112', (tester) async {
+      final callService = FakeEmergencyCallService();
+      await tester.pumpWidget(_buildSubject(
+        user: _elderWithoutContact,
+        callService: callService,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.bySubtype<ElevatedButton>(), findsOneWidget);
+      expect(find.byType(TextButton), findsOneWidget);
+      expect(find.text('Llamar a María'), findsNothing);
+
+      await tester.tap(find.text('Llamar al 112'));
+      await tester.pump();
+
+      expect(callService.dialed, equals(['112']));
+    });
+
+    testWidgets('tap en 112 marca 112 aunque haya contacto', (tester) async {
+      final callService = FakeEmergencyCallService();
+      await tester.pumpWidget(_buildSubject(
+        user: _elderWithCompanionContact,
+        callService: callService,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Llamar al 112'));
+      await tester.pump();
+
+      expect(callService.dialed, equals(['112']));
+    });
+
+    testWidgets('dial devuelve false: texto de error persistente, sin SnackBar',
+        (tester) async {
+      final callService = FakeEmergencyCallService()..result = false;
+      await tester.pumpWidget(_buildSubject(
+        user: _elderWithoutContact,
+        callService: callService,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Llamar al 112'));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text('Este dispositivo no puede hacer llamadas'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('Cancelar cierra la ruta', (tester) async {
+      final callService = FakeEmergencyCallService();
+      await tester.pumpWidget(_buildSubject(
+        user: _elderWithoutContact,
+        callService: callService,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    fullscreenDialog: true,
+                    builder: (_) => const EmergencyScreen(),
+                  ),
+                ),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('abrir'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EmergencyScreen), findsOneWidget);
+
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EmergencyScreen), findsNothing);
+    });
+
+    testWidgets('al montar: STT parado, TTS parado antes de anunciar',
+        (tester) async {
+      final callService = FakeEmergencyCallService();
+      final tts = FakeTtsService();
+      final speech = FakeSpeechService();
+      await tester.pumpWidget(_buildSubject(
+        user: _elderWithCompanionContact,
+        callService: callService,
+        tts: tts,
+        speech: speech,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(speech.stopListeningCalls, equals(1));
+      expect(tts.stopCalls, greaterThanOrEqualTo(1));
+      expect(tts.spoken, contains('Elige a quién llamar'));
+    });
+  });
+}

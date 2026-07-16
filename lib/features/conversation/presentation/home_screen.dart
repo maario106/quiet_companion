@@ -196,21 +196,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       _ActionButton(
                         icon: Icons.phone_in_talk,
                         color: AppTheme.elderEmergency,
-                        onPressed: () {},
+                        // Siempre visible: el 112 está disponible aunque no
+                        // haya contacto configurado, así que la pantalla de
+                        // emergencia nunca está vacía.
+                        onPressed: () => context.push('/emergency'),
                       ),
                       _KeyboardButton(
                         textScale: textScale,
                         onPressed: () {},
                       ),
                       Visibility(
-                        visible: !isDependent,
+                        visible: showSettings,
                         maintainSize: true,
                         maintainAnimation: true,
                         maintainState: true,
                         child: _ActionButton(
                           icon: Icons.settings_outlined,
                           color: AppTheme.elderPrimary,
-                          onPressed: () {},
+                          onPressed: () => context.push('/settings'),
                         ),
                       ),
                     ],
