@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/features/onboarding/domain/companion_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/companion_auth_state.dart';
@@ -16,13 +18,17 @@ class CompanionRegisterScreen extends ConsumerStatefulWidget {
 class _CompanionRegisterScreenState
     extends ConsumerState<CompanionRegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -31,6 +37,11 @@ class _CompanionRegisterScreenState
     ref.read(companionAuthControllerProvider.notifier).register(
           _emailController.text.trim(),
           _passwordController.text,
+          name: _nameController.text.trim(),
+          // El validador garantiza que la normalización no devuelve null.
+          phoneNumber: EmergencyContact.normalizeSpanishPhone(
+            _phoneController.text,
+          )!,
         );
   }
 
@@ -76,6 +87,20 @@ class _CompanionRegisterScreenState
                     ),
                     const SizedBox(height: 32),
                     TextFormField(
+                      controller: _nameController,
+                      textCapitalization: TextCapitalization.words,
+                      enabled: !isLoading,
+                      decoration:
+                          const InputDecoration(labelText: 'Tu nombre'),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Introduce tu nombre';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
@@ -99,6 +124,32 @@ class _CompanionRegisterScreenState
                       validator: (value) {
                         if (value == null || value.length < 6) {
                           return 'Mínimo 6 caracteres';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Al vincular, este teléfono se convierte en el contacto
+                    // de emergencia del mayor (desnormalizado en su doc).
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      enabled: !isLoading,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(9),
+                      ],
+                      decoration: const InputDecoration(
+                        labelText: 'Tu teléfono',
+                        prefixText: '+34 ',
+                        helperText:
+                            'El mayor podrá llamarte desde su botón de emergencia',
+                      ),
+                      validator: (value) {
+                        final normalized =
+                            EmergencyContact.normalizeSpanishPhone(value ?? '');
+                        if (normalized == null) {
+                          return 'Introduce un teléfono español de 9 dígitos';
                         }
                         return null;
                       },

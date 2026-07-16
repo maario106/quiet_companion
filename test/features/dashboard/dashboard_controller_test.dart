@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_controller.dart';
@@ -53,10 +54,18 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> ensureCompanionUserDoc(String uid) async {}
+  Future<void> ensureCompanionUserDoc(
+    String uid, {
+    String? name,
+    String? phoneNumber,
+  }) async {}
 
   @override
   Future<void> updateName(String uid, String name) async {}
+
+  @override
+  Future<void> updateEmergencyContact(
+      String uid, EmergencyContact contact) async {}
 
   @override
   Future<void> linkCompanionToElder(String code, String companionId) async {}

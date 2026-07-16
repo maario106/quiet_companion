@@ -1,3 +1,4 @@
+import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 
 enum UserRole { elder, companion, unassigned }
@@ -13,6 +14,16 @@ class UserModel {
   final String? linkedElderId;
   final UserPreferences preferences;
 
+  /// Teléfono propio del usuario en E.164. Hoy solo lo rellena el familiar
+  /// en su registro; es la fuente de la desnormalización de [emergencyContact]
+  /// en el documento del mayor al vincular.
+  final String? phoneNumber;
+
+  /// Contacto de emergencia del mayor. null es un estado legal y permanente:
+  /// mayor que aún no ha configurado nada, o documento anterior a esta
+  /// feature. El camino null-safe es el mismo en ambos casos.
+  final EmergencyContact? emergencyContact;
+
   const UserModel({
     required this.id,
     this.name,
@@ -22,6 +33,8 @@ class UserModel {
     this.linkedCompanionId,
     this.linkedElderId,
     this.preferences = const UserPreferences(),
+    this.phoneNumber,
+    this.emergencyContact,
   });
 
   static const _unset = Object();
@@ -35,6 +48,8 @@ class UserModel {
     Object? linkedCompanionId = _unset,
     Object? linkedElderId = _unset,
     UserPreferences? preferences,
+    Object? phoneNumber = _unset,
+    Object? emergencyContact = _unset,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -49,6 +64,11 @@ class UserModel {
           ? this.linkedElderId
           : linkedElderId as String?,
       preferences: preferences ?? this.preferences,
+      phoneNumber:
+          phoneNumber == _unset ? this.phoneNumber : phoneNumber as String?,
+      emergencyContact: emergencyContact == _unset
+          ? this.emergencyContact
+          : emergencyContact as EmergencyContact?,
     );
   }
 
@@ -62,6 +82,11 @@ class UserModel {
       'linkedCompanionId': linkedCompanionId,
       'linkedElderId': linkedElderId,
       'preferences': preferences.toMap(),
+      'phoneNumber': phoneNumber,
+      // Se omite la clave cuando es null para no crear el campo en los
+      // documentos que no lo necesitan.
+      if (emergencyContact != null)
+        'emergencyContact': emergencyContact!.toMap(),
     };
   }
 
@@ -77,6 +102,8 @@ class UserModel {
       preferences: map['preferences'] != null
           ? UserPreferences.fromMap(map['preferences'])
           : const UserPreferences(),
+      phoneNumber: map['phoneNumber'] as String?,
+      emergencyContact: EmergencyContact.fromMapOrNull(map['emergencyContact']),
     );
   }
 }
