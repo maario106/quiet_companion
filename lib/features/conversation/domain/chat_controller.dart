@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/services/gemini_service.dart';
 import 'package:quiet_companion/core/services/speech_service.dart';

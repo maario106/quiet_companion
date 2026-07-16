@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
+import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/features/onboarding/data/auth_repository.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_state.dart';

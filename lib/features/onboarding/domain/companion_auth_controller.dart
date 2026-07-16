@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'companion_auth_state.dart';
 import '../data/auth_repository.dart';
 
@@ -48,11 +49,22 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
     }
   }
 
-  Future<void> register(String email, String password) async {
+  /// [name] y [phoneNumber] (E.164) se desnormalizan en el documento del
+  /// mayor al vincular, como su contacto de emergencia.
+  Future<void> register(
+    String email,
+    String password, {
+    required String name,
+    required String phoneNumber,
+  }) async {
     state = state.copyWith(status: CompanionAuthStatus.loading, errorMessage: '');
     try {
       final uid = await _authRepository.registerWithEmail(email, password);
-      await _authRepository.ensureCompanionUserDoc(uid);
+      await _authRepository.ensureCompanionUserDoc(
+        uid,
+        name: name,
+        phoneNumber: phoneNumber,
+      );
       state = state.copyWith(
         status: CompanionAuthStatus.authenticated,
         companionId: uid,

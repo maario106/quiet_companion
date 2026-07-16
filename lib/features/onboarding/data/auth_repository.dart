@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/constants/firestore_paths.dart';
+import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
 class AuthRepository {
@@ -62,14 +62,20 @@ class AuthRepository {
     return _auth.authStateChanges().map((user) => user?.uid);
   }
 
-  Future<void> ensureCompanionUserDoc(String uid) async {
+  Future<void> ensureCompanionUserDoc(
+    String uid, {
+    String? name,
+    String? phoneNumber,
+  }) async {
     final docRef = _firestore.collection(FirestorePaths.usersCollection).doc(uid);
     final snapshot = await docRef.get();
     if (snapshot.exists && snapshot.data() != null) return;
     final user = UserModel(
       id: uid,
+      name: name,
       role: UserRole.companion,
       autonomy: AutonomyStatus.none,
+      phoneNumber: phoneNumber,
     );
     await docRef.set(user.toMap(), SetOptions(merge: true));
   }
@@ -81,13 +87,24 @@ class AuthRepository {
         .update({'name': name});
   }
 
+  /// Escribe el contacto de emergencia elegido por el mayor (source: manual).
+  Future<void> updateEmergencyContact(
+      String uid, EmergencyContact contact) async {
+    await _firestore
+        .collection(FirestorePaths.usersCollection)
+        .doc(uid)
+        .update({'emergencyContact': contact.toMap()});
+  }
+
   // TODO: Considerar sustituir esta función por una cloud function más segura.
   Future<void> linkCompanionToElder(String code, String companionId) async {
-    // 1. Buscamos si existe un Mayor con ese código exacto
+    // 1. Buscamos si existe un Mayor con ese código exacto. Las transacciones
+    // del cliente no admiten queries, así que la búsqueda va fuera y el código
+    // se revalida dentro leyendo el documento.
     final query = await _firestore
         .collection(FirestorePaths.usersCollection)
         .where('linkCode', isEqualTo: code)
-        .where('role', isEqualTo: UserRole.elder.name) // Asegúrate de cómo guardas los enums
+        .where('role', isEqualTo: UserRole.elder.name)
         .limit(1)
         .get();
 
@@ -95,35 +112,54 @@ class AuthRepository {
       throw Exception('El código no es válido o ya ha caducado.');
     }
 
-    // 2. ¡Lo hemos encontrado! Extraemos sus datos
-    final elderDoc = query.docs.first;
-    final elderId = elderDoc.id;
+    final elderRef = query.docs.first.reference;
+    final companionRef =
+        _firestore.collection(FirestorePaths.usersCollection).doc(companionId);
 
-    // 3. Preparamos una operación Atómica (Batch). O se hace todo, o no se hace nada.
-    final batch = _firestore.batch();
-    final companionRef = _firestore.collection(FirestorePaths.usersCollection).doc(companionId);
+    // 2. Transacción (antes era un WriteBatch): necesitamos LEER el doc del
+    // mayor antes de escribir para respetar la precedencia del contacto de
+    // emergencia — una vinculación nunca sobrescribe un contacto manual.
+    await _firestore.runTransaction((transaction) async {
+      final elderSnap = await transaction.get(elderRef);
+      final companionSnap = await transaction.get(companionRef);
 
-    // Actualizamos al Mayor
-    batch.update(elderDoc.reference, {
-      'linkedCompanionId': companionId,
-      'autonomy': AutonomyStatus.dependent.name,
-      'linkCode': FieldValue.delete(), // Borramos el código para que no se use dos veces
+      if (!elderSnap.exists || elderSnap.data()?['linkCode'] != code) {
+        throw Exception('El código no es válido o ya ha caducado.');
+      }
+
+      final elderUpdate = <String, dynamic>{
+        'linkedCompanionId': companionId,
+        'autonomy': AutonomyStatus.dependent.name,
+        'linkCode': FieldValue.delete(), // El código es de un solo uso
+      };
+
+      // Desnormalización del contacto de emergencia (el mayor solo lee su
+      // propio doc, sin lecturas cross-user). Solo si el familiar tiene
+      // teléfono y el mayor no eligió ya un contacto manual.
+      final existingContact =
+          EmergencyContact.fromMapOrNull(elderSnap.data()?['emergencyContact']);
+      final companionPhone = companionSnap.data()?['phoneNumber'] as String?;
+      final companionName = companionSnap.data()?['name'] as String?;
+
+      final elderChoseManually =
+          existingContact?.source == EmergencyContactSource.manual;
+      if (!elderChoseManually &&
+          companionPhone != null &&
+          companionPhone.isNotEmpty) {
+        elderUpdate['emergencyContact'] = EmergencyContact(
+          name: (companionName == null || companionName.isEmpty)
+              ? 'Mi familiar'
+              : companionName,
+          phone: companionPhone,
+          source: EmergencyContactSource.companion,
+        ).toMap();
+      }
+
+      transaction.update(elderRef, elderUpdate);
+      transaction.update(companionRef, {
+        'linkedElderId': elderRef.id,
+        'autonomy': AutonomyStatus.linked.name,
+      });
     });
-
-    // Actualizamos al Familiar
-    batch.update(companionRef, {
-      'linkedElderId': elderId,
-      'autonomy': AutonomyStatus.linked.name,
-    });
-
-    // 4. Ejecutamos los cambios en la nube
-    await batch.commit();
   }
 }
-
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(
-    auth: FirebaseAuth.instance,
-    firestore: FirebaseFirestore.instance,
-  );
-});

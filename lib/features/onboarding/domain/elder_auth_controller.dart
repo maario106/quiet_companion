@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'elder_auth_state.dart';
 import '../data/auth_repository.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 
 class ElderAuthController extends StateNotifier<AuthState> {
   ElderAuthController(this._authRepository)
