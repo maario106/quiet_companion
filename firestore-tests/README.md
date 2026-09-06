@@ -34,15 +34,20 @@ Si tu JDK 21 está en otra ruta, exporta `JDK21` y no toques nada más. Ojo:
 |---|---|
 | el dueño gobierna su documento | Mayor y familiar pueden con lo suyo, y solo con lo suyo |
 | el familiar vinculado y su mayor | El panel escribe `preferences` y `name`; no toca rol, autonomía ni contacto de emergencia |
-| vinculación por código | Solo se reclama a un mayor **con código libre**, solo para uno mismo, sin colar campos extra |
+| la vinculación ya no se hace desde el cliente | Nadie puede reclamar a un mayor desde la app, ni con código libre |
 | un autenticado cualquiera | No lee ni escribe datos ajenos, no vuelca la colección |
 | sin autenticar | No toca nada |
 | colecciones que no existen | El deny por defecto cubre `/pairings` y `/alerts` |
-| **HUECO TEMPORAL** | Comprueba que los permisos abiertos a propósito **siguen abiertos** |
+| `/users` no es enumerable | La búsqueda por `linkCode` está denegada desde cualquier cliente |
 
-El último grupo es deliberado. La búsqueda por `linkCode` obliga a permitir
-consultas sobre `/users`, y las reglas no pueden inspeccionar cláusulas `where`
-(solo `request.query.limit`). Esos tres casos son el recordatorio ejecutable de
-lo que la callable `validateAndLink` tiene que cerrar (RNF-9, ADR-0008): cuando
-exista, se invierten a `assertFails` y las dos líneas marcadas en
-`firestore.rules` desaparecen.
+## La vinculación
+
+`allow list: if false`. La búsqueda por código era lo único que obligaba a
+dejar `/users` consultable, y desde la fase 2 la hace `validateAndLink` con el
+Admin SDK, que se salta estas reglas. Las reglas puras de esa función (qué
+contacto de emergencia gana, cómo se normaliza el código) se testean aparte,
+sin emulador:
+
+```bash
+cd functions && npm test
+```

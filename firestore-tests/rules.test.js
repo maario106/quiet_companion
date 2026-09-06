@@ -7,10 +7,9 @@
  *
  *   cd firestore-tests && npm test
  *
- * Los casos marcados HUECO TEMPORAL comprueban que un permiso deliberadamente
- * abierto SIGUE abierto. No son un descuido: son el recordatorio ejecutable de
- * lo que la callable `validateAndLink` tiene que cerrar (RNF-9). Cuando se
- * implemente, estos casos se invierten a `assertFails`.
+ * El último grupo era, hasta que existió `validateAndLink`, un recordatorio
+ * ejecutable de lo que faltaba por cerrar. Ahora comprueba lo contrario: que
+ * `/users` no se puede enumerar ni leer a ciegas desde un cliente (RNF-9).
  */
 
 import { readFileSync } from 'node:fs';
@@ -180,17 +179,19 @@ describe('el familiar vinculado y su mayor', () => {
   });
 });
 
-describe('vinculación por código', () => {
-  it('reclama a un mayor con código libre poniéndose como familiar', async () => {
-    // Mitad de la transacción de linkCompanionToElder que toca al mayor.
-    await assertSucceeds(updateDoc(userRef(INTRUSO, ELDER_LIBRE), {
+describe('la vinculación ya no se hace desde el cliente', () => {
+  // `validateAndLink` escribe con el Admin SDK, que se salta estas reglas.
+  // Lo que se comprueba aquí es que NADIE puede replicar esa escritura desde
+  // la app, ni siquiera sobre un mayor que todavía tiene código libre.
+  it('no se puede reclamar a un mayor con código libre', async () => {
+    await assertFails(updateDoc(userRef(INTRUSO, ELDER_LIBRE), {
       linkedCompanionId: INTRUSO,
       autonomy: 'dependent',
       linkCode: deleteField(),
     }));
   });
 
-  it('NO puede reclamar a un mayor que ya tiene familiar', async () => {
+  it('no se puede reclamar a un mayor ya vinculado', async () => {
     await assertFails(updateDoc(userRef(INTRUSO, ELDER_VINCULADO), {
       linkedCompanionId: INTRUSO,
       autonomy: 'dependent',
@@ -198,20 +199,9 @@ describe('vinculación por código', () => {
     }));
   });
 
-  it('NO puede vincular a un tercero: solo puede reclamarse a sí mismo', async () => {
-    await assertFails(updateDoc(userRef(INTRUSO, ELDER_LIBRE), {
-      linkedCompanionId: 'otro-familiar',
-      autonomy: 'dependent',
-      linkCode: deleteField(),
-    }));
-  });
-
-  it('NO puede aprovechar la vinculación para cambiar otros campos', async () => {
-    await assertFails(updateDoc(userRef(INTRUSO, ELDER_LIBRE), {
+  it('un familiar no puede robarle el vínculo a otro', async () => {
+    await assertFails(updateDoc(userRef(INTRUSO, ELDER_VINCULADO), {
       linkedCompanionId: INTRUSO,
-      autonomy: 'dependent',
-      linkCode: deleteField(),
-      name: 'Nombre robado',
     }));
   });
 });
@@ -268,24 +258,32 @@ describe('colecciones que no existen: denegadas por defecto', () => {
   });
 });
 
-describe('HUECO TEMPORAL — lo que validateAndLink debe cerrar (RNF-9)', () => {
-  it('la búsqueda por linkCode con limit(1) está permitida a cualquiera', async () => {
+describe('`/users` no es enumerable desde un cliente (RNF-9)', () => {
+  it('la búsqueda por linkCode está denegada, incluso con limit(1)', async () => {
     const q = query(
       collection(db(INTRUSO), 'users'),
       where('linkCode', '==', 'AB23'),
       where('role', '==', 'elder'),
       limit(1),
     );
-    await assertSucceeds(getDocs(q));
+    await assertFails(getDocs(q));
   });
 
-  it('una consulta limit(1) SIN filtro también pasa: se puede enumerar despacio', async () => {
-    await assertSucceeds(
+  it('una consulta limit(1) sin filtro tampoco pasa', async () => {
+    await assertFails(
       getDocs(query(collection(db(INTRUSO), 'users'), limit(1))),
     );
   });
 
-  it('el documento de un mayor pendiente de vincular es legible por cualquiera', async () => {
-    await assertSucceeds(getDoc(userRef(INTRUSO, ELDER_LIBRE)));
+  it('el documento de un mayor pendiente de vincular ya no es legible', async () => {
+    await assertFails(getDoc(userRef(INTRUSO, ELDER_LIBRE)));
+  });
+
+  it('ni siquiera un familiar registrado puede buscar por código', async () => {
+    await assertFails(getDocs(query(
+      collection(db(FAMILIAR), 'users'),
+      where('linkCode', '==', 'AB23'),
+      limit(1),
+    )));
   });
 });

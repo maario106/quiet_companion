@@ -9,9 +9,9 @@ rules_version = '2';
 // "Error al guardar". Los tests de `firestore-tests/` existen para que eso se
 // vea al ejecutar y no en el móvil de un mayor.
 //
-// Dos permisos están marcados HUECO TEMPORAL: son la búsqueda del código de
-// vinculación, que las reglas no pueden acotar (ver el comentario en `list`).
-// Los cierra la callable `validateAndLink` — RNF-9, ADR-0008.
+// `/users` es privado: cada uno ve su documento y el de su vinculado, y nada
+// más. La vinculación ya no necesita consultar la colección — la hace la
+// callable `validateAndLink` con credenciales de servidor (RNF-9, ADR-0008).
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -32,13 +32,9 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
 
-    // Lecturas defensivas con `get(campo, null)`: `linkCode` desaparece del
-    // documento al vincular (`FieldValue.delete()`), y en estas reglas leer un
-    // campo ausente con notación de punto deniega la operación entera.
-    function linkCode() {
-      return resource.data.get('linkCode', null);
-    }
-
+    // Lectura defensiva con `get(campo, null)`: en estas reglas, leer con
+    // notación de punto un campo ausente deniega la operación entera, y
+    // `linkedCompanionId` no existe hasta que hay vínculo.
     function companionOf() {
       return resource.data.get('linkedCompanionId', null);
     }
@@ -48,33 +44,19 @@ service cloud.firestore {
       return isSignedIn() && companionOf() == request.auth.uid;
     }
 
-    // Un mayor que aún espera familiar. Su documento es visible para cualquier
-    // autenticado porque la vinculación tiene que leerlo antes de que el
-    // vínculo exista. HUECO TEMPORAL.
-    function isUnclaimedElder() {
-      return isSignedIn() && linkCode() != null;
-    }
-
     match /users/{userId} {
 
       // ── Lectura ────────────────────────────────────────────────────────
-      // 1. El dueño lee su documento (`getUser`, `watchUser`).
-      // 2. El familiar vinculado lee el del mayor (panel, `getUser(elderId)`).
-      // 3. HUECO TEMPORAL: `transaction.get(elderRef)` en
-      //    `linkCompanionToElder` ocurre ANTES de que exista el vínculo, así
-      //    que ninguna de las dos primeras condiciones lo cubre.
-      allow get: if isOwner(userId)
-                 || isLinkedCompanion()
-                 || isUnclaimedElder();
+      // Solo por identificador, y solo dos casos: el dueño lee su documento
+      // (`getUser`, `watchUser`) y el familiar vinculado lee el de su mayor
+      // (panel, `getUser(elderId)`).
+      allow get: if isOwner(userId) || isLinkedCompanion();
 
-      // HUECO TEMPORAL: la búsqueda por código
-      // (`where('linkCode', isEqualTo: code)`) es una consulta de colección.
-      // Las reglas NO pueden inspeccionar las cláusulas `where`: o se permite
-      // consultar `/users`, o no hay vinculación. Lo único acotable es el
-      // tamaño, y `limit(1)` es lo que pide el repositorio. Un atacante todavía
-      // puede enumerar despacio paginando; es un badén, no un muro, y por eso
-      // esta línea tiene fecha de caducidad.
-      allow list: if isSignedIn() && request.query.limit <= 1;
+      // Nadie consulta la colección. Buscar al mayor por su código era lo
+      // único que lo exigía, y eso ahora corre en `validateAndLink` con
+      // credenciales de servidor. Sin esta línea abierta, `/users` deja de
+      // poder enumerarse desde un cliente.
+      allow list: if false;
 
       // ── Escritura ──────────────────────────────────────────────────────
       // Alta del propio documento: mayor anónimo en el onboarding
@@ -97,18 +79,11 @@ service cloud.firestore {
         //    reescribirle el contacto de emergencia.
         || (isLinkedCompanion() && changed().hasOnly(['preferences', 'name']))
 
-        // 3. Vinculación: reclamar un mayor que TIENE código libre,
-        //    poniéndose a sí mismo como familiar y sin tocar nada más. Un
-        //    mayor ya vinculado no tiene `linkCode`, así que no se le puede
-        //    robar el vínculo por esta vía.
-        || (isUnclaimedElder()
-            && request.resource.data.linkedCompanionId == request.auth.uid
-            && changed().hasOnly([
-                 'linkedCompanionId',
-                 'autonomy',
-                 'linkCode',
-                 'emergencyContact'
-               ]));
+        // 2b. La vinculación NO aparece aquí a propósito: la escribe
+        //     `validateAndLink` con el Admin SDK, que se salta estas reglas.
+        //     Un cliente no puede reclamar a un mayor por su cuenta, ni
+        //     siquiera a uno con código libre.
+        ;
     }
 
     // Todo lo demás, denegado. Cubre las colecciones que aún no existen: una
