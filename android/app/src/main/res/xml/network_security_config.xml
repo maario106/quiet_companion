@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  just_audio reproduce audio en memoria sirviéndolo desde un servidor HTTP
+  local (127.0.0.1) al que apunta a ExoPlayer. Desde Android 9 el tráfico en
+  claro está prohibido por defecto, así que ExoPlayer rechazaba el audio
+  sintetizado del propio proceso: "Cleartext HTTP traffic to 127.0.0.1 not
+  permitted".
+
+  Se abre el tráfico en claro SOLO hacia loopback. El resto de la app
+  (Firestore, Auth, la callable de síntesis) mantiene el bloqueo por defecto:
+  nada de esta excepción sale del dispositivo. Ver ADR-0020.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>
