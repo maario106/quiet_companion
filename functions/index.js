@@ -2,14 +2,24 @@
  * Cloud Functions de Quiet Companion.
  *
  * Codebase creado para ADR-0018: hasta ahora el proxy de Cloud Functions
- * estaba solo diseñado (ADR-0014, "Propuesta"). Contiene únicamente la
- * síntesis de voz; la clave de Gemini sigue viviendo en el cliente y su
+ * estaba solo diseñado (ADR-0014, "Propuesta").
+ *
+ * Contiene la síntesis de voz (`synthesizeSpeech`) y la vinculación
+ * (`validateAndLink`). La clave de Gemini sigue viviendo en el cliente y su
  * migración es trabajo aparte.
  */
 
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const textToSpeech = require("@google-cloud/text-to-speech");
+const {initializeApp} = require("firebase-admin/app");
+const {getFirestore, FieldValue} = require("firebase-admin/firestore");
+const {resolveEmergencyContact, normalizeLinkCode} = require("./pairing");
+
+initializeApp();
+
+/** Región de despliegue. Debe coincidir con `kFunctionsRegion` del cliente. */
+const REGION = "europe-west1";
 
 /**
  * Voz de síntesis. Constante de servidor: el cliente NUNCA envía parámetros
@@ -63,7 +73,7 @@ function ttsClient() {
  */
 exports.synthesizeSpeech = onCall(
     {
-      region: "europe-west1",
+      region: REGION,
       memory: "256MiB",
       timeoutSeconds: 30,
       // Guardarraíl de coste para un proyecto sin financiación: una fuga o un
@@ -114,5 +124,106 @@ exports.synthesizeSpeech = onCall(
         });
         throw new HttpsError("internal", "No se ha podido sintetizar la voz.");
       }
+    },
+);
+
+// ─── Vinculación mayor ↔ familiar (RNF-9, ADR-0008) ──────────────────────
+
+exports.validateAndLink = onCall(
+    {
+      region: REGION,
+      memory: "256MiB",
+      timeoutSeconds: 30,
+      maxInstances: 10,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Se requiere sesión iniciada.");
+      }
+
+      const code = normalizeLinkCode(request.data?.code);
+
+      if (code.length === 0) {
+        throw new HttpsError(
+            "invalid-argument",
+            "El código no es válido o ya ha caducado.",
+        );
+      }
+
+      const companionId = request.auth.uid;
+      const db = getFirestore();
+      const users = db.collection("users");
+
+      // La query va fuera de la transacción (las transacciones no admiten
+      // consultas) y el código se revalida dentro leyendo el documento: entre
+      // una cosa y otra otro familiar puede haberlo usado.
+      const found = await users
+          .where("linkCode", "==", code)
+          .where("role", "==", "elder")
+          .limit(1)
+          .get();
+
+      if (found.empty) {
+        throw new HttpsError(
+            "not-found",
+            "El código no es válido o ya ha caducado.",
+        );
+      }
+
+      const elderRef = found.docs[0].ref;
+      const companionRef = users.doc(companionId);
+
+      try {
+        await db.runTransaction(async (tx) => {
+          const [elderSnap, companionSnap] = await Promise.all([
+            tx.get(elderRef),
+            tx.get(companionRef),
+          ]);
+
+          if (!elderSnap.exists || elderSnap.data().linkCode !== code) {
+            throw new HttpsError(
+                "not-found",
+                "El código no es válido o ya ha caducado.",
+            );
+          }
+
+          // Guarda nueva: el cliente no podía comprobarlo sobre sí mismo. Un
+          // mayor anónimo no puede vincularse a otro mayor.
+          const companionData = companionSnap.data();
+          if (!companionSnap.exists || companionData.role !== "companion") {
+            throw new HttpsError(
+                "permission-denied",
+                "Solo un familiar registrado puede vincularse.",
+            );
+          }
+
+          const elderUpdate = {
+            linkedCompanionId: companionId,
+            autonomy: "dependent",
+            linkCode: FieldValue.delete(), // El código es de un solo uso.
+          };
+
+          const contact =
+            resolveEmergencyContact(elderSnap.data(), companionData);
+          if (contact) elderUpdate.emergencyContact = contact;
+
+          tx.update(elderRef, elderUpdate);
+          tx.update(companionRef, {
+            linkedElderId: elderRef.id,
+            autonomy: "linked",
+          });
+        });
+      } catch (error) {
+        if (error instanceof HttpsError) throw error;
+        // El detalle se queda en el log: al familiar no le sirve de nada y
+        // puede contener identificadores de otra persona.
+        logger.error("Fallo de vinculación", {
+          companionId,
+          error: error.message,
+        });
+        throw new HttpsError("internal", "No se ha podido vincular.");
+      }
+
+      return {elderId: elderRef.id};
     },
 );
