@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Elder and caregiver profile documents, keyed by anonymous UID
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+      allow delete: if false;
+
+      match /{subcollection=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Pairing codes: written and validated server-side only
+    match /pairings/{code} {
+      allow read, write: if false;
+    }
+
+    // Alerts: caregiver reads, function writes
+    match /alerts/{alertId} {
+      allow read: if isSignedIn()
+                  && request.auth.uid == resource.data.caregiverUid;
+      // acknowledgement flips status only; nothing else mutable
+      allow update: if isSignedIn()
+                    && request.auth.uid == resource.data.caregiverUid
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['status', 'acknowledgedAt']);
+      allow create, delete: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
