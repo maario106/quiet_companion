@@ -1,3 +1,4 @@
+import 'package:quiet_companion/core/config/preference_scales.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
@@ -42,6 +43,25 @@ final List<SettingsRow> settingsRows = [
         user.emergencyContact?.source != EmergencyContactSource.companion,
     route: '/settings/emergency-contact',
   ),
+  // Accesibilidad local del mayor (ADR-0013, CU-05/RF-5): las mismas tres
+  // magnitudes que el familiar mueve con deslizadores, aquí como escalas de
+  // peldaños con nombre. Se derivan de `preferenceScales` en vez de
+  // escribirse a mano para que añadir un ajuste siga siendo un solo sitio.
+  //
+  // Visibles para TODO mayor, vinculado o independiente. La alternativa
+  // (limitarlas al independiente, que es la letra de CU-05) dejaba sin
+  // ninguna fila —y por tanto sin botón de ajustes, `home_screen.dart:57`— al
+  // mayor vinculado cuyo contacto de emergencia fija el familiar. Que dos
+  // personas puedan tocar el mismo valor no necesita arbitraje: a diferencia
+  // del contacto de emergencia, aquí no hay autoridad que proteger, y gana la
+  // última escritura.
+  for (final scale in preferenceScales)
+    SettingsRow(
+      title: scale.title,
+      value: (user) => scale.labelFor(user.preferences),
+      visible: (user) => true,
+      route: scale.route,
+    ),
 ];
 
 /// Filas visibles para [user]. La usan HomeScreen (botón visible si hay ≥ 1

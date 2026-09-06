@@ -67,6 +67,11 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> updateEmergencyContact(
       String uid, EmergencyContact contact) async {}
 
+  /// Ruta del mayor sobre sus propias preferencias. El panel del familiar no
+  /// la usa (escribe por [saveUser]), pero el fake debe cubrir la interfaz.
+  @override
+  Future<void> updatePreferences(String uid, UserPreferences prefs) async {}
+
   @override
   Future<void> linkCompanionToElder(String code, String companionId) async {}
 }

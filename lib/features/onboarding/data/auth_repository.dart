@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:quiet_companion/core/constants/firestore_paths.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/models/user_preferences.dart';
 
 class AuthRepository {
   const AuthRepository({
@@ -85,6 +86,18 @@ class AuthRepository {
         .collection(FirestorePaths.usersCollection)
         .doc(uid)
         .update({'name': name});
+  }
+
+  /// Escribe las preferencias de accesibilidad del mayor desde su propio
+  /// dispositivo. Actualiza solo el campo `preferences`, a diferencia de
+  /// [saveUser] (que reescribe el documento entero y usa el familiar desde su
+  /// panel): el mayor no debe poder tocar de rebote su rol, su vinculación ni
+  /// su contacto de emergencia al subir el tamaño de la letra.
+  Future<void> updatePreferences(String uid, UserPreferences prefs) async {
+    await _firestore
+        .collection(FirestorePaths.usersCollection)
+        .doc(uid)
+        .update({'preferences': prefs.toMap()});
   }
 
   /// Escribe el contacto de emergencia elegido por el mayor (source: manual).

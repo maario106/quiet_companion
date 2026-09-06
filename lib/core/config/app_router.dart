@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:quiet_companion/core/config/preference_scales.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
@@ -9,6 +10,7 @@ import 'package:quiet_companion/features/conversation/presentation/home_screen.d
 import 'package:quiet_companion/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_contact_setup_screen.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_screen.dart';
+import 'package:quiet_companion/features/settings/presentation/preference_stepper_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/settings_screen.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/companion_auth_controller.dart';
@@ -151,6 +153,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'emergency-contact',
             builder: (context, state) => const EmergencyContactSetupScreen(),
+          ),
+          // Una sola ruta paramétrica para las tres escalas de accesibilidad:
+          // añadir un ajuste es añadir una PreferenceScale, sin tocar aquí.
+          GoRoute(
+            path: 'preference/:id',
+            builder: (context, state) {
+              final scale =
+                  preferenceScaleBySlug(state.pathParameters['id']);
+              return scale == null
+                  ? const UnknownPreferenceScreen()
+                  : PreferenceStepperScreen(scale: scale);
+            },
           ),
         ],
       ),

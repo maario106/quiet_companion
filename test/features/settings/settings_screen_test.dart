@@ -48,20 +48,28 @@ Widget _buildSubject(UserModel user) {
 
 void main() {
   group('visibleSettingsRows (función compartida con HomeScreen)', () {
-    test('sin contacto (null) → 1 fila: el botón de ajustes se muestra', () {
-      expect(visibleSettingsRows(_elderSinConfigurar), hasLength(1));
+    // Contacto de emergencia + las tres escalas de accesibilidad (ADR-0021).
+    test('sin contacto (null) → contacto + 3 escalas', () {
+      expect(visibleSettingsRows(_elderSinConfigurar), hasLength(4));
     });
 
-    test('contacto manual → 1 fila: el botón de ajustes se muestra', () {
-      expect(visibleSettingsRows(_elderConContactoManual), hasLength(1));
+    test('contacto manual → contacto + 3 escalas', () {
+      expect(visibleSettingsRows(_elderConContactoManual), hasLength(4));
     });
 
-    test('contacto de vinculación (companion) → 0 filas: botón oculto', () {
-      expect(visibleSettingsRows(_elderAcompanado), isEmpty);
+    test('contacto de vinculación (companion) → oculta el contacto, deja las '
+        '3 escalas: el botón de ajustes ya no desaparece', () {
+      expect(visibleSettingsRows(_elderAcompanado), hasLength(3));
+      expect(
+        visibleSettingsRows(_elderAcompanado)
+            .any((row) => row.title == 'Contacto de emergencia'),
+        isFalse,
+      );
     });
 
     test('el valor de la fila muestra el nombre o el vacío accionable', () {
-      final row = visibleSettingsRows(_elderConContactoManual).single;
+      final row = visibleSettingsRows(_elderConContactoManual).first;
+      expect(row.title, equals('Contacto de emergencia'));
       expect(row.value(_elderConContactoManual), equals('María'));
       expect(row.value(_elderSinConfigurar), equals('Sin configurar'));
     });
@@ -86,7 +94,7 @@ void main() {
       expect(find.text('Sin configurar'), findsNothing);
     });
 
-    testWidgets('contacto de vinculación: 0 filas', (tester) async {
+    testWidgets('contacto de vinculación: sin fila de contacto, con escalas', (tester) async {
       await tester.pumpWidget(_buildSubject(_elderAcompanado));
       await tester.pumpAndSettle();
 
