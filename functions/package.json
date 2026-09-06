@@ -1,0 +1,19 @@
+{
+  "name": "quiet-companion-functions",
+  "description": "Cloud Functions de Quiet Companion",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "list-voices": "node scripts/list_voices.js",
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "@google-cloud/text-to-speech": "^6.0.1",
+    "firebase-functions": "^6.3.2"
+  }
+}
