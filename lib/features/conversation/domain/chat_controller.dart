@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
+import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/services/gemini_service.dart';
 import 'package:quiet_companion/core/services/speech_service.dart';
 import 'package:quiet_companion/core/services/tts_service.dart';
@@ -71,29 +72,57 @@ class ChatController extends StateNotifier<ChatState> {
   Future<void> startListening() async {
     final available = await _speechService.initiate();
 
-    if (available) {
-      state = state.copyWith(status: ChatStatus.listening);
-
-      _speechService.beginListening((recognizedText) {
-        state = state.copyWith(userMessage: recognizedText);
-      });
-    } else {
+    if (!available) {
       state = state.copyWith(
         status: ChatStatus.error,
         responseAI: 'No se ha podido acceder al micrófono.',
       );
+      return;
     }
+
+    state = state.copyWith(status: ChatStatus.listening, userMessage: '');
+
+    _speechService.beginListening(
+      onPartial: (text) {
+        // Los dos callbacks llegan desde temporizadores: el controlador puede
+        // haberse reconstruido (currentUserProvider) mientras el mayor hablaba.
+        if (!mounted || state.status != ChatStatus.listening) return;
+        state = state.copyWith(userMessage: text);
+      },
+      onFinal: (text) {
+        if (!mounted || state.status != ChatStatus.listening) return;
+        _submit(text);
+      },
+    );
   }
 
+  /// Cierre manual del turno: el mayor pulsa el botón sin esperar a la pausa.
   void stopListeningAndSend() {
-    _speechService.stopListening();
+    // Si el silencio ya cerró el turno, `status` ya no es `listening` y este
+    // camino no debe enviar por segunda vez.
+    if (state.status != ChatStatus.listening) return;
+    _submit(_speechService.stopListening());
+  }
 
-    final finalText = state.userMessage;
-    if (finalText.isNotEmpty) {
-      sendMessage(finalText);
-    } else {
-      state = state.copyWith(status: ChatStatus.initial);
+  /// Único punto de envío, compartido por el cierre automático y el manual.
+  void _submit(String text) {
+    final message = text.trim();
+    if (message.isEmpty) {
+      // Turno en vacío (nadie habló): se vuelve a reposo sin molestar al LLM
+      // ni enseñar un error, que no lo hay.
+      state = state.copyWith(status: ChatStatus.initial, userMessage: '');
+      return;
     }
+    state = state.copyWith(userMessage: message);
+    sendMessage(message);
+  }
+
+  @override
+  void dispose() {
+    // Nunca dejar el reconocedor abierto detrás de un controlador muerto: es
+    // el micrófono del mayor y el provider es de toda la app.
+    _speechService.cancelListening();
+    super.dispose();
   }
 }
 

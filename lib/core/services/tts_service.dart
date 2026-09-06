@@ -1,62 +1,33 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
-import 'package:quiet_companion/core/providers/current_user_provider.dart';
 
-class TtsService {
-  final FlutterTts _flutterTts = FlutterTts();
+/// Borde de plataforma de la síntesis de voz. Hermano de
+/// [EmergencyCallService]: interfaz + implementación de producción
+/// ([CloudTtsService]) + respaldo ([DeviceTtsService]) + fake para tests.
+///
+/// El flujo conversacional habla contra esta interfaz y no sabe si la voz
+/// viene de la nube o del motor del dispositivo (ADR-0017).
+abstract interface class TtsService {
+  /// Dice [text] en voz alta. Trocea internamente en frases, las sintetiza y
+  /// las reproduce en orden. Completa cuando ha terminado de sonar la última
+  /// (o antes, si [stop] la interrumpe).
+  ///
+  /// Es seguro llamarlo mientras ya se está hablando: la locución en curso se
+  /// detiene primero. Nunca lanza: un fallo de red acaba en la voz del
+  /// dispositivo, no en una excepción — el turno de conversación de un mayor
+  /// no puede romperse por un timeout.
+  Future<void> speak(String text);
 
-  TtsService() {
-    _initializeTts();
-  }
+  /// Corta la reproducción, descarta la síntesis en vuelo y vacía la cola.
+  /// Idempotente, y deja el servicio listo para el siguiente [speak].
+  Future<void> stop();
 
-  Future<void> _initializeTts() async {
-    await _flutterTts.setLanguage("es-ES");
-    await _flutterTts.setPitch(1.0);
-    await _flutterTts.awaitSpeakCompletion(true);
-  }
+  /// Aplica volumen y velocidad del mayor. La invoca el provider cuando
+  /// cambian en Firestore, no el flujo de conversación.
+  Future<void> applyPreferences(UserPreferences prefs);
 
-  // Aplica las preferencias del usuario en caliente. flutter_tts solo permite
-  // que volumen y velocidad afecten a la *siguiente* locución, no a la actual,
-  // así que no intentamos interrumpir la voz en curso.
-  Future<void> applyPreferences(UserPreferences prefs) async {
-    await _flutterTts.setVolume(prefs.volume);
-    await _flutterTts.setSpeechRate(prefs.speechRate);
-  }
+  /// Si hay una locución sonando o sintetizándose.
+  bool get isSpeaking;
 
-  Future<void> speak(String text) async {
-    await _flutterTts.speak(text);
-  }
-
-  Future<void> stop() async {
-    await _flutterTts.stop();
-  }
-
-  // flutter_tts no expone un dispose explícito; stop() libera recursos de la
-  // sesión de audio y es la equivalencia segura.
-  Future<void> dispose() async {
-    await _flutterTts.stop();
-  }
+  /// Libera los recursos de audio.
+  Future<void> dispose();
 }
-
-// Provider del [TtsService]. Escucha [currentUserProvider] y aplica las
-// preferencias del usuario (volumen, velocidad) cada vez que cambian en
-// Firestore. Mantiene el servicio sin estado sobre las preferencias: es el
-// provider quien orquesta la propagación.
-final ttsServiceProvider = Provider<TtsService>((ref) {
-  final service = TtsService();
-
-  ref.listen<AsyncValue<UserModel?>>(currentUserProvider, (previous, next) {
-    final prefs = next.valueOrNull?.preferences;
-    if (prefs == null) return;
-    service.applyPreferences(prefs);
-  });
-
-  // dispose() es Future<void>; envolverlo en una closure deja explícito que es
-  // fire-and-forget (el callback de onDispose es void Function()).
-  ref.onDispose(() {
-    service.dispose();
-  });
-  return service;
-});

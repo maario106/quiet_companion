@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/intentional_background_exit_provider.dart';
+import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/services/emergency_call_service.dart';
 import 'package:quiet_companion/core/services/speech_service.dart';
-import 'package:quiet_companion/core/services/tts_service.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
 /// Pantalla de llamada de emergencia del mayor. Se presenta como fullscreen

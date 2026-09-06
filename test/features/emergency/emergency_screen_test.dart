@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
-import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
+import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/services/emergency_call_service.dart';
 import 'package:quiet_companion/core/services/speech_service.dart';
-import 'package:quiet_companion/core/services/tts_service.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_screen.dart';
+
+import '../../helpers/fake_tts_service.dart';
 
 class FakeEmergencyCallService implements EmergencyCallService {
   final List<String> dialed = [];
@@ -21,40 +22,32 @@ class FakeEmergencyCallService implements EmergencyCallService {
   }
 }
 
-class FakeTtsService implements TtsService {
-  final List<String> spoken = [];
-  int stopCalls = 0;
-
-  @override
-  Future<void> applyPreferences(UserPreferences prefs) async {}
-
-  @override
-  Future<void> speak(String text) async {
-    spoken.add(text);
-  }
-
-  @override
-  Future<void> stop() async {
-    stopCalls++;
-  }
-
-  @override
-  Future<void> dispose() async {}
-}
-
 class FakeSpeechService implements SpeechService {
   int stopListeningCalls = 0;
+  int cancelListeningCalls = 0;
 
   @override
   Future<bool> initiate() async => true;
 
   @override
-  void beginListening(Function(String) onResult) {}
+  void beginListening({
+    required void Function(String transcript) onPartial,
+    required void Function(String transcript) onFinal,
+  }) {}
 
   @override
-  void stopListening() {
+  String stopListening() {
     stopListeningCalls++;
+    return '';
   }
+
+  @override
+  void cancelListening() {
+    cancelListeningCalls++;
+  }
+
+  @override
+  String get transcript => '';
 
   @override
   bool get isListening => false;
