@@ -73,7 +73,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> updatePreferences(String uid, UserPreferences prefs) async {}
 
   @override
-  Future<void> linkCompanionToElder(String code, String companionId) async {}
+  Future<String> linkCompanionToElder(String code) async => 'elder-1';
 }
 
 void main() {

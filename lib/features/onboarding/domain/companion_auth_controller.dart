@@ -84,13 +84,13 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
   Future<void> linkWithCode(String code) async {
     state = state.copyWith(status: CompanionAuthStatus.loading, errorMessage: '');
     try {
-      // TODO: Considerar cambio a cloud function
-      await _authRepository.linkCompanionToElder(code, state.companionId!);
-      final updatedUser = await _authRepository.getUser(state.companionId!);
+      // La callable devuelve el mayor vinculado: ya no hace falta releer el
+      // documento propio para enterarse de con quién nos han vinculado.
+      final elderId = await _authRepository.linkCompanionToElder(code);
 
       state = state.copyWith(
         status: CompanionAuthStatus.linked,
-        linkedElderId: updatedUser?.linkedElderId,
+        linkedElderId: elderId,
       );
     } catch (e) {
       state = state.copyWith(

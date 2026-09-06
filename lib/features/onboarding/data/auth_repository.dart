@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:quiet_companion/core/config/functions_config.dart';
 import 'package:quiet_companion/core/constants/firestore_paths.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
@@ -9,11 +11,14 @@ class AuthRepository {
   const AuthRepository({
     required FirebaseAuth auth,
     required FirebaseFirestore firestore,
+    required FirebaseFunctions functions,
   })  : _auth = auth,
-        _firestore = firestore;
+        _firestore = firestore,
+        _functions = functions;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions;
 
   Future<String> signInAnonymously() async {
     final credential = await _auth.signInAnonymously();
@@ -109,70 +114,36 @@ class AuthRepository {
         .update({'emergencyContact': contact.toMap()});
   }
 
-  // TODO: Considerar sustituir esta función por una cloud function más segura.
-  Future<void> linkCompanionToElder(String code, String companionId) async {
-    // 1. Buscamos si existe un Mayor con ese código exacto. Las transacciones
-    // del cliente no admiten queries, así que la búsqueda va fuera y el código
-    // se revalida dentro leyendo el documento.
-    final query = await _firestore
-        .collection(FirestorePaths.usersCollection)
-        .where('linkCode', isEqualTo: code)
-        .where('role', isEqualTo: UserRole.elder.name)
-        .limit(1)
-        .get();
+  /// Vincula al familiar autenticado con el mayor dueño de [code].
+  ///
+  /// La búsqueda y la transacción viven en la Cloud Function
+  /// `validateAndLink`, no aquí: encontrar al mayor obliga a consultar
+  /// `/users` por `linkCode`, y las reglas de Firestore no pueden acotar una
+  /// consulta de colección (no ven las cláusulas `where`). Mientras esto se
+  /// hacía en el cliente, `/users` tenía que ser consultable por cualquier
+  /// autenticado (RNF-9, ADR-0008).
+  ///
+  /// El identificador del familiar ya no es un parámetro: el servidor lo toma
+  /// de la sesión, así que nadie puede vincular a un tercero.
+  Future<String> linkCompanionToElder(String code) async {
+    try {
+      final result = await _functions
+          .httpsCallable(kValidateAndLinkCallable)
+          .call<dynamic>(<String, dynamic>{'code': code});
 
-    if (query.docs.isEmpty) {
-      throw Exception('El código no es válido o ya ha caducado.');
+      // El canal de plataforma entrega mapas sin tipar; se lee
+      // defensivamente en vez de castear, que falla en Android.
+      final data = result.data;
+      final elderId = data is Map ? data['elderId'] : null;
+      if (elderId is! String || elderId.isEmpty) {
+        throw Exception('No se ha podido vincular.');
+      }
+      return elderId;
+    } on FirebaseFunctionsException catch (error) {
+      // El mensaje de la Function ya viene en es-ES y redactado para el
+      // familiar; se reenvía tal cual para que la UI no cambie de texto
+      // respecto de la versión que hacía esto en el cliente.
+      throw Exception(error.message ?? 'No se ha podido vincular.');
     }
-
-    final elderRef = query.docs.first.reference;
-    final companionRef =
-        _firestore.collection(FirestorePaths.usersCollection).doc(companionId);
-
-    // 2. Transacción (antes era un WriteBatch): necesitamos LEER el doc del
-    // mayor antes de escribir para respetar la precedencia del contacto de
-    // emergencia — una vinculación nunca sobrescribe un contacto manual.
-    await _firestore.runTransaction((transaction) async {
-      final elderSnap = await transaction.get(elderRef);
-      final companionSnap = await transaction.get(companionRef);
-
-      if (!elderSnap.exists || elderSnap.data()?['linkCode'] != code) {
-        throw Exception('El código no es válido o ya ha caducado.');
-      }
-
-      final elderUpdate = <String, dynamic>{
-        'linkedCompanionId': companionId,
-        'autonomy': AutonomyStatus.dependent.name,
-        'linkCode': FieldValue.delete(), // El código es de un solo uso
-      };
-
-      // Desnormalización del contacto de emergencia (el mayor solo lee su
-      // propio doc, sin lecturas cross-user). Solo si el familiar tiene
-      // teléfono y el mayor no eligió ya un contacto manual.
-      final existingContact =
-          EmergencyContact.fromMapOrNull(elderSnap.data()?['emergencyContact']);
-      final companionPhone = companionSnap.data()?['phoneNumber'] as String?;
-      final companionName = companionSnap.data()?['name'] as String?;
-
-      final elderChoseManually =
-          existingContact?.source == EmergencyContactSource.manual;
-      if (!elderChoseManually &&
-          companionPhone != null &&
-          companionPhone.isNotEmpty) {
-        elderUpdate['emergencyContact'] = EmergencyContact(
-          name: (companionName == null || companionName.isEmpty)
-              ? 'Mi familiar'
-              : companionName,
-          phone: companionPhone,
-          source: EmergencyContactSource.companion,
-        ).toMap();
-      }
-
-      transaction.update(elderRef, elderUpdate);
-      transaction.update(companionRef, {
-        'linkedElderId': elderRef.id,
-        'autonomy': AutonomyStatus.linked.name,
-      });
-    });
   }
 }

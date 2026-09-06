@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:quiet_companion/core/config/functions_config.dart';
 import 'package:quiet_companion/core/config/tts_config.dart';
 
 /// Costura de red de la síntesis: separada de [CloudTtsService] para que la
@@ -21,7 +22,7 @@ abstract interface class TtsSynthesizer {
 class FunctionsTtsSynthesizer implements TtsSynthesizer {
   FunctionsTtsSynthesizer({FirebaseFunctions? functions})
       : _functions = functions ??
-            FirebaseFunctions.instanceFor(region: kTtsFunctionsRegion);
+            FirebaseFunctions.instanceFor(region: kFunctionsRegion);
 
   final FirebaseFunctions _functions;
 

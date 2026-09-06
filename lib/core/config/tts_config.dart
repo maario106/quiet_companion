@@ -9,13 +9,6 @@ library;
 /// Nombre de la callable de síntesis desplegada.
 const String kSynthesizeSpeechCallable = 'synthesizeSpeech';
 
-/// Región de despliegue de las Cloud Functions. Debe coincidir con la del
-/// despliegue real: el SDK apunta a `us-central1` por defecto y una región
-/// distinta da un 404 silencioso que aquí se traduciría en respaldo constante
-/// al TTS del dispositivo. Europa por cercanía y por coherencia con Firestore
-/// (`eur3`).
-const String kTtsFunctionsRegion = 'europe-west1';
-
 /// Tiempo máximo de espera por fragmento. Vencido, esa locución pasa al TTS
 /// del dispositivo: sin reintentos ni backoff (ADR-0017). Para esta población
 /// una voz peor pero inmediata es mejor que un silencio impredecible.
