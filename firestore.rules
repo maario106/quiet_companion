@@ -1,5 +1,18 @@
 rules_version = '2';
 
+// Reglas de Quiet Companion.
+//
+// Modelan lo que el código hace HOY, no lo que se querría que hiciera. Cada
+// permiso de abajo corresponde a una operación concreta de
+// `auth_repository.dart` o `dashboard_controller.dart`; si una de esas
+// operaciones cambia, estas reglas la denegarán en silencio y la app enseñará
+// "Error al guardar". Los tests de `firestore-tests/` existen para que eso se
+// vea al ejecutar y no en el móvil de un mayor.
+//
+// Dos permisos están marcados HUECO TEMPORAL: son la búsqueda del código de
+// vinculación, que las reglas no pueden acotar (ver el comentario en `list`).
+// Los cierra la callable `validateAndLink` — RNF-9, ADR-0008.
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -7,39 +20,99 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
 
-    // Elder and caregiver profile documents, keyed by anonymous UID
+    // Campos que cambian de valor en esta escritura. Un `set()` que reenvía el
+    // documento entero pero solo altera un campo produce una sola clave aquí:
+    // por eso `saveUser` del panel del familiar pasa el filtro de abajo pese a
+    // reescribir el documento completo.
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // Lecturas defensivas con `get(campo, null)`: `linkCode` desaparece del
+    // documento al vincular (`FieldValue.delete()`), y en estas reglas leer un
+    // campo ausente con notación de punto deniega la operación entera.
+    function linkCode() {
+      return resource.data.get('linkCode', null);
+    }
+
+    function companionOf() {
+      return resource.data.get('linkedCompanionId', null);
+    }
+
+    // El familiar que ya está vinculado a ESTE mayor.
+    function isLinkedCompanion() {
+      return isSignedIn() && companionOf() == request.auth.uid;
+    }
+
+    // Un mayor que aún espera familiar. Su documento es visible para cualquier
+    // autenticado porque la vinculación tiene que leerlo antes de que el
+    // vínculo exista. HUECO TEMPORAL.
+    function isUnclaimedElder() {
+      return isSignedIn() && linkCode() != null;
+    }
+
     match /users/{userId} {
-      allow get, list: if isOwner(userId);
-      allow create, update: if isOwner(userId);
+
+      // ── Lectura ────────────────────────────────────────────────────────
+      // 1. El dueño lee su documento (`getUser`, `watchUser`).
+      // 2. El familiar vinculado lee el del mayor (panel, `getUser(elderId)`).
+      // 3. HUECO TEMPORAL: `transaction.get(elderRef)` en
+      //    `linkCompanionToElder` ocurre ANTES de que exista el vínculo, así
+      //    que ninguna de las dos primeras condiciones lo cubre.
+      allow get: if isOwner(userId)
+                 || isLinkedCompanion()
+                 || isUnclaimedElder();
+
+      // HUECO TEMPORAL: la búsqueda por código
+      // (`where('linkCode', isEqualTo: code)`) es una consulta de colección.
+      // Las reglas NO pueden inspeccionar las cláusulas `where`: o se permite
+      // consultar `/users`, o no hay vinculación. Lo único acotable es el
+      // tamaño, y `limit(1)` es lo que pide el repositorio. Un atacante todavía
+      // puede enumerar despacio paginando; es un badén, no un muro, y por eso
+      // esta línea tiene fecha de caducidad.
+      allow list: if isSignedIn() && request.query.limit <= 1;
+
+      // ── Escritura ──────────────────────────────────────────────────────
+      // Alta del propio documento: mayor anónimo en el onboarding
+      // (`saveUser`) y familiar en el registro (`ensureCompanionUserDoc`).
+      allow create: if isOwner(userId);
+
+      // El borrado de una cuenta es una acción explícita de datos, nunca un
+      // efecto de la app. Si algún día hace falta, va por Cloud Function.
       allow delete: if false;
 
-      match /{subcollection=**} {
-        allow read, write: if isOwner(userId);
-      }
+      allow update: if
+        // 1. El dueño gobierna su documento: nombre, preferencias y contacto
+        //    de emergencia (`updateName`, `updatePreferences`,
+        //    `updateEmergencyContact`), y su mitad de la transacción de
+        //    vinculación (`linkedElderId`, `autonomy`).
+        isOwner(userId)
+
+        // 2. El familiar vinculado solo toca las dos cosas que su panel
+        //    edita. No puede cambiar el rol del mayor, romperle el vínculo ni
+        //    reescribirle el contacto de emergencia.
+        || (isLinkedCompanion() && changed().hasOnly(['preferences', 'name']))
+
+        // 3. Vinculación: reclamar un mayor que TIENE código libre,
+        //    poniéndose a sí mismo como familiar y sin tocar nada más. Un
+        //    mayor ya vinculado no tiene `linkCode`, así que no se le puede
+        //    robar el vínculo por esta vía.
+        || (isUnclaimedElder()
+            && request.resource.data.linkedCompanionId == request.auth.uid
+            && changed().hasOnly([
+                 'linkedCompanionId',
+                 'autonomy',
+                 'linkCode',
+                 'emergencyContact'
+               ]));
     }
 
-    // Pairing codes: written and validated server-side only
-    match /pairings/{code} {
-      allow read, write: if false;
-    }
-
-    // Alerts: caregiver reads, function writes
-    match /alerts/{alertId} {
-      allow read: if isSignedIn()
-                  && request.auth.uid == resource.data.caregiverUid;
-      // acknowledgement flips status only; nothing else mutable
-      allow update: if isSignedIn()
-                    && request.auth.uid == resource.data.caregiverUid
-                    && request.resource.data.diff(resource.data)
-                         .affectedKeys().hasOnly(['status', 'acknowledgedAt']);
-      allow create, delete: if false;
-    }
-
-    // Default deny
+    // Todo lo demás, denegado. Cubre las colecciones que aún no existen: una
+    // regla para algo que nadie escribe es una afirmación que nadie verifica.
     match /{document=**} {
       allow read, write: if false;
     }
