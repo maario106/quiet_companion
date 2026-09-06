@@ -37,16 +37,18 @@ class SettingsScreen extends ConsumerWidget {
                 BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
             child: user == null
                 ? const Center(child: CircularProgressIndicator())
-                : ListView(
+                : ListView.separated(
                     padding: EdgeInsets.all(AppTheme.screenPadding(context)),
-                    children: [
-                      for (final row in rows)
-                        _SettingsRowTile(
-                          row: row,
-                          value: row.value(user),
-                          textScale: textScale,
-                        ),
-                    ],
+                    itemCount: rows.length,
+                    // Separación explícita entre filas: son destinos táctiles
+                    // grandes y contiguos, y pegadas invitan al toque erróneo.
+                    // Mismo hueco que entre los botones de EmergencyScreen.
+                    separatorBuilder: (_, __) => const SizedBox(height: 24),
+                    itemBuilder: (context, index) => _SettingsRowTile(
+                      row: rows[index],
+                      value: rows[index].value(user),
+                      textScale: textScale,
+                    ),
                   ),
           ),
         ),
