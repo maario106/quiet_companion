@@ -1,0 +1,272 @@
+\documentclass[a4paper,11pt]{book}
+%\documentclass[a4paper,twoside,11pt,titlepage]{book}
+
+\usepackage[
+  a4paper,
+  inner=35mm,      % margen interior (libro a doble cara)
+  outer=30mm,      % margen exterior
+  top=25mm,        % margen superior real
+  bottom=30mm,     % margen inferior
+  headheight=10pt, % altura de la cabecera para fancyhdr
+  headsep=15pt,    % separación cabecera–texto (reduce “aire” arriba)
+  includehead      % cuenta la cabecera dentro del margen superior
+]{geometry}
+
+
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+
+\usepackage{csquotes}
+\MakeOuterQuote{"}   % permite usar "" como comillas tipográficas sin conflicto con babel
+
+\usepackage[
+  style = apa,
+  backend = biber,
+  ]
+{biblatex}
+\addbibresource{bibliografia.bib}
+%\bibliography{bibliografia/bibliografia}\addcontentsline{toc}{chapter}{Bibliografía}
+
+% \usepackage[style=list, number=none]{glossary} %
+%\usepackage{titlesec}
+%\usepackage{pailatino}
+
+\decimalpoint
+\usepackage{dcolumn}
+\newcolumntype{.}{D{.}{\esperiod}{-1}}
+\makeatletter
+\addto\shorthandsspanish{\let\esperiod\es@period@code}
+\makeatother
+
+%para los colores de las tablas
+\usepackage[table,xcdraw]{xcolor}
+
+%\usepackage[chapter]{algorithm}
+\RequirePackage{verbatim}
+%\RequirePackage[Glenn]{fncychap}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{afterpage}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{pdflscape}
+\usepackage{longtable}
+\usepackage{amsmath}
+
+\usepackage{booktabs}   % \toprule, \midrule, \bottomrule
+\usepackage{tabularx}   % columnas que se ajustan al ancho
+\usepackage{array}      % control fino de columnas
+\usepackage{ragged2e}   % \RaggedRight en celdas justificadas
+\usepackage{rotating}   % tabla apaisada (sidewaystable) para la de 7 columnas
+\usepackage{enumitem}   % nosep, leftmargin=* en listas dentro de tablas
+\usepackage{tikz}       % línea de hitos del capítulo 5 (cronología del desarrollo)
+% Opcional, para zebra striping:
+% \usepackage[table]{xcolor}
+
+\usepackage[pdfborder={000}]{hyperref} %referencia
+
+\DeclareCiteCommand{\citep}[\mkbibparens]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}\usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+
+% ********************************************************************
+% Re-usable information
+% ********************************************************************
+\newcommand{\director}{Daniel Bolaños Martínez}
+\newcommand{\otrodirector}{Alberto Durán López}
+\newcommand{\thetitle}{Título del Trabajo}
+\newcommand{\thetitleen}{Title in english}
+\newcommand{\theauthor}{Mario Rosas Navarro}
+\newcommand{\curso}{2025-2026}
+\newcommand{\dni}{77650905FF}
+\newcommand{\grado}{Doble Grado en Ingeniería Informática - Administración y Dirección de empresas}
+\newcommand{\myFaculty}{Escuela Técnica Superior de Ingenierías Informática y de
+Telecomunicación}
+\newcommand{\myFacultyShort}{E.T.S. de Ingenierías Informática y de
+Telecomunicación}
+\newcommand{\myUni}{\protect{Universidad de Granada}}
+\newcommand{\myLocation}{Granada a \today.}
+\newcommand{\myVersion}{Version 0.1}
+
+
+\hypersetup{
+pdfauthor = {\theauthor (email (en) ugr (punto) es)},
+pdftitle = {\thetitle},
+pdfsubject = {},
+pdfkeywords = {palabra_clave1, palabra_clave2, palabra_clave3, ...},
+pdfcreator = {LaTeX con el paquete ....},
+pdfproducer = {pdflatex}
+}
+
+%\hyphenation{}
+
+
+%\usepackage{doxygen/doxygen}
+%\usepackage{pdfpages}
+\usepackage{url}
+\usepackage[type={CC}, modifier={by-sa}, version={4.0}]{doclicense}
+\usepackage{hyperref}
+\usepackage{hyperxmp}
+\usepackage{colortbl,longtable}
+\usepackage[stable]{footmisc}
+%\usepackage{index}
+
+\usepackage{soul}
+
+%\makeindex
+%\usepackage[style=long, cols=2,border=plain,toc=true,number=none]{glossary}
+% \makeglossary
+
+% Definición de comandos que me son tiles:
+%\renewcommand{\indexname}{Índice alfabético}
+%\renewcommand{\glossaryname}{Glosario}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LO]{\leftmark}
+\fancyhead[RE]{\rightmark}
+\fancyhead[RO,LE]{\textbf{\thepage}}
+\renewcommand{\chaptermark}[1]{\markboth{\textbf{#1}}{}}
+\renewcommand{\sectionmark}[1]{\markright{\textbf{\thesection. #1}}}
+
+%\setlength{\headheight}{1.5\headheight}
+
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+%Definimos los tipos teorema, ejemplo y definición podremos usar estos tipos
+%simplemente poniendo \begin{teorema} \end{teorema} ...
+\newtheorem{teorema}{Teorema}[chapter]
+\newtheorem{ejemplo}{Ejemplo}[chapter]
+\newtheorem{definicion}{Definición}[chapter]
+
+\addto\captionsspanish{%
+  \renewcommand{\tablename}{Tabla}%
+  \renewcommand{\listtablename}{Índice de Tablas}%
+  \renewcommand{\listfigurename}{Índice de Figuras}%
+}
+
+\definecolor{gray97}{gray}{.97}
+\definecolor{gray75}{gray}{.75}
+\definecolor{gray45}{gray}{.45}
+\definecolor{gray30}{gray}{.94}
+\definecolor{codegray}{RGB}{240,240,240}
+
+\newcommand{\code}[1]{%
+  \sethlcolor{codegray}\hl{\texttt{#1}}%
+}
+
+\lstset{ frame=Ltb,
+     framerule=0.5pt,
+     aboveskip=0.5cm,
+     framextopmargin=3pt,
+     framexbottommargin=3pt,
+     framexleftmargin=0.1cm,
+     framesep=0pt,
+     rulesep=.4pt,
+     backgroundcolor=\color{gray97},
+     rulesepcolor=\color{black},
+     %
+     stringstyle=\ttfamily,
+     showstringspaces = false,
+     basicstyle=\scriptsize\ttfamily,
+     commentstyle=\color{gray45},
+     keywordstyle=\bfseries,
+     %
+     numbers=left,
+     numbersep=6pt,
+     numberstyle=\tiny,
+     numberfirstline = false,
+     breaklines=true,
+   }
+ 
+% minimizar fragmentado de listados
+\lstnewenvironment{listing}[1][]
+   {\lstset{#1}\pagebreak[0]}{\pagebreak[0]}
+
+\lstdefinestyle{CodigoC}
+   {
+	basicstyle=\scriptsize,
+	frame=single,
+	language=C,
+	numbers=left
+   }
+\lstdefinestyle{CodigoC++}
+   {
+	basicstyle=\small,
+	frame=single,
+	backgroundcolor=\color{gray30},
+	language=C++,
+	numbers=left
+   }
+
+ 
+\lstdefinestyle{Consola}
+   {basicstyle=\scriptsize\bf\ttfamily,
+    backgroundcolor=\color{gray30},
+    frame=single,
+    numbers=none
+   }
+
+
+\newcommand{\bigrule}{\titlerule[0.5mm]}
+
+
+%Para conseguir que en las páginas en blanco no ponga cabecerass
+\makeatletter
+\def\clearpage{%
+  \ifvmode
+    \ifnum \@dbltopnum =\m@ne
+      \ifdim \pagetotal <\topskip
+        \hbox{}
+      \fi
+    \fi
+  \fi
+  \newpage
+  \thispagestyle{empty}
+  \write\m@ne{}
+  \vbox{}
+  \penalty -\@Mi
+}
+\makeatother
+\usepackage{pdfpages}
+\begin{document}
+\input{portada/portada}
+\input{portada/portada_2}
+\input{prefacios/prefacio}
+\frontmatter
+\tableofcontents
+\listoffigures
+\listoftables
+
+\mainmatter
+\setlength{\parskip}{5pt}
+
+\input{capitulos/01-Introduccion}
+\input{capitulos/02-Marco-teorico}
+\input{capitulos/03-Metodologia-y-Planificacion}
+\input{capitulos/04-Analisis-y-Especificacion-del-Sistema}
+\input{capitulos/05_Diseño_Desarrollo}
+\input{capitulos/06_Desarrollo_Futuro}
+
+%%% --- The following two lines are what needs to be added --- %%%
+\setcounter{biburllcpenalty}{7000}
+\setcounter{biburlucpenalty}{8000}
+\nocite{*}
+\printbibliography[
+title={Bibliografía},
+heading=bibintoc]
+%\bibliography{bibliografia/bibliografia}\addcontentsline{toc}{chapter}{Bibliografía}
+%\bibliographystyle{unsrt}
+
+
+%
+%\appendix
+%\input{apendices/manual_usuario/manual_usuario}
+%%\input{apendices/paper/paper}
+%\input{glosario/entradas_glosario}
+% \addcontentsline{toc}{chapter}{Glosario}
+% \printglossary
+
+\end{document}

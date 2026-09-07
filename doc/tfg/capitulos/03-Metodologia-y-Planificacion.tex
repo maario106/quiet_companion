@@ -1,0 +1,234 @@
+\chapter{Metodología y Planificación del Proyecto}
+
+\section{Análisis de metodologías de desarrollo}
+
+La elección de una metodología de desarrollo condiciona la planificación, el seguimiento y la entrega del 
+proyecto. Dado que este TFG se desarrolla de forma individual y con un alcance acotado a un MVP, la 
+metodología debe priorizar la simplicidad operativa y la adaptación al cambio frente a la coordinación de 
+equipos. A continuación se analizan las alternativas y se justifica la elegida:
+
+\subsection{Metodologías tradicionales frente a ágiles}
+
+Las \textbf{metodologías tradicionales} (modelo en cascada, modelo en V) estructuran el desarrolo en fases 
+secuenciales —requisitos, diseño implementación, pruebas— en las que cada fase debe completarse antes de 
+iniciar la siguiente. Exigen una especificación cerrada desde el inicio y penalizan los cambios tardíos, cuyo 
+coste crece a lo largo del cilo.
+
+Las \textbf{metodologías ágiles} sustituyen la secuencia rígida por un desarrollo iterativo e incremental: 
+el producto se construye en ciclos cortos que entregan funcionalidad utilizable y permiten incorporar cambios 
+de forma continua. Priorizan el software funcionando, la colaboracion y la respuesta al cambio sobre la 
+documentación exhaustiva y la planificación cerrada.
+
+Para este proyecto, el enfoque tradicional es inadecuado: el alcance no estaba completamente definido al inicio 
+(las funcionalidades se han priorizado y reordenado durante el desarrollo) y un único desarrollador no obtiene 
+beneficio del control formal entre las fases que justifica la cascada. El enfoque ágil se ajusta mejor a un 
+desarrollo exploratorio y sujeto a revisión continua.
+
+\subsection{Comparación de marcos ágiles}
+
+Dentro del paradigma ágil, se consideran tres marcos relevantes:
+
+\textbf{Scrum.} Organiza el trabajo en \textit{sprints} de duración fija, con roles definidos (Product Owner, 
+Scrum Master, equipo de desarrollo) y ceremonias periódicas (planificación, \textit{daily}, revisión, 
+retrospectiva). Está diseñado para equipos y su valor reside en la coordinación; sus roles y ceremonias 
+resultan redundantes en un desarrollo individual.
+
+\textbf{Kanban.} Gestiona el trabajo mediante un flujo continuo visualizado en un tablero de columnas (p. ej. 
+\textit{Por hacer / En curso / Hecho}), limitando el trabajo en curso (WIP) para evitar la sobrecarga y los 
+cuellos de botella. No impone roles, ceremonias ni iteraciones de duración fija: se adapta al ritmo de trabajo.
+
+\textbf{Lean.} Más que un marco de gestión, es un conjunto de principios orientados a maximizar el valor eliminando 
+el desperdicio (\textit{waste}): todo aquello que no aporta valor al producto final. Promueve construir solo lo 
+necesario, validar pronto y posponer decisiones hasta el último momento responsable.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Comparación de marcos ágiles aplicables al proyecto.}
+    \label{tab:comparacion-agiles}
+    \begin{tabularx}{\textwidth}{@{}l *{3}{>{\RaggedRight\arraybackslash}X}@{}}
+        \toprule
+        \textbf{Criterio} & \textbf{Scrum} & \textbf{Kanban} & \textbf{Lean} \\
+        \midrule
+        Unidad de planificación      & Sprint (fijo)            & Flujo continuo & Flujo de valor \\
+        Roles obligatorios           & Sí (3)                   & No             & No \\
+        Ceremonias                   & Sí (4)                   & No             & No \\
+        Idóneo para 1 desarrollador  & Bajo                     & Alto           & Alto \\
+        Adaptación al cambio         & Media (intra-sprint rígido) & Alta        & Alta \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Justificación de la elección: Kanban Lean}
+
+Se ha optado por un enfoque \textbf{Kanban con principios Lean} por las siguientes razones:
+
+\textbf{Adecuación al desarrollo individual.} Scrum se descarta porque sus roles y ceremonias presuponen un equipo; 
+mantenerlos en solitario añade sobrecargaa sin aportar coordinación. Kanban no impone esa estructura: el desarrollador
+gestiona un único flujo de trabajo sin reuniones ni roles artificiales.
+
+\textbf{Flujo continuo frente a iteraciones rígidas.} El alcance del MVP se ha reordenado durante el desarrollo 
+(priorización de la establización de HU-1 a HU-4 frente a funcionalidades posteriores). El flujo continuo de Kanban absorbe
+esta repriorización sin el coste de cerrar y replanificar \textit{sprints} de duración fija.
+
+\textbf{Límite de WIP y foco.} Limitar el trabajo en curso obliga a completar una funcionalidad antes de iniciar la siguiente,
+lo que en un desarrollo individual previene la dispersión y la acumulación de tareas a medio terminar.
+
+\textbf{Principios Lean: minimizar el desperdicio.} La restricción de recursos propia de un TFG hace del principio Lean de 
+eliminar el desperdicio una guía natural: se construye únicamente la funcionalidad que aporta valor al MVP, posponiendo 
+deliberadamente todo lo accesorio (análisis emocional, persistencia, llamada de emergencia) hasta que el núcleo esté validado.
+Esta decisión de acotar el alcance es una aplicación directa del pricnipio de \textit{construir solo lo necesario}.
+
+La combinación resultante ---un tablero Kanban que visualiza el flujo, con WIP limitado, gobernado por el criterio de Lean
+de priorizar valor y diferir lo accesorio--- ofrece el equilibrio entre disciplina y flexibilidad que requiere un desarrollo
+individual, exploratorio y con plazo fijo.
+
+\section{Aplicación de la metodología al proyecto}
+
+Definidos los principios metodológicos en la sección anterior, este apartado documenta su aplicación concreta al desarrollo
+de Quiet Companion: los actores implicados, la formalización de las Historias de Usuario como unidades de trabajo, el desglose 
+técnico de las mismas, la estructura del tablero Kanban, el plan de iteraciones y el cronograma resultante.
+
+\subsection{Definición de actores y roles}
+Se distinguen dos planos de acores: los del \textbf{proyecto o producto} (quienes participan activamente en el desarrollo y 
+la supervisión) y los del \textbf{sistema} (quienes interactúan con el producto desarrollado).
+
+Actores del proyecto:
+\begin{itemize}
+    \item \textbf{Desarrollador Único.} Asume todos los roles técnicos: ingeniería de requisitos, diseño, implementación,
+    pruebas, documentacion, y despliegue. Esta concentración de roles es lo que justifica la elección metodológica de 3.0.1
+    \item \textbf{Tutores académicos.} Supervisan el progreso, validan decisiones de diseño y orientan el alcance. Las sesiones
+    de tutoría actúan como puntos de control externos que sustituyten las ceremonias de Scrum (revisión y retrospectiva)
+    que en un desarrollo individual carecen de sentido.
+**Nota: también podría añadir el hecho de que he ido mostrando el avance del MVP a familiares y conocidos (personas mayores) como
+"focus group" o muestra de target group, y también a otros compañeros programadores/informáticos para que me den feedback
+\end{itemize}
+
+Actores del sistema:
+\begin{itemize}
+    \item \textbf{Mayor independiente.} Persona mayor con autonomía cognitiva y técnica suficiente para gestionar la aplicación
+    por sí misma. Accede al chat por voz y a los ajustes de accesibilidad en su propio dispositivo.
+    \item \textbf{Mayor vinculado.} Persona mayor cuya configuración se delega en un familiar. Su interfaz queda restringida al 
+    chat por voz, en el llamado \textit{Modo Ultra-Simple}. **Nota: Esto todavía habría que revisarlo
+    \item \textbf{Familiar (companion).} Adulto que asume el rol de gestor de la configración del Mayor vinculado. Accede a un
+    panel remoto desde su propio dispositvio y, en versiones futuras, a indicadores de bienestar emocional.
+\end{itemize}
+
+Estos tres actores del sistema se materializan en el modelo de datos mediante el campo \code{role} (\code{elder} | \code{companion}) y, en el caso 
+del mayor, el campo \code{autonomy} (\code{independent} | \code{dependent}), lo que permite que una misma base de código sirva a los tres perfiles
+ sin duplicación.
+
+\subsection{Historias de Usuario como unidades de trabajo}
+
+En la metodología adoptada, las Historias de Usuario cumplen un doble papel: son fuente de requisitos (se formalizan en el capítulo de especificación)
+ y son unidades de trabajo del tablero Kanban. Este apartado las trata bajo el segundo enfoque.
+
+El catálogo de Historias de Usuario gestionadas en el tablero es el siguiente:
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabularx}{\textwidth}{@{}c >{\RaggedRight\arraybackslash}X c c@{}}
+        \toprule
+        \textbf{ID} & \textbf{Título} & \textbf{Prioridad} & \textbf{Estado al cierre del MVP} \\
+        \midrule
+        HU-1 & Selección de Autonomía              & Alta  & Completada \\
+        HU-2 & Interfaz Core Conversacional        & Alta  & Completada \\
+        HU-3 & Interfaz Accesible y Comprensible   & Alta  & Completada \\
+        HU-4 & Configuración Adaptativa            & Alta  & Completada \\
+        HU-5 & Memoria Conversacional Básica       & Media & Diferida a trabajo futuro \\
+        HU-6 & Seguimiento del Estado de Ánimo     & Media & Diferida a trabajo futuro \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Catálogo de Historias de Usuario gestionadas en el tablero Kanban.}
+    \label{tab:catalogo-hu}
+\end{table}
+
+ Cada Historia de Usuario se ha gestionado como una tarjeta en el tablero, siguiendo una plantilla común que recoge la información 
+mínima necesaria para entrar en flujo:
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{|>{\raggedright\arraybackslash}p{0.48\textwidth}|>{\raggedright\arraybackslash}p{0.44\textwidth}|}
+        \hline
+        \textbf{Identificación}: HU-1 & Selección de Autonomía \\
+        \hline
+        \multicolumn{2}{|>{\raggedright\arraybackslash}p{0.94\textwidth}|}{%
+            \textbf{Descripción}: \newline
+            Como Mayor, quiero poder elegir, al abrir la aplicación por primera vez,
+            si la gestionaré yo mismo o si me ayudará un familiar, para que el sistema
+            me ofrezca la experiencia adecuada a mis capacidades tecnológicas.
+        } \\
+        \hline
+        \textbf{Estimación}: L & \textbf{Prioridad}: 1 \\
+        \hline
+        \multicolumn{2}{|>{\raggedright\arraybackslash}p{0.94\textwidth}|}{%
+            \textbf{Criterios de aceptación}:
+            \begin{itemize}[nosep, leftmargin=*]
+                \item La primera pantalla muestra dos opciones claras
+                      («Usar por mi cuenta» / «Vincular con un familiar»).
+                \item Si el usuario elige «Usar por mi cuenta», se habilita un botón
+                      de «Ajustes» en su pantalla principal.
+                \item Si elige «Vincular», se genera un código corto en pantalla y la
+                      interfaz principal se bloquea hasta que el familiar se conecte.
+            \end{itemize}
+        } \\
+        \hline
+    \end{tabular}
+    \caption{Historia de Usuario HU-1: Selección de Autonomía.}
+    \label{tab:hu1}
+\end{table}
+
+
+**note: pasar la tabla a código latex
+
+La aplicación efectiva del principio Lean de construir \textit{solo lo necesario} se manifiesta en la decisión deliberada 
+de diferir HU-5 y HU-6: una vez constatado durante el desarrollo que la estabilización de HU-1 a HU-4 requería 
+más esfuerzo del estimado inicialmente, se priorizó la entrega de un núcleo robusto sobre la cobertura amplia
+ pero superficial de las seis historias. El detalle completo de cada HU, incluidos sus criterios de aceptación,
+  se documenta en el capítulo de especificación.
+
+\subsection{Tarjetas técnicas y desglose de tareas}
+Cada Historia de Usuario se descompone en una o varias tarjetas técnicas, que son las unidades reales de trabajo
+ del desarrollador. Esta separación responde al doble nivel de granularidad necesario: las HU expresan valor para
+  el usuario; las tarjetas técnicas expresan trabajo concreto de ingeniería.
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabularx}{\textwidth}{@{}c c >{\RaggedRight\arraybackslash}X c@{}}
+        \toprule
+        \textbf{ID} & \textbf{HU} & \textbf{Título} & \textbf{Tipo} \\
+        \midrule
+        T-201 & HU-4 & Implementar \code{currentUserProvider} como \code{StreamProvider} único & Implementación \\
+        T-202 & HU-4 & Migrar \code{TtsService} a inyección de dependencias vía Riverpod       & Refactor \\
+        T-203 & HU-4 & Aplicar \code{textSizeMultiplier} en \code{home\_screen.dart}           & Implementación \\
+        T-204 & HU-4 & Centralizar rutas de Firestore en \code{FirestorePaths}                & Refactor \\
+        T-205 & HU-4 & Migrar \code{GeminiService} y \code{SpeechService} al patrón de DI      & Refactor \\
+        T-206 & HU-4 & Romper acoplamiento horizontal \code{dashboard} $\rightarrow$ \code{onboarding} & Refactor \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Desglose de tarjetas técnicas de la HU-4 durante la fase de estabilización.}
+    \label{tab:tarjetas-tecnicas}
+\end{table}
+\subsection{El tablero Kanban: columnas y flujo (TO DO / Doing / Done)}
+
+\subsection{Plan de iteraciones / hitos (milestones)}
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabularx}{\textwidth}{@{}c >{\RaggedRight\arraybackslash}X c c@{}}
+        \toprule
+        \textbf{Hito} & \textbf{Objetivo} & \textbf{HU implicadas} & \textbf{Estado} \\
+        \midrule
+        M1 & Cimientos: Auth, modelo de datos, onboarding dual        & HU-1        & Completado \\
+        M2 & Pipeline conversacional (STT $\rightarrow$ LLM $\rightarrow$ TTS) & HU-2, HU-3 & Completado \\
+        M3 & Dashboard remoto y configuración adaptativa              & HU-4        & Completado \\
+        M4 & Estabilización: refactors, DI, eliminación de deuda técnica & HU-1 a HU-4 & Completado \\
+        M5 & Pulido de navegación y pruebas de usuario                & HU-1 a HU-4 & En curso \\
+        M6 & Persistencia conversacional y memoria \textit{(futuro)}  & HU-5        & Diferido \\
+        M7 & Análisis emocional y panel de bienestar \textit{(futuro)} & HU-6       & Diferido \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Plan de iteraciones e hitos del proyecto.}
+    \label{tab:plan-hitos}
+\end{table}
+
+\subsection{Cronograma: diagrama de Gantt}

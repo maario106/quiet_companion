@@ -1,0 +1,232 @@
+\chapter{Marco Teórico y Estado del Arte}
+
+\section{Marco conceptual de la soledad}
+\label{marco-conceptual}
+
+\subsection{Soledad, aislamiento y soledad no deseada: tres conceptos distintos}
+
+El apartado de \nameref{contexto} introdujo la magnitud del problema en España, pero un tratamiento riguroso exige 
+delimitar primero los conceptos que se van a tratar, los cuales se confunden con frecuencia en el lenguaje cotidiano. 
+La literatura científica distingue tres nociones que no son sinónimas:
+
+El \textbf{aislamiento social} es una medida \textit{objetiva}: se refiere a la ausencia o escasez de 
+relaciones y contactos sociales, cuantificable mediante el tamaño y la frecuencia de la red de una persona. 
+La \textbf{soledad}, en cambio, es una experiencia \textit{subjetiva}: la discrepancia percibida entre las 
+relaciones que se tienen y las que se desearían tener, tanto en cantidad como en calidad. Ambas no siempre 
+coinciden: una persona puede estar objetivamente aislada sin sentirse sola, y puede sentirse profundamente 
+sola estando rodeada de gente. Esta distinción es la que recoge el matiz de partida de este trabajo: la 
+\textbf{soledad no deseada} (SND) es precisamente la cara dolorosa de la soledad, aquella que no se elige y 
+que se impone por circunstancias externas, frente a la soledad buscada o \textit{solitud}, que puede ser 
+reparadora.
+
+\subsection{El modelo de Weiss: soledad social y soledad emocional}
+
+**NOTE: me falta añadir las referencias del marco de Weiss y la Escala de Soledad de Jong Gierveld.**
+
+La aportación teórica más influyente para entender la soledad ---y la más relevante para justificar las 
+decisiones de diseño de este proyecto--- es la de \textcite{Weiss1973}, que diferenció \textbf{dos tipos
+de soledad de naturaleza distinta}:
+\begin{itemize}
+	\item La \textbf{soledad emocional} surge de la ausencia de una figura de apego íntimo ---una pareja, 
+	un mejor amigo--- y se caracteriza por sentimientos intensos de vacío, abandono y desamparo. En la 
+	tercera edad, su detonante más frecuente es la viudez.
+	\item La \textbf{soledad social} surge de la ausencia de una red social más amplia y estimulante ---
+	amigos, vecinos, colegas--- y se caracteriza por sentimientos de aburrimiento, falta de propósito y
+	marginalidad. Su detonante más común es la jubilación, la pérdida de movilidad o el alejamiento de los 
+	círculos sociales.
+\end{itemize}
+
+Esta distinción, posteriormente operacionalizada en instrumentos de medición validados como la \textbf{
+Escala de Soledad de De Jong Gierveld} \autocite{DeJongGierveld2010} ---que mantiene las subescalas social y emocional bajo un factor 
+general de soledad--- no es un mero matiz académico. Tiene una implicación directa sobre el diseño de 
+intervenciones, y es aquí donde reside un argumento central de este TFG: \\
+
+Según el marco de Weiss:
+\begin{quote}
+\textbf{La soledad emocional solo puede aliviarse mediante una relación 
+íntima nueva o recuperada, mientras que la soledad social puede aliviarse mediante la (re)integración en 
+una red social}. Una misma intervención no sirve para ambas.
+\end{quote}
+
+Esta tesis tiene una consecuencia ética y de diseño insoslayable para cualquier producto que, como Quiet 
+Companion, emplee un agente conversacional artificial: \textbf{un asistente de IA puede contribuir 
+legítimamente a paliar la soledad social} ---ofreciendo estímulo cognitivo, conversación, y una presencia 
+que combate el aburrimiento y la marginalidad--- \textbf{pero no puede ni debe pretender sustituir el vínculo 
+íntimo que demanda la soledad emocional}. La pretensión de los compañeros conversacionales generalistas 
+(Repilka, Character.AI) de cubrir esa segunda dimensión ---ofreciéndose como \enquote{pareja} o \enquote{mejor amigo}--- es 
+precisamente lo que la literatura señala como fuente de daño y lo que el modelo dual de este proyecto evita 
+por diseño al situar al acompañante humano como nexo afectiva y reservar a la IA un papel de estímulo y 
+compañía.
+
+\subsection{La soledad como factor de riesgo de salud pública}
+
+La razón por la que la SND ha escalado de problema social a prioridad sanitaria es la robustez de la evidencia 
+que la vincula con la morbimortalidad. El meta-análisis de referencia en este campo, el de Holt-Lunstad et al. 
+(2015), revisó 70 estudios y concluyó que tanto el aislamiento social (OR = 1,29) como la soledad (OR = 1,26) 
+y vivir solo (OR = 1,32) son \textbf{factores de riesgo independientes de mortalidad prematura}. El hallazgo 
+que dio notoriedad al estudio es su magnitud comparada: el riesgo asociado a la falta de relaciones sociales 
+es \textbf{equivalente al de la obesidad de grados 2 y 3, y superior al de la inactividad física}, controlando 
+otros factores. Los autores advertían ya entonces que, de no actuar, la soledad alcanzaría \enquote{proporciones
+epidémicas} hacia 2030.
+
+La \textbf{Organización Mundial de la Salud} ha recogido este consenso al clasificar el aislamiento social y 
+la soledad como determinantes sociales de la salud \enquote{importantes pero desatendidos} en la población mayor, 
+sustentando esa calificación en tres métricas: su asociación con exceso de morbimortalidad, su elevada 
+prevalencia y su prevalencia creciente. La mediación fisiológica propuesta incluye la asociación de la SND con 
+conductas de riesgo (tabaquismo, sedentarismo, mala alimentación) y con marcadores de hipertensión, dislipemia 
+e índice de masa corporal elevado.
+
+Queda así establecido el marco teórico: la SND es un constructo subjetivo, bidimensional (social y emocional), 
+y un factor de riesgo de salud pública de primer orden. Cualquier intervención tecnológica debe declarar 
+honestamente \textit{qué dimensión} aspira a abordar.
+
+\section{Estado del arte: Soluciones tecnológicas frente a la soledad}
+\label{estado-arte}
+
+\subsection{Evidencia agregada sobre la eficacia de los agentes conversacionales}
+
+Antes de revisar productos concretos conviene preguntarse si la propia categoría —agentes conversacionales para 
+mayores— funciona. La evidencia más actualizada y rigurosa es el meta-análisis de Satake et al. (2026), publicado 
+en \textit{Psychological Medicine}, que sintetizó 17 estudios sobre agentes conversacionales autónomos (robóticos 
+y no robóticos) en mayores sin deterioro cognitivo. Sus conclusiones son moderadamente alentadoras y, sobre todo, 
+honestas:
+\begin{itemize}
+	\item Se observaron mejoras \textbf{de pequeñas a moderadas} en soledad (SMCC = 0,350) y en síntomas depresivos
+	(SMCC = 0,464), \textbf{sin que ningún estudio reportara empeoramiento} de los síntomas.
+	\item Un análisis de subgrupos sugirió que \textbf{los robots físicamente \enquote{encarnados} (\textit{embodied}) podrían
+	rendir mejor que los agentes no robóticos} (como asistentes de voz o chatbots), aunque el reducido número de 
+	estudios robóticos obliga a la cautela.
+	\item La base de evidencia sigue siendo limitada y metodológicamente heterogénea (escasez de grupos de control, 
+	ausencia de medidas validadas de aislamiento social).
+\end{itemize}
+
+Este resultado es importante para posicionar la propuesta con franqueza. Quiet Companion es un agente \textbf{ 
+no robótico} (una app de voz), y la evidencia sugiere que esta vía podría ser algo menos potente que un robot 
+dedicado. La elección, sin embargo, se justifica no por eficacia clínica máxima sino por \textbf{accesibilidad
+y escalabilidad}: como se argumentará, el robot \textit{embodied} es inviable económicamente para el público objetivo 
+español, mientras que una app sobre hardware existente sí es replicable a escala.
+
+\subsection{Categoría A: robots sociales físicos}
+
+Esta categoría agrupa las soluciones \textit{embodied}, que la literatura señala como las más eficaces pero también 
+las más caras y menos accesibles.
+
+\textbf{PARO} (AIST, Japón) es el robot terapéutico más estudiado: una foca robótica con sensores táctiles y 
+auditivos diseñada para terapia no farmacológica en pacientes con demencia. Diversos ensayos en centros 
+geriátricos europeos documentan mejoras en agitación, ansiedad, depresión y calidad de vida percibida. Su 
+limitación de cara a este proyecto es estructural: \textbf{no conversa}. Aborda la dimensión afectiva mediante 
+el contacto, pero deja intacta la dimensión cognitiva e informacional.
+
+\textbf{ElliQ} (Intuition Robotics) es el referente comercial en compañía conversacional proactiva: un robot de 
+sobremesa con LLM que inicia conversaciones, recuerda interacciones previas, sugiere actividades y monitoriza 
+bienestar. La compañía publica métricas notables (reducción autorreportada de soledad y decenas de interacciones 
+diarias), si bien proceden del propio fabricante y no de evaluación independiente.
+
+
+\begin{table}[htbp]
+	\centering
+	\caption{Fortalezas y debilidades de los robots sociales físicos (Categoría A).}
+	\label{tab:cat-a-robots}
+	\begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+        \toprule
+        \textbf{Fortalezas} & \textbf{Debilidades} \\
+        \midrule
+        Mayor eficacia sugerida por el meta-análisis & Coste de adquisición y suscripción prohibitivo \\
+        Presencia física: cero fricción de uso & Hardware propietario con riesgo de obsolescencia \\
+        Proactividad real (inician la interacción) & Sin localización al español ni distribución en España \\
+        Validación clínica creciente (PARO) & Métricas comerciales no siempre independientes (ElliQ) \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Categoría B: agentes de voz y servicios telefónicos sin hardware dedicado}
+
+Es la categoría conceptualmente más cercana a Quiet Companion. Servicios como \textbf{Meela},
+\textbf{Joy Calls} (Onscreen) o \textbf{inTouch} operan sobre teléfono convencional o app, sin requerir 
+hardware especial, realizando llamadas de compañía programadas que saludan por el nombre y recuerdan 
+conversaciones anteriores.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Fortalezas y debilidades de los agentes de voz sin hardware dedicado (Categoría B).}
+    \label{tab:cat-b-voz}
+    \begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+        \toprule
+        \textbf{Fortalezas} & \textbf{Debilidades} \\
+        \midrule
+        Cero barrera de hardware: sortea la brecha digital & El mayor no controla la interacción (la IA llama, no se la llama) \\
+        Modelo escalable y de bajo coste marginal & Orientación B2B: el cliente real es la residencia o la familia, no el mayor \\
+        Sin curva de aprendizaje de un dispositivo nuevo & Sin implantación ni soporte en español en España \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+El punto débil más relevante es de \textbf{agencia}: estos servicios funcionan como \textit{check-in} periódico, 
+no como compañero disponible a demanda del propio usuario.
+
+\subsection{Categoría C: compañeros conversacionales generalistas}
+
+Esta categoría —\textbf{Replika} ($\approx$25 millones de usuarios), \textbf{Character.AI}, \textbf{Xiaoice} ($\approx$660
+millones en China)— representa el contraejemplo, no el modelo a seguir. No están diseñados para mayores ni 
+para combatir la soledad de forma terapeútica, sino para \textbf{maximizar el tiempo de uso}, y la literatura
+académica y regulatoria ha documentado los daños derivados de ese incentivo:
+\begin{itemize}
+	\item Un estudio de teoría fundamentada sobre la comunidad r/Replika (Laestadius et al., 2024) documentó
+	patrones de \textbf{dependencia emocional} análogos a relaciones humanas patológicas, incluyendo respuestas
+	inapropiadas del bot ante ideación autolítica.
+	\item Revisiones recientes (Scientific American, 2025; \textit{Mental Health Journal}, 2025) \textbf{identifican
+	explícitamente a los mayores como población vulnerable} a estos sistemas ---junto a adolescentes y personas con
+	trastorno mental previo--- por declive cognitivo y aceptación acrítica del contenido generado.
+	\item En el plano regulatorio, el \textbf{Reglamento Europeo de Inteligencia Artificial (EU AI Act)} orienta
+	la IA con capacidad de interacción emocional hacia las categorías de riesgo elevado y mayores exigencias de
+	transparencia, y la autoridad italiana de protección de datos llegó a bloquear temporalmente Replika por
+	incumplimientos del RGPD. 
+\end{itemize}
+
+Vinculando esto con el marco de Weiss (2.1.2): el daño de la Categoría C no es un fallo de implementación sino 
+una consecuencia de su modelo de negoco, que empuja al producto a invadir la dimensión \textbf{emocional}
+(ofreciéndose como pareja o confidente íntimo) que la teoría dice que solo un vínculo humano real puede
+satisfacer.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Fortalezas y debilidades de los compañeros conversacionales generalistas (Categoría C).}
+    \label{tab:cat-c-generalistas}
+    \begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X}
+        \toprule
+        \textbf{Fortalezas} & \textbf{Debilidades} \\
+        \midrule
+        Naturalidad conversacional avanzada & Modelo de negocio orientado a maximizar el tiempo de uso \\
+        Personalización profunda del interlocutor & Patrones documentados de dependencia emocional \\
+        Disponibilidad permanente (24/7) & Mayores identificados como población vulnerable \\
+        & Ausencia de salvaguarda humana y de control regulatorio \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Categoría D: Intervenciones no tecnológicas de acompañamiento}
+Por completitud, conviene situar las intervenciones humanas como el voluntariado intergeneracional (proyecto CONTIGO!, Fundación Senara) o las redes públicas de atención a mayores en soledad. Son las más alineadas con la cobertura de la soledad emocional, pero su limitación es de escala: dependen de voluntarios o de presupuesto público y no llegan a los millones de afectados. Quiet Companion no compite con ellas, sino que aspira a complementarlas.
+
+\subsection{Síntesis comparativa y posicionamiento}
+
+\begin{sidewaystable}
+    \centering
+    \caption{Síntesis comparativa de las categorías de soluciones y posicionamiento de Quiet Companion.}
+    \label{tab:sintesis-comparativa}
+    \renewcommand{\arraybackslash}{}
+    \begin{tabularx}{\textheight}{@{}l *{5}{>{\RaggedRight\arraybackslash}X} >{\RaggedRight\arraybackslash\bfseries}X@{}}
+        \toprule
+        \textbf{Criterio} & \textbf{A. Robots} & \textbf{B. Servicios voz} & \textbf{C. Generalistas} & \textbf{D. Humano} & \textbf{Quiet Companion} \\
+        \midrule
+        Coste para el usuario          & Muy alto      & Medio (B2B)   & Bajo            & Gratis & Marginal \\
+        Idioma español nativo          & No            & No            & Parcial         & Sí     & Sí \\
+        Control por el mayor           & Medio         & Bajo          & Alto            & ---    & Alto \\
+        Salvaguarda humana             & Cuidador (pago) & Cuidador    & Ninguna         & Total  & Familiar (diada) \\
+        Escalabilidad                  & Baja          & Alta          & Alta            & Baja   & Alta \\
+        Riesgo de dependencia          & Bajo          & Bajo          & Alto            & Nulo   & Mitigado por diseño \\
+        Dimensión abordada (Weiss)     & Social/afectiva & Social      & Pretende emocional & Ambas & Social (deriva lo emocional al familiar) \\
+        \bottomrule
+    \end{tabularx}
+\end{sidewaystable}
+
+El cruce de las dos mitades del capítulo revela el hueco que ocupa la propuesta. La Categoría A es eficaz pero inaccesible; la B es accesible pero no aterriza en España ni cede el control al mayor; la C es accesible pero peligrosa, porque su modelo de negocio la empuja a invadir la dimensión emocional que solo el vínculo humano debe cubrir; la D es ideal pero no escala. Quiet Companion combina la accesibilidad de la app (Categoría B) con una salvaguarda estructural —la diada elder–companion— que reintroduce el factor humano (Categoría D) sin renunciar a la escalabilidad, y que delimita conscientemente su ámbito a la soledad social que el marco de Weiss legitima abordar mediante tecnología. Ningún competidor reúne simultáneamente estas propiedades, y esa combinación —no una funcionalidad aislada— constituye la aportación de este trabajo.
