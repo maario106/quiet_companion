@@ -46,3 +46,14 @@ mismo patrón que resolvería la tensión de seguridad del emparejamiento (ADR-0
 
 No aplica: no hay artefacto. Criterio de cierre futuro: la clave no aparece en el cliente (`grep`) y las
 llamadas pasan por la callable.
+
+## Epílogo — primera llamada al LLM fuera del cliente (2026-09-26)
+
+ADR-0029 diseña `closeConversation`, que será la **primera llamada a Gemini que no use la clave del cliente**:
+el análisis de cada conversación al cerrarse. Se hará con Vertex AI y las credenciales del entorno (el mismo
+mecanismo que ya usa Cloud TTS) o, si el modelo no está disponible en la región, con la clave en Secret
+Manager.
+
+Este ADR **no se cierra** con eso: el canal conversacional en vivo sigue llamando a Gemini desde el cliente con
+la clave del `.env`, y RNF-8 sigue incumplido mientras sea así. Lo que cambia es que migrar el chat en vivo ya
+no exigirá decidir cómo llama el servidor a Gemini: estará resuelto y probado en `closeConversation`.

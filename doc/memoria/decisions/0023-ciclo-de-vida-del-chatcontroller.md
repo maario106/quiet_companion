@@ -97,3 +97,15 @@ autor registrada en ADR-0021). Verificación **manual en dispositivo, pendiente*
    cabecera debe pasar a "Hola, \<nombre\>".
 2. Con una conversación en marcha, cambiar el tamaño de letra desde Ajustes → al volver, la conversación
    debe seguir donde estaba.
+
+## Epílogo — lo que se apoya en esta decisión (2026-09-26)
+
+Dos diseños de HU-5 y HU-6 dependen de que el controlador ya no muera cuando cambia el documento del mayor:
+
+- **ADR-0028** guarda en el `ChatController` el búfer de turnos de la conversación en curso. Con el `watch`
+  anterior, cualquier ajuste de accesibilidad habría tirado a la basura la transcripción a medio acumular.
+- **ADR-0032** entrega la memoria del mayor al controlador por `ref.listen`, con la regla que este ADR dejó
+  para el resto del proyecto: una actualización de la memoria nunca reinicia la sesión en curso.
+
+ADR-0032 resuelve además el coste anotado arriba (*"`startSession` borra el hilo de la conversación"*): al
+resembrar por un cambio de nombre, la sesión nueva recibirá el historial de la conversación en curso.

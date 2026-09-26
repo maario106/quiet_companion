@@ -89,3 +89,18 @@ correcto: obliga a que un cambio de acceso a datos sea una decisión consciente 
 autenticado cualquiera, un no autenticado, las colecciones inexistentes y la no enumerabilidad de `/users`.
 El despliegue de las reglas se hace con `firebase deploy --only firestore:rules` sobre el alias de proyecto
 definido en `9e740aa`.
+
+## Epílogo — las reglas que traen HU-5 y HU-6 (2026-09-26)
+
+Diseñadas, no escritas: se añadirán en los mismos commits que las operaciones que las justifican, como exige
+este ADR.
+
+- **Subcolecciones nuevas** bajo `users/{elderId}`: `conversations`, `conversationContents` y `memory`.
+  Escritura `if false` (solo el Admin SDK, ADR-0029). Lectura para el dueño y para el familiar vinculado
+  **según el nivel que haya elegido el mayor** (ADR-0031), comprobado con `get()` sobre el documento del mayor.
+- **Lista del familiar ampliada** a `['preferences', 'name', 'conversationSettings']` (ADR-0034).
+- **La regla del dueño deja de ser ilimitada:** no podrá escribir `conversationConsent`, que solo escribe la
+  callable `setConversationConsent` (ADR-0030).
+
+La propiedad que justificaba este ADR se mantiene: si una operación cambia y las reglas no la contemplan, falla
+en voz alta y los tests de ADR-0026 lo señalan.

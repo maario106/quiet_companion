@@ -47,3 +47,11 @@ Firestore emite. Efecto observable: al vincular al mayor (borrado de `linkCode`)
 
 `router_redirect_test.dart` cubre la prioridad de `currentUserProvider` sobre el estado del controlador.
 `_userSubscription` eliminado de `ElderAuthController` (INFO §8.5).
+
+## Epílogo — la misma idea, del lado del familiar (2026-09-26)
+
+ADR-0027 extiende el patrón al documento que el familiar observa: un `linkedElderProvider` en `core/providers/`
+escuchará `users/{linkedElderId}` y será la fuente de verdad del mayor en el panel. Sustituye a la lectura
+única de `DashboardController`, que es una copia fuera de esta fuente de verdad. ADR-0032 añade un tercer
+provider del mismo tipo, `elderMemoryProvider`, sobre `users/{uid}/memory/profile`. En los tres casos se
+mantiene la regla de este ADR: los controladores no abren *streams*, los reciben.

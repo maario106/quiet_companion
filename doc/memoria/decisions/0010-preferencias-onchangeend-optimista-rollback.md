@@ -47,3 +47,17 @@ Los dos ejes son el coste de Firestore y la honestidad de la UI. El rollback rev
 
 `dashboard_controller_test.dart`: *happy path* (una sola llamada a `saveUser`), rollback ante error (revierte
 `linkedElder` + fija `errorMessage`) y no-op si no hay elder vinculado (`test.md` §2).
+
+## Epílogo — el *rollback* cambia de mecanismo (2026-09-26)
+
+ADR-0027 detecta que el camino de escritura de este ADR parte de una copia del mayor leída una sola vez y la
+reescribe entera con `saveUser`. Desde que el mayor escribe sus propios ajustes (ADR-0021), eso revierte sus
+cambios o hace fallar la escritura. Cuando ADR-0027 se implemente:
+
+- **`onChangeEnd` se mantiene** tal cual: una escritura por gesto.
+- **La honestidad de la interfaz se mantiene, pero el *rollback* manual desaparece.** El panel pintará desde
+  un *stream* del documento del mayor, y la compensación de latencia de Firestore ya muestra el valor escrito
+  al instante y lo revierte si el servidor lo rechaza. El controlador solo tendrá que mostrar el error.
+- `saveUser` deja de usarse para editar: el panel escribe cada campo con `update()`.
+
+Al implementarse, este ADR pasará a *Superseded by ADR-0027* en lo relativo al mecanismo de *rollback*.

@@ -4,9 +4,15 @@
 Flutter mobile app combating loneliness in elderly people. Dual UX: voice-first assistant for the elder, monitoring dashboard for the family companion. Package: `com.rosas.quiet_companion`. Trabajo Fin de Grado (TFG).
 
 ## Current Goal
-**Stabilize HU-1 to HU-4 for testing.** No further feature changes in these areas — tests should not need to be redone. Priority: navigation flow polish (currently weak) and clear action paths between elder and companion roles.
+**HU-5 + HU-6: conversation memory and mood tracking.** HU-1→4 are the MVP and are done; do not change their
+behaviour except where a phase of the plan says so. Active plan, phases and acceptance criteria:
+`doc/plan/ACTIVE.md`. Governing decisions: ADR-0027 → ADR-0034.
 
-Out of scope until HU-1→4 are stable: HU-5 (emotional analysis), conversation persistence, emergency call, Cloud Functions.
+HU numbering follows the memoria (ch. 3–4): **HU-5 = conversational memory (RF-7)**, **HU-6 = mood tracking
+(RF-8)**. Older docs (`pending.md`, `hu4-plan.md`, ADR-0015/0016) call mood analysis "HU-5" — ignore that.
+
+Out of scope for this plan: companion notifications (FCM), moving the live chat's Gemini call server-side
+(ADR-0014), keyboard input mode, n8n.
 
 ## Stack (locked)
 - Flutter / Dart
@@ -15,6 +21,11 @@ Out of scope until HU-1→4 are stable: HU-5 (emotional analysis), conversation 
 - Firebase: `firebase_core ^3.15.2`, `firebase_auth ^5.7.0`, `cloud_firestore ^5.6.0`, `cloud_functions ^5.4.0`
 - `google_generative_ai ^0.4.7` (gemini-2.5-flash)
 - `go_router ^17.0.0`, `speech_to_text ^7.3.0`, `flutter_tts ^4.2.5`, `permission_handler ^12.0.1`, `flutter_dotenv ^6.0.0`
+- `just_audio ^0.10.6` (cloud TTS playback, ADR-0017), `url_launcher ^6.3.2` (emergency dialer, ADR-0012)
+- Cloud Functions: `functions/`, JavaScript, gen 2, Node 22, region **`europe-west1`** (must match
+  `kFunctionsRegion`). Callables today: `synthesizeSpeech`, `validateAndLink`. Planned: `closeConversation`,
+  `setConversationConsent`.
+- Security rules: `firestore.rules`, verified against the emulator in `firestore-tests/` (ADR-0025, ADR-0026)
 - Plan: Firebase Blaze
 
 ## Architecture
@@ -23,19 +34,27 @@ Clean Architecture + Feature-Sliced Design (CFS hybrid).
 ```
 lib/
 ├── core/                       # cross-cutting only
-│   ├── config/                 # app_router.dart, env.dart
+│   ├── config/                 # app_router, env, functions/speech/tts config, preference_scales, settings_rows
 │   ├── constants/              # firestore_paths.dart
-│   ├── models/                 # UserModel, UserPreferences
-│   ├── providers/              # currentUserProvider (single source of truth)
-│   ├── repositories/           # user_repository.dart
-│   ├── services/               # GeminiService, TtsService, SpeechService, PermissionService
-│   └── theme/                  # AppTheme
+│   ├── models/                 # UserModel, UserPreferences, EmergencyContact
+│   ├── providers/              # currentUserProvider (SSOT), authRepositoryProvider, ttsServiceProvider, …
+│   ├── services/               # GeminiService, SpeechService, TtsService (cloud + device), EmergencyCallService, …
+│   ├── theme/                  # AppTheme
+│   ├── utils/                  # sentence_splitter.dart
+│   └── widgets/                # sign_out_button.dart
 ├── features/
-│   ├── conversation/           # {data, domain, presentation}
-│   ├── dashboard/              # {domain, presentation}
-│   └── onboarding/             # {data, domain, presentation}
+│   ├── conversation/           # {data, domain, presentation} — elder voice chat
+│   ├── dashboard/              # {domain, presentation} — companion panel
+│   ├── emergency/              # {presentation}
+│   ├── onboarding/             # {data, domain, presentation} — AuthRepository lives here
+│   └── settings/               # {presentation} — elder settings shell
 └── main.dart, firebase_options.dart
+functions/                      # Cloud Functions (see Stack)
+firestore.rules, firestore-tests/
 ```
+
+Data shared by two features (read models, their providers, pure aggregations) goes in `core/`. Example: the
+conversation records read by both the companion panel and the elder's "Mi semana" (ADR-0033).
 
 ### Rules (enforce strictly)
 - **No horizontal coupling:** features never import from other features. Shared data lives in `core/`.
@@ -45,6 +64,13 @@ lib/
 - **Firestore paths:** always via `FirestorePaths` constants, never inline strings.
 - **Cross-user writes:** Cloud Function only. Enforced since 2026-09-06: pairing runs in the `validateAndLink`
   callable and `firestore.rules` denies it from any client (ADR-0024, ADR-0025).
+- **Conversation text is never persisted.** The transcript lives in `ChatController` memory, travels to the
+  `closeConversation` callable at conversation end, and is discarded. It must never appear in Firestore,
+  on disk, or in any log (client or Function): log lengths and ids only (ADR-0028, ADR-0029).
+- **Privacy is enforced by rules, not UI.** What the companion may read is decided in `firestore.rules` from
+  the elder's `companionSharing` level; hiding something in the panel is not protection (ADR-0031).
+- **In stateful providers, `watch` only what should destroy the state when it changes;** everything else
+  arrives through `ref.listen` (ADR-0023).
 - **NO commits:** Do not run any bash commands that apply a commit or a push, let the dev do commits on their own. You can give the commands to run
     them in an organized manner.
 
@@ -59,12 +85,29 @@ lib/
 ### Firestore
 ```
 /users/{uid}
-- id, role ("elder" | "companion")
-- autonomy ("none" | "independent" | "dependent")
+- id, name | null, role ("elder" | "companion")
+- autonomy ("none" | "independent" | "dependent" on the elder; "linked" on the companion)
 - linkCode (4 chars, A-Z\{O,I} + 2-9) | null
 - linkedCompanionId (on the elder) | linkedElderId (on the companion) | null
   <!-- RF-2 and older docs say a single `linkedPartnerId`; the code has always used these two. -->
-- preferences (volume, speechRate, textSizeMultiplier)
+- preferences (volume, speechRate, textSizeMultiplier)      ← accessibility only (ADR-0013, ADR-0021)
+- phoneNumber (companion, E.164) | null
+- emergencyContact { name, phone, source: companion|manual } (elder) | absent
+```
+
+Planned for HU-5/HU-6 — **not implemented yet**; see `doc/plan/ACTIVE.md` before touching:
+```
+/users/{elderId}
+- conversationConsent { granted, answeredAt, textVersion }   ← only via setConversationConsent (ADR-0030)
+- companionSharing ("none" | "wellbeing" | "full")          ← only the elder writes it (ADR-0031)
+- conversationSettings { inactivityMinutes, retentionDays } ← companion (linked) or elder (independent) (ADR-0034)
+
+/users/{elderId}/conversations/{id}          ← Function only; companion reads at "wellbeing"+
+- startedAt, endedAt, elderTurns, endReason, status, sentiment, signals[], promptVersion, model, expireAt
+/users/{elderId}/conversationContents/{id}   ← Function only; companion reads at "full"
+- endedAt, topics[], summary, expireAt
+/users/{elderId}/memory/profile              ← Function only; companion reads at "full" (ADR-0032)
+- facts {key: value} (≤ 30), recent [{endedAt, summary}] (3), updatedAt
 ```
 
 ### Auth strategy
@@ -74,32 +117,43 @@ lib/
 ## Reactive Backbone
 - `firebaseAuthUserProvider` → Stream of Firebase `User?`
 - `currentUserProvider` → Stream of `users/{uid}` doc as `UserModel?`. **Single source of truth.** Any widget anywhere uses `ref.watch(currentUserProvider)`.
-- `RouterNotifier` listens to `elderAuthControllerProvider` + `companionAuthControllerProvider` and recalculates redirects.
+- `RouterNotifier` listens to `elderAuthControllerProvider`, `companionAuthControllerProvider`,
+  `firebaseAuthUserProvider` and `currentUserProvider`, and recalculates redirects. Companions are pinned to
+  `/dashboard` (exact match today; must become a prefix match before companion sub-screens exist, ADR-0033).
+- `chatControllerProvider` rebuilds only on uid change (`select`); the name reaches it by `ref.listen`
+  (ADR-0023).
+- Planned: `linkedElderProvider` (companion's live view of the elder, ADR-0027) and `elderMemoryProvider`
+  (ADR-0032).
 
 ## Completed (do not regress)
 - Firebase Auth + Firestore (anonymous elder, email companion)
 - `UserModel` + `UserPreferences` (immutable, `copyWith`, `fromMap`/`toMap`)
 - Dual-role onboarding (splash → onboarding → branch)
-- Pairing by 4-char code (atomic via `WriteBatch`)
+- Pairing by 4-char code, server-side: `validateAndLink` callable with a transaction (ADR-0024; supersedes the
+  client `WriteBatch` of ADR-0008)
 - Router with auth-driven redirects
-- Voice chat pipeline (STT → Gemini → TTS) with `systemInstruction` + `safetySettings`
-- Dashboard with real-time preference propagation (sliders → Firestore → elder UI)
-- TTS reactive to preferences via `ttsServiceProvider`
+- Voice chat pipeline (STT → Gemini → TTS) with `systemInstruction` + `safetySettings`; the elder's name
+  learned by function calling (`guardarNombre`)
+- Turn-based listening closed by silence (ADR-0022); `ChatController` survives user-doc changes (ADR-0023)
+- Cloud TTS (Chirp 3: HD) behind `TtsService`, device-TTS fallback (ADR-0017 → ADR-0020)
+- Dashboard with preference propagation companion → elder (sliders → Firestore → elder UI). The reverse
+  direction is broken; see technical debt.
+- Elder's local accessibility scales in Settings (ADR-0021)
+- Emergency call: dialer launch with 112 + emergency contact (ADR-0012)
+- Firestore rules scoped per operation, 29 emulator tests (ADR-0025, ADR-0026); optional emulator connection
+  for the app (`core/config/emulator_config.dart`)
 
-## Current Sprint — Stabilization Plan (HU-1 → HU-4)
+## Current Sprint — HU-5 + HU-6
 
-### A. Navigation polish (BLOCKING — must finish before testing)
-1. Elder navigation: `splash → onboarding → choice → (independent | linked) → home`. Each screen has explicit back-nav where it makes sense, none where it would cause data inconsistency.
-2. Companion navigation: `splash → onboarding → companion/choice → (login | register) → pairing → dashboard`. Same back-nav audit.
-3. Logout button: **companion only** (in dashboard). Elder UI must not show it.
-4. Define and lock the exact screen transitions before any further work.
+Follow `doc/plan/ACTIVE.md` phase by phase. Phases 0 (companion panel live, ADR-0027) and 2 (conversation
+boundary, ADR-0028) are unblocked. Phase 1 (consent) waits for the author to confirm ADR-0030; everything that
+analyses or stores conversations depends on it.
 
-### B. HU-4 cleanup (in progress)
-- Milestone 2.5.1: migrate `GeminiService` + `SpeechService` to providers (same DI pattern as `TtsService`).
-- Milestone 2.5.2: break dashboard → onboarding horizontal coupling. Dashboard reads `currentUserProvider`, not `companionAuthControllerProvider`.
-- Remove `_userSubscription` stream duplication between `ElderAuthController` and `currentUserProvider`. Controller should react to `authStateChanges()` directly; user data flows through `currentUserProvider`.
-
-### C. Known technical debt
+### Known technical debt
+- **Companion panel works on a one-shot copy of the elder** (`DashboardController._init` → `getUser`) and
+  rewrites the whole doc with `saveUser` on every slider: it reverts the elder's own changes or fails against
+  the rules. Fix = ACTIVE.md phase 0 (ADR-0027). Do not add fields to the elder doc before it lands.
+- Two ADR files share number 0023 (chat controller lifecycle, JDK 21). Not renumbered; next new ADR is 0035.
 - ~~`chat_controller.dart:86` — `new GeminiService()` antipattern~~ — fixed (Milestone 2.5.1, DI via providers).
 - ~~`home_screen.dart` — `withOpacity` deprecations, stray `print()` calls~~ — no longer in the tree.
 - ~~Title placeholder `'¡Hola!'` until `UserModel` gets a `name` field~~ — `UserModel.name` exists; the elder's
@@ -116,7 +170,7 @@ lib/
 
 # Architecture Rules (Clean Architecture + Feature-Sliced Design)
 - **Core (`lib/core/`):** Transversal elements ONLY (themes, global models like `UserModel` + `UserPreferences`, external service wrappers).
-- **Features (`lib/features/`):** Isolated modules (`chat`, `onboarding`, `dashboard`).
+- **Features (`lib/features/`):** Isolated modules (`conversation`, `onboarding`, `dashboard`, `emergency`, `settings`).
 - **Domain Layer (`/domain/`):** StateNotifier (`Controller`) and immutable state classes (`State` with `copyWith`).
 - **Presentation Layer (`/presentation/`):** UI using `ConsumerWidget` or `ConsumerStatefulWidget`.
 - **Single Source of Truth:** Use `StreamProvider` (e.g., `currentUserProvider`) to listen to Firestore changes in real-time. Controllers should not keep streams open themselves to avoid violating SRP.

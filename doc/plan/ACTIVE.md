@@ -1,183 +1,214 @@
-# SPEC — TTS swap: device TTS → Google Cloud TTS (Chirp 3: HD) via Cloud Functions proxy
+# Plan activo — HU-5 y HU-6: conversaciones, memoria y bienestar
 
-_Target: Claude Code. Project: Quiet Companion (`com.rosas.quiet_companion`), Flutter + Firebase (Firestore, Anonymous Auth, Cloud Functions Node.js, FlutterFire aligned to `firebase_core` 3.x). Related ADR: `adr-tts-chirp3-hd.md`._
+_Abierto el 2026-09-26. Sustituye a la *spec* del TTS, terminada y archivada en
+`archive/tts-chirp3-spec.md`._
 
 ---
 
-## 1. Goal
+## Objetivo
 
-Replace the robotic device-native TTS in the elder voice chat with Google Cloud TTS **Chirp 3: HD** Spanish (es-ES) voices, synthesized server-side through the **existing Cloud Functions proxy** (no API keys in the client), behind a **`TtsService` abstraction** with a device-TTS fallback.
+Que el lado del familiar sirva para algo más que mover tres deslizadores, y que el análisis también le sirva
+al propio mayor, sin guardar nunca lo que dice palabra por palabra.
 
-## 2. Non-goals (out of scope — do NOT implement)
+- **HU-5 — Memoria conversacional (RF-7):** el asistente recuerda lo que el mayor le cuenta entre
+  conversaciones.
+- **HU-6 — Seguimiento del estado de ánimo (RF-8):** cada conversación se clasifica (positivo, neutro o
+  negativo, con señales y temas) y el agregado lo ve el familiar en su panel y el mayor en "Mi semana".
 
-- gRPC/streaming synthesis (chunked request/response only).
-- Gemini-TTS, Gemini Live API, or any pipeline change to STT or the LLM call.
-- Audio caching of synthesized phrases.
-- A voice-selection UI or settings row.
-- Retries with backoff on synthesis failure (project-wide rejected UX pattern — fall back instead).
-- Any change to Firestore schema or security rules.
+> **Numeración:** se sigue la de la memoria (cap. 3 y 4): HU-5 es la memoria y HU-6 el ánimo. Documentos
+> anteriores llaman "HU-5" al análisis emocional (ver `doc/memoria/scope.md`, divergencias).
 
-## 3. Hard constraints
+## Decisiones que gobiernan el plan
 
-1. **Additive architecture.** The conversational flow (`ChatController` and the voice loop) must not be restructured. It should end up calling a `TtsService` abstraction; only the implementation behind it changes. Keep the diff to the existing flow minimal: swap the concrete TTS call sites for the interface, nothing else.
-2. **No secrets in the client.** The Cloud Function uses Application Default Credentials of the Functions runtime. Do not add any API key to Flutter code, `.env` shipped in the app, or Remote Config.
-3. **Follow existing project patterns:**
-   - Service abstraction: interface + production impl + fake for tests, same as `core/services/emergency_call_service.dart`.
-   - DI via the existing provider pattern in `core/providers/` (as with `auth_repository_provider.dart`).
-   - Firestore path constants via `FirestorePaths` are NOT needed here (no persistence).
-4. **Language:** all synthesized content is Spanish (es-ES). Voice name and speaking rate live in ONE config constant file.
-5. `flutter analyze` must stay at 0 issues; full test suite must stay green (currently 105 passing).
+| ADR | Estado | Qué fija |
+|---|---|---|
+| 0027 | Aceptada | El panel escucha al mayor en tiempo real (`linkedElderProvider`) y escribe cada campo con `update()`. |
+| 0028 | Aceptada | Una conversación termina tras *N* minutos sin turnos o al pasar a segundo plano (salvo al ir al marcador de emergencia). Por debajo de 3 turnos del mayor no sale texto del móvil. |
+| 0029 | Aceptada | Análisis único al cierre en la callable `closeConversation`. La transcripción no se guarda en ningún sitio. Supera a ADR-0015. |
+| 0030 | **Propuesta** | Consiente el mayor, con un gesto explícito, una vez: tras elegir el modo independiente o tras vincularse. Retirarlo lo borra todo. |
+| 0031 | Aceptada | Tres niveles de lo que ve el familiar (`none`, `wellbeing`, `full`; por defecto `full`), impuestos por las reglas repartiendo los datos en dos colecciones. |
+| 0032 | Aceptada | Memoria extraída al cierre (cambios, tope de 30), en `memory/profile`, inyectada al empezar cada conversación. Se descarta `guardarContexto` en tiempo real. |
+| 0033 | **Propuesta** | "Mi semana": el mayor ve su análisis, con los mismos datos que el panel y otra pantalla. |
+| 0034 | Aceptada | Inactividad {2, 5, 10, 15} min y conservación {30, 60, 90, 180} días. Los fija el familiar (vinculado) o el propio mayor (independiente). Tope de 180 días en el servidor. |
 
-## 4. Backend — Cloud Function `synthesizeSpeech`
+## Pendiente de decidir
 
-Location: existing Functions codebase (Node.js), same deployment unit as the Gemini proxy.
+| # | Decisión | Bloquea | Dónde |
+|---|---|---|---|
+| 1 | Confirmar el momento del consentimiento, el borrado al retirarlo y un único consentimiento para análisis y memoria | Fase 1, y con ella de la 3 en adelante | ADR-0030, `UNRESOLVED` |
+| 2 | "Mi semana": ¿solo para el independiente o para todo mayor con consentimiento? | Solo el predicado de visibilidad de la fase 6 | ADR-0033, `UNRESOLVED` |
+| 3 | Vertex AI con credenciales del entorno o clave de AI Studio en Secret Manager | Fase 3 | ADR-0029 §4 |
+| 4 | Posición del acceso a "Mi semana" en `HomeScreen` | Fase 6 | ADR-0033 §4 |
 
-- **Type:** `onCall` (callable), consistent with `validateAndLink` and the Gemini proxy.
-- **Auth:** reject unauthenticated calls (`context.auth == null` → `unauthenticated`). Anonymous auth is valid (elders are anonymous-auth users).
-- **Dependency:** `@google-cloud/text-to-speech` (official client, uses ADC automatically inside Functions).
-- **Input:** `{ text: string }`. Optional overrides are NOT accepted from the client — voice, language, rate are server-side constants (smaller attack/abuse surface).
-- **Validation:**
-  - `text` required, non-empty after trim.
-  - Max length: **900 characters** per call (chunking happens client-side; this is a safety cap). Over limit → `invalid-argument`.
-- **Synthesis request:**
-  - `input: { text }` (plain text — Chirp 3: HD voices do not accept SSML; never wrap in SSML).
-  - `voice: { languageCode: 'es-ES', name: <VOICE_NAME> }`.
-  - `audioConfig: { audioEncoding: 'MP3', speakingRate: <RATE> }`.
-  - **`VOICE_NAME`:** Chirp 3: HD voices follow the pattern `es-ES-Chirp3-HD-<Name>`. At implementation time, call `client.listVoices({ languageCode: 'es-ES' })` (one-off script or temporary log) to enumerate the actual available Chirp3-HD names in this project/region, pick a warm female voice, and hardcode it as a constant with a comment listing the alternatives found. Do not invent a name from memory.
-  - **`RATE`:** default `1.0`. Define the constant; if the chosen Chirp 3: HD voice rejects `speakingRate` (some tiers restrict audioConfig params — verify against the API error, not assumptions), omit the field and note it in the constant's comment.
-- **Output:** `{ audioContent: string /* base64 MP3 */ }`. Sentence-sized chunks are tens of KB in base64 — well within callable limits.
-- **Errors:** map synthesis failures to `internal` with a generic message; log details server-side. Never echo the input text back in errors.
-- **Manual prerequisite (document in the PR description, do not attempt from code):** enable the Cloud Text-to-Speech API on the GCP project. Blaze plan is already active.
+**Las fases 0 y 2 no dependen de ninguna de estas decisiones** y pueden empezar ya.
 
-## 5. Client — `TtsService` abstraction
+---
 
-### 5.1 Interface — `lib/core/services/tts_service.dart`
+## Fase 0 — El panel ve al mayor en tiempo real (ADR-0027)
 
-```dart
-abstract interface class TtsService {
-  /// Speaks [text]. Splits into sentences internally, synthesizes and plays
-  /// them in order. Returns when playback of ALL chunks completes or after
-  /// stop() is called. Must be safe to call while already speaking
-  /// (implicitly stops the current utterance first).
-  Future<void> speak(String text);
+Requisito previo de todo lo demás. Arregla además lo que el autor notaba: el panel no muestra el valor
+vigente.
 
-  /// Immediately stops playback, cancels all pending synthesis for the
-  /// current utterance, and clears the queue. Idempotent.
-  Future<void> stop();
+- `core/providers/linked_elder_provider.dart`: `StreamProvider<UserModel?>` sobre
+  `users/{linkedElderId}`, con la ruta tomada de `FirestorePaths`.
+- `AuthRepository`: escritura de un campo de preferencias (`update({'preferences.<campo>': valor})`).
+  `saveUser` queda solo para crear documentos.
+- `DashboardController`: sin copia `linkedElder` ni *rollback* manual; solo errores de guardado.
+- `DashboardScreen`: pinta desde `linkedElderProvider`.
+- `dashboard_controller_test.dart`: reescrito para el nuevo camino.
+- **Sin ADR (cambio trivial):** `EmergencyContactSetupScreen` precarga el nombre y el teléfono del contacto
+  vigente.
 
-  /// Whether an utterance is currently being played or synthesized.
-  bool get isSpeaking;
-}
-```
+**Aceptación:** el guion de ADR-0027 §Verificación, puntos 1 a 4.
 
-Match the return-type/stream conventions of whatever contract the current device-TTS wrapper exposes to `ChatController` — if the controller currently awaits completion or listens to a completion callback to resume listening (turn-taking), the interface MUST preserve that semantic exactly. Inspect the current call sites first and adapt the interface shape if needed; the behavioral contract above is what matters, not the exact signatures.
+## Fase 1 — Consentimiento (ADR-0030) · _bloqueada por la decisión 1_
 
-### 5.2 Sentence chunking — pure function, `lib/core/utils/sentence_splitter.dart`
+- `core/models/`: `ConversationConsent { granted, answeredAt, textVersion }`. `UserModel` gana
+  `conversationConsent`, `companionSharing` y `conversationSettings`, omitidos en `toMap` cuando son nulos
+  (como `emergencyContact`).
+- `functions/`: callable `setConversationConsent`.
+  - Al conceder, escribe el registro con la hora del servidor y, si el mayor está vinculado, deja
+    `companionSharing: 'full'`.
+  - Al retirar, hace `recursiveDelete` de `conversations`, `conversationContents` y `memory`, y guarda
+    `granted: false`.
+- `firestore.rules`: el dueño no puede escribir `conversationConsent`. Tests contra el emulador.
+- Router: un mayor dado de alta sin `conversationConsent` va a `/consent`. Test en
+  `router_redirect_test.dart`.
+- Pantallas del mayor:
+  - consentimiento: pregunta, "Sí, quiero" / "Ahora no", "Escuchar" y "Saber más";
+  - detalle, con los plazos vigentes y lo que ve el familiar;
+  - fila de Ajustes "Guardar mis conversaciones".
+- Panel: tarjeta de estado de solo lectura ("Sin activar" / "Activado desde el …").
+- Texto del consentimiento versionado (`textVersion`) en una constante.
 
-- `List<String> splitIntoSentences(String text)` — pure, no dependencies, fully unit-tested.
-- Split on `.`, `!`, `?`, `…` followed by whitespace/EOL; keep the delimiter with the sentence. Handle: abbreviations are NOT worth special-casing (accept occasional over-splitting), decimal numbers must not split (`3.5`), ellipses collapse to one boundary, empty/whitespace-only segments dropped.
-- **Also add `String sanitizeForSpeech(String text)`**: strip markdown artifacts the LLM may emit before synthesis — `*`, `_`, `#`, backticks, bullet dashes at line start, emojis. Applied before splitting. Unit-tested.
-- Merge very short fragments (< 25 chars) into the next sentence to avoid choppy audio and wasted round trips.
+**Aceptación:** ADR-0030 §Verificación.
 
-### 5.3 `CloudTtsService` — `lib/core/services/cloud_tts_service.dart`
+## Fase 2 — Frontera de la conversación (ADR-0028), sin red
 
-Production implementation:
+- `core/config/conversation_config.dart`: valores por defecto (5 min, mínimo de 3 turnos) y márgenes.
+- `ConversationCloser` en `core/services/`, con la interfaz y un doble para tests. La implementación real
+  llega en la fase 3.
+- `ChatController`:
+  - búfer de turnos `(rol, texto, hora)` sin las respuestas de error;
+  - `startedAt`;
+  - temporizador de inactividad inyectable, que empieza a contar al terminar el TTS;
+  - `endConversation(reason)`;
+  - sesión de Gemini nueva, creada de forma perezosa en el primer turno tras un cierre.
+- Ciclo de vida: `paused` cierra la conversación salvo con `intentionalBackgroundExitProvider` activo; al
+  volver, cierra si el plazo ya venció.
+- Primeros tests de `ChatController` (diferidos hasta ahora en `test.md`): los seis casos de ADR-0028
+  §Verificación.
 
-- **Dependencies:** the existing callable-client pattern used for `validateAndLink` (inject `FirebaseFunctions` or the project's callable wrapper — reuse whatever seam already exists for testability), plus an audio player.
-- **Audio playback:** use **`just_audio`** for MP3-from-bytes playback. If the project already depends on an audio player package for STT/earcons, reuse that instead — check `pubspec.yaml` first.
-- **Pipeline (the core of this task):**
-  1. `speak(text)` → sanitize → split into sentences → build chunk list.
-  2. Synthesize chunk 0; start playing it as soon as it arrives.
-  3. While chunk *i* plays, synthesize chunk *i+1* (prefetch of exactly one — do not fire all requests at once).
-  4. Chunks play strictly in order.
-- **Cancellation (`stop()`):** must (a) stop the player, (b) mark in-flight synthesis results as discarded (callables can't be aborted — use a generation counter/token: results carrying a stale generation are dropped), (c) clear the queue, (d) leave the service reusable for the next `speak()`. This is the highest-risk logic — test it thoroughly.
-- **Fallback policy (per utterance, NO retries):**
-  - Wrap each synthesis call in a timeout (constant, **4 s**).
-  - If the FIRST chunk of an utterance fails or times out → delegate the ENTIRE original text to `DeviceTtsService.speak()` and mark the utterance as degraded (debug log only, no user-facing error).
-  - If a LATER chunk fails → speak only the remaining text via `DeviceTtsService` (do not replay what was already heard). If that's disproportionately complex given the current code, simplifying to "remaining chunks are skipped silently" is acceptable — choose one, document it in a comment, and test the chosen behavior.
-  - No exponential backoff anywhere (project decision).
+**Aceptación:** esos tests en verde y `flutter analyze` sin incidencias.
 
-### 5.4 `DeviceTtsService` — wrap the existing `flutter_tts` usage
+## Fase 3 — `closeConversation` y prompt v1 (ADR-0029) · _necesita las fases 1 y 2, y la decisión 3_
 
-- Extract the current device TTS logic into `DeviceTtsService implements TtsService` with no behavior change (es-ES locale, current rate/pitch settings preserved).
-- It is both the fallback for `CloudTtsService` and the offline path.
+- **Primero, el prompt v1**, revisado antes de cablear nada:
+  - evalúa el sentimiento del mayor, no el del diálogo;
+  - lista cerrada de señales;
+  - resumen en tercera persona, sin citas ni datos de salud;
+  - advierte de que el texto viene del reconocedor de voz.
+- `functions/conversation.js`, con funciones puras: validar la entrada, validar la salida del modelo, recortar
+  listas y calcular el corte de conservación. Tests en `functions/conversation.test.js` (`node --test`).
+- `exports.closeConversation`:
+  - autenticación y comprobación del consentimiento;
+  - Gemini con salida estructurada;
+  - escritura en `conversations/{id}` y `conversationContents/{id}`;
+  - limpieza por plazo;
+  - registros sin texto.
+- `firestore.rules`: las tres subcolecciones con escritura `if false` y lectura para el dueño. Tests.
+- Cliente: `CloudConversationCloser` y `kCloseConversationCallable` en `functions_config.dart`.
+- `FirestorePaths`: `conversations`, `conversationContents` y `memory`.
+- Chat en vivo: instrucción de crisis en el `systemInstruction` (024 y 112).
+- **Paso manual:** política TTL de Firestore sobre `expireAt` en las dos colecciones, y
+  `firebase deploy --only functions,firestore:rules`.
 
-### 5.5 `FakeTtsService` — `test/` helpers
+**Aceptación:** ADR-0029 §Verificación.
 
-- Records `speak`/`stop` calls and spoken texts; controllable completion (`Completer`-based) so tests can simulate long utterances and interruption. Same style as the existing emergency-call fake.
+## Fase 4 — Qué ve el familiar y plazos configurables (ADR-0031, ADR-0034)
 
-### 5.6 Config — `lib/core/config/tts_config.dart`
+- Reglas: lectura del familiar según `companionSharing`, y escritura de `conversationSettings`. Los casos de
+  ADR-0031 y ADR-0034 contra el emulador.
+- Ajustes del mayor:
+  - "Qué ve mi familiar" (vinculado y con consentimiento): tres peldaños;
+  - "Esperar antes de cerrar la conversación" y "Cuánto tiempo se guarda": solo el independiente.
+  - `PreferenceScale` está ligada a los `double` de `UserPreferences`. Al implementar se decide si se
+    generaliza la pantalla de peldaños o se hace una específica, porque estos valores no son preferencias.
+- Panel: selector de los dos plazos (vinculado); nivel de compartición y consentimiento en solo lectura.
+- `closeConversation`: acota y aplica `retentionDays`.
 
-Single source of truth: chunk timeout (4 s), max chunk length (matching the 900-char server cap), min-fragment merge threshold (25), and a doc comment pointing to the server-side voice constant (the client never sends voice params).
+**Aceptación:** los criterios de ADR-0031 y ADR-0034.
 
-### 5.7 Wiring
+## Fase 5 — Panel del familiar (HU-6)
 
-- `core/providers/tts_service_provider.dart`: provider exposing `TtsService`, defaulting to `CloudTtsService` (which itself holds a `DeviceTtsService` for fallback).
-- Replace direct TTS calls in the voice chat flow with the provider. **Do not** alter turn-taking logic, STT triggering, or UI state transitions — if the current code resumes listening on TTS completion, the new `speak()` completing must trigger the exact same path.
-- Barge-in: if the current flow stops TTS when the user starts speaking, route that through `TtsService.stop()`.
+- `core/models/conversation_record.dart` y `conversation_content.dart`; providers de lectura en
+  `core/providers/`.
+- `core/utils/week_summary.dart`, agregación pura con tests (semana vacía, un día, empates, sin señales).
+- Secciones del panel, en orden de fiabilidad:
+  1. actividad: última conversación, días con conversación y minutos;
+  2. señales de la semana;
+  3. ánimo por día;
+  4. temas;
+  5. lista de conversaciones, con detalle en `/dashboard/conversation/:id`.
+- Aviso visible: *"orientativo, no es un diagnóstico"*.
+- Si el mayor ha elegido `none` o `wellbeing`, el panel lo dice ("Ana ha elegido no compartir…") en vez de
+  mostrar un error de permisos.
+- Router: el familiar pasa con `startsWith('/dashboard')`. Test.
 
-## 6. Dependencies & platform changes
+**Aceptación:** tests de la agregación y del router, y un recorrido manual con tres conversaciones reales en
+el emulador.
 
-- `pubspec.yaml`: add `just_audio` (skip if an equivalent player already present).
-- `functions/package.json`: add `@google-cloud/text-to-speech`.
-- No new Android permissions. No manifest changes expected (playback of app-generated audio needs none). Do not touch the `<queries>` block added for the emergency call.
+## Fase 6 — "Mi semana" (ADR-0033) · _visibilidad según la decisión 2_
 
-## 7. Tests (target: all green, follow existing suite conventions)
+- *Feature* nueva del mayor, con la ruta `/my-week` y un acceso desde `HomeScreen`, visible con el
+  consentimiento activo y al menos una conversación analizada.
+- Frases y no gráficas; "Escuchar" mediante `ttsServiceProvider`; sin etiquetas clínicas; la línea "Tu
+  familiar ve: …" con acceso a cambiarlo.
+- Reutiliza `week_summary.dart`.
 
-1. `sentence_splitter_test.dart`: sanitization (markdown/emoji stripping), splitting (punctuation, decimals `3.5`, ellipsis, short-fragment merging, empty input).
-2. `cloud_tts_service_test.dart` with a fake callable + fake player:
-   - happy path: N sentences → N synthesis calls, played in order, `speak()` completes after last chunk;
-   - prefetch: chunk i+1 requested while chunk i playing (verify via call ordering);
-   - `stop()` mid-utterance: player stopped, stale in-flight result discarded (generation counter), queue cleared, service reusable;
-   - `speak()` while speaking: previous utterance stopped first;
-   - first-chunk failure/timeout → full text delegated to injected fallback `TtsService`;
-   - later-chunk failure → chosen degraded behavior (per §5.3) verified;
-   - `isSpeaking` transitions.
-3. `DeviceTtsService`: thin wrapper — a smoke test around configuration is enough; do not attempt to test `flutter_tts` internals.
-4. Existing `ChatController` tests must pass unchanged apart from swapping in `FakeTtsService`.
+**Aceptación:** ADR-0033 §Verificación.
 
-Do NOT add tests requiring real network or real Firebase.
+## Fase 7 — Memoria (ADR-0032)
 
-## 8. Acceptance criteria
+- Prompt v2: la misma llamada devuelve también los cambios de memoria. Se sube `promptVersion`.
+- `functions/`: aplicar los cambios (función pura, con el tope de 30) y escribir `memory/profile` con los tres
+  resúmenes recientes. Tests.
+- `core/providers/elder_memory_provider.dart`; `GeminiService.startSession(nombre, memoria, historial?)`;
+  entrega al controlador por `ref.listen`.
+- Al resembrar por un cambio de nombre, se conserva el hilo (`startChat(history: …)`).
+- Reglas: lectura de `memory` (el dueño, y el familiar con `full`).
+- Panel: "Lo que el asistente sabe", en solo lectura.
 
-- [x] `synthesizeSpeech` callable deployed code-complete (deploy itself may be manual), auth-gated, 900-char cap, server-side voice constants, no SSML.
-- [x] `TtsService` interface + `CloudTtsService` + `DeviceTtsService` + `FakeTtsService` in place following the emergency-call service pattern.
-- [x] Voice chat flow uses the provider; zero changes to turn-taking semantics.
-- [x] Sentence chunking with single-chunk prefetch; first-audio latency bounded by one synthesis round trip.
-- [x] Fallback to device TTS on failure/timeout, no retries/backoff.
-- [x] `flutter analyze` 0 issues; full suite green including new tests (105 → 140).
-- [x] PR description lists the two manual steps: enable Cloud Text-to-Speech API in GCP; `firebase deploy --only functions`.
+**Aceptación:** ADR-0032 §Verificación. Criterio clave: *"vivo en Granada"* se recuerda en la conversación
+siguiente.
 
-### Implementation status (2026-07-27)
+---
 
-**Deployed.** `synthesizeSpeech` is live in `europe-west1` (gen 2, `ACTIVE`), the Cloud Text-to-Speech API
-is enabled, and the Function logs show real invocations with `{"auth":"VALID"}` and no synthesis errors —
-which also confirms, empirically, that `es-ES-Chirp3-HD-Sulafat` exists in this project and accepts
-`speakingRate`. `npm run list-voices` was never needed.
+## Fuera de alcance de este plan
 
-Two defects found only on device, both at the `just_audio` seam, both fixed:
+- Notificaciones al familiar (FCM, `pending.md` §6).
+- Solicitud remota de consentimiento (ADR-0030, alternativas).
+- Edición de la memoria por el familiar.
+- Migrar el chat en vivo al servidor (ADR-0014).
+- Modo teclado.
+- n8n.
+- La evaluación de impacto (EIPD) de un despliegue real: se cita como trabajo futuro en la memoria.
 
-1. Playback refused the in-memory audio — Android blocks cleartext to the loopback server `just_audio`
-   uses. Loopback-only network-security-config (ADR-0020).
-2. Multi-sentence answers played the first and last sentence only: `play()`'s future completes immediately
-   when the player is already `playing`, so each chunk cut off the previous one. Sequencing now waits on
-   `processingStateStream` (ADR-0017, implementation note 2026-07-27).
+## Reglas de trabajo
 
-Deviations from this spec, each with an ADR:
+- **El código va en `main_mario` y la documentación en `docs/memoria`** (`CLAUDE.md` §Documentation Rules).
+  Cada ADR gana en `Evidencia:` los SHA cortos de los commits que lo implementan, y su `Estado` pasa de
+  *pendiente de implementación* a implementado.
+- `flutter analyze` sin incidencias en los ficheros tocados, y la suite en verde.
+- Las reglas de Firestore cambian en el mismo commit que la operación que las justifica, con sus tests contra
+  el emulador (ADR-0025, ADR-0026).
+- Ningún texto de conversación en registros, ni del cliente ni de la Function.
 
-- The "existing Cloud Functions proxy" did not exist; `functions/` was created from scratch with only this
-  callable — ADR-0018.
-- The dashboard's volume/speed sliders would have silently stopped working under §4's "no client-side
-  overrides"; they are applied at the player instead — ADR-0019.
-- `CloudTtsService` takes an injectable `chunkTimeout` (defaults to `kTtsChunkTimeout`) so the timeout test
-  does not wait 4 real seconds.
-- §6 was wrong: **a manifest change was needed.** `just_audio` serves in-memory audio over a local HTTP
-  server on `127.0.0.1`, which Android blocks by default since API 28 — synthesis succeeded and playback
-  failed. Fixed with a loopback-only `network-security-config` — ADR-0020.
+## Al cerrar HU-5 y HU-6
 
-## 9. Manual verification (post-implementation, human)
-
-- Physical low-end Android device on mobile data: perceived first-audio latency per response; no gaps/overlap between chunks.
-- Airplane mode: utterance falls back to device voice without error UI and conversation continues.
-- Barge-in during a long multi-sentence response: audio stops instantly, no stale chunk plays afterwards.
-- Voice quality check with an es-ES Chirp3-HD voice; if the picked voice sounds wrong for the persona, changing it is a one-constant server-side edit.
+- Reescribir este plan en pasado, en `doc/memoria/hu/hu5-memoria-conversacional.md` y
+  `doc/memoria/hu/hu6-estado-de-animo.md`, con desviaciones y retrabajo.
+- Actualizar `scope.md`: pasar a "Implementado" solo lo que tenga código.
+- Memoria del TFG: RF-7 y RF-8 dejan de estar diferidos (cap. 4); la nota de RNF-10 (base jurídica, plazos y
+  derecho de supresión) ya tiene respuesta; y hay que reflejarlo en los cap. 5 y 6.
+- Mover este fichero a `archive/` y abrir un `ACTIVE.md` nuevo.

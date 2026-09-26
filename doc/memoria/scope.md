@@ -41,12 +41,17 @@ plan._
 | Capacidad | Documento de diseño | Por qué se difiere | Prerequisito |
 |---|---|---|---|
 | Proxy de Cloud Functions para aislar la clave del LLM (RNF-8) | ADR-0014, PDF Stack §2 | Clave todavía en `.env` del cliente. El codebase `functions/` ya sirve dos callables (ADR-0018, ADR-0024): falta únicamente la de Gemini. **Es el último incumplimiento de seguridad declarado del proyecto** | Cuenta Blaze (activa) |
-| Persistencia conversacional (solo resúmenes) | ADR-0015, `hu4-plan.md` §C, `pending.md` §4 | Prerequisito de HU-5; huella de datos mínima (RGPD) | Prompt de resumen (`gemini-prompt-architect`) |
-| Perfil de contexto del mayor (aprendizaje progresivo) | `hu4-plan.md` §D | Diferido tras HU-1→4 | Independiente del tiempo real |
-| Análisis emocional / clasificación de sentimiento (HU-5) | `hu4-plan.md` §E, `pending.md` §4, RF-8 | Propuesta de valor central; 0 % construido | Persistencia (§C) |
-| Pantalla "Mi semana" (refuerzo positivo, mayor independiente) | PDF Solución (HU-6), RF-8 | Depende del análisis emocional | HU-5 |
+| Panel del familiar en tiempo real y escritura por campo | ADR-0027 | Requisito previo de HU-5/HU-6; corrige la copia única del mayor que el panel reescribe entera | — |
+| Frontera de conversación (inactividad / segundo plano) y búfer de turnos en memoria | ADR-0028 | Unidad de todo lo que se analiza y guarda | ADR-0023 (implementado) |
+| Análisis al cierre en callable `closeConversation`: resumen, ánimo (3 clases), señales, temas; sin transcripción en reposo | ADR-0029 (supera a ADR-0015), `doc/plan/ACTIVE.md` | Base de HU-5 y HU-6 | Consentimiento (ADR-0030) |
+| Consentimiento explícito del mayor, retirada con borrado | ADR-0030 (*Propuesta*, responde a ADR-0016) | Bloquea el análisis hasta confirmarse | Confirmación del autor |
+| Nivel de lo que ve el familiar (`none` / `wellbeing` / `full`), impuesto por reglas | ADR-0031 | Privacidad del mayor frente al panel | ADR-0029 |
+| Memoria del mayor (RF-7, HU-5): extracción al cierre, documento aparte, inyección al iniciar | ADR-0032 (descarta `hu4-plan.md` §D.1–D.4) | Diferido tras HU-1→4 | ADR-0029 |
+| Análisis emocional en el panel del familiar (RF-8, HU-6) | ADR-0029, ADR-0031, `doc/plan/ACTIVE.md` | Propuesta de valor central; 0 % construido | ADR-0029 |
+| Pantalla "Mi semana" (el mayor ve su propio análisis) | ADR-0033 (*Propuesta*), PDF Solución (HU-6), RF-8 | Depende del análisis | ADR-0029 |
+| Plazos configurables (inactividad, conservación) | ADR-0034 | — | ADR-0027, ADR-0028 |
 | Modo de entrada por teclado (botón "¿Teclado?") | `pending.md` §2.3 | Botón inerte; tarea aparte | — |
-| Notificaciones al familiar (inactividad, flag emocional, resumen semanal) | `pending.md` §6 | Depende de que existan datos que notificar | HU-5 + Cloud Function/FCM |
+| Notificaciones al familiar (inactividad, flag emocional, resumen semanal) | `pending.md` §6 | Depende de que existan datos que notificar | HU-6 (ADR-0029) + Cloud Function/FCM |
 | Propagación del cambio de teléfono del familiar (`onDocumentUpdated`) | `pending.md` §3 | La desnormalización evita lecturas cross-user; propagación diferida | Cloud Functions |
 | CI en GitHub Actions (analyze + test) | `pending.md` §5 | Prioridad baja | — |
 
@@ -75,7 +80,20 @@ Afirmaciones de la documentación que el árbol de código no sostiene, con su m
   realidad es Gemini + Firebase, bloqueados en `CLAUDE.md` — ADR-0002, ADR-0003.
 - **Higiene documental.** `doc/plan/ACTIVE.md` contiene en realidad la *spec* del cambio de TTS (no un plan
   activo) y sigue sin archivar pese a que el trabajo está terminado; `scope.md` estaba vacío (este documento
-  lo rellena); existía un ADR de TTS duplicado (eliminado).
+  lo rellena); existía un ADR de TTS duplicado (eliminado). **Resuelto en parte (2026-09-26):** la *spec* del
+  TTS se archivó en `doc/plan/archive/tts-chirp3-spec.md` y `ACTIVE.md` es ya el plan de HU-5/HU-6.
+- **Numeración de las HU.** La memoria (cap. 3, tabla de HU; cap. 4, RF-7 y RF-8) define **HU-5 = memoria
+  conversacional** (RF-7) y **HU-6 = seguimiento del estado de ánimo** (RF-8). `CLAUDE.md`, `pending.md`,
+  `hu4-plan.md` §E, ADR-0015/0016 y versiones anteriores de este documento llamaban "HU-5" al análisis
+  emocional y "HU-6" a "Mi semana". Se adopta la numeración de la memoria. Los documentos antiguos no se
+  reescriben; `CLAUDE.md` ya está corregido.
+- **ADR-0023 duplicado.** Dos ficheros comparten número: `0023-ciclo-de-vida-del-chatcontroller.md` y
+  `0023-jdk-21-fijado-y-memoria-de-gradle-acotada.md`. No se renumeran, porque los ADR son de solo adición y
+  el número puede estar citado. Las decisiones nuevas continúan en ADR-0027.
+- **Copia única del mayor en el panel.** HU-4 describe la propagación en caliente de preferencias
+  *familiar → mayor*, y funciona. La dirección contraria no existe: el panel lee el documento del mayor una
+  sola vez y lo reescribe entero en cada deslizador, revirtiendo lo que el mayor haya cambiado desde entonces
+  (ADR-0021) o fallando por las reglas. Diagnosticado el 2026-09-26; corrección diseñada en ADR-0027.
 - **Fechas del cambio de voz.** Esta tabla y el capítulo 5 datan la migración de TTS entre el 25 y el 27 de
   julio de 2026, que es cuando se hizo el trabajo; el historial la fecha el **2026-09-06**, que es cuando se
   consolidó en el repositorio. Se registran las dos porque la regla del proyecto es que las fechas salen de

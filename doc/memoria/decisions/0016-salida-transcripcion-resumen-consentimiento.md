@@ -46,3 +46,21 @@ resumen/barrido, y quién lo otorga.
 
 No aplica (diseño). Criterio futuro: existe un flujo de consentimiento *opt-in* documentado que cubre
 explícitamente el envío del transcript al resumen.
+
+## Epílogo — respuesta propuesta (2026-09-26)
+
+La cuestión abierta de este ADR tiene respuesta **propuesta** en **ADR-0030**. Se cerrará cuando el autor
+confirme los tres puntos que ese ADR deja marcados.
+
+- **¿El *opt-in* cubre el envío de la transcripción al análisis?** Sí, y se dice expresamente en el texto del
+  consentimiento: lo hablado se envía a Google para analizarse y no se guarda. El análisis pasa a hacerse en
+  una callable (ADR-0029), así que el salto que este ADR describía (cliente → proveedor) es ahora cliente →
+  Function del proyecto → proveedor, y también se declara.
+- **¿Quién consiente?** Siempre el mayor, en su dispositivo, con un gesto explícito. El familiar no puede
+  hacerlo por él: la vinculación no le convierte en representante legal. En modo vinculado se pregunta justo
+  tras la vinculación, que suele ser presencial, para que el familiar pueda explicarlo sin decidir.
+- **¿Cómo se recoge y se retira?** Una pantalla con dos botones grandes, registrada por una callable con la
+  hora del servidor. Se retira en Ajustes con la misma facilidad, y retirarlo borra todo lo guardado.
+
+La alternativa *"resumen extractivo/local sin segunda llamada al LLM"* sigue sin diseñar y no se retoma: el
+análisis emocional de HU-6 no se puede hacer de forma extractiva.

@@ -70,3 +70,12 @@ framework por su alcance a dispositivos modestos y luego exigirles inferencia ne
 
 El pipeline de voz de HU-2 (STT → Gemini → TTS) funciona con Gemini. El *function calling* (`guardarNombre`)
 se verificó en `708d71a`. La clave sigue en el cliente (`.env`): **RNF-8 aún no cumplido**.
+
+## Epílogo — el "RAG parcial" toma forma (2026-09-26)
+
+La decisión anunciaba *"RAG parcial: inyectando el contexto del usuario guardado en Firebase antes de cada
+interacción"*. Hasta ahora ese contexto era solo el nombre. ADR-0032 lo diseña completo: una memoria de datos
+estables y resúmenes recientes, extraída al cerrar cada conversación e inyectada en el `systemInstruction` **al
+empezar cada conversación** (no antes de cada turno: el `systemInstruction` ya viaja en todos los turnos de la
+sesión). Se confirma de paso lo que esta decisión daba por supuesto: la API de Gemini no guarda estado entre
+llamadas, y cualquier memoria entre conversaciones tiene que guardarla y entregarla la app.
