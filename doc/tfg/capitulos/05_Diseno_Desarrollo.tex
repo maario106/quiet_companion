@@ -11,18 +11,17 @@
 
 \section{Introducción del capítulo}
 
-El Capítulo~4 estableció \emph{qué} debe hacer el sistema: actores, requisitos funcionales y no
+El capítulo~\ref{cap:analisis} estableció \emph{qué} debe hacer el sistema: actores, requisitos funcionales y no
 funcionales, casos de uso y modelo conceptual de dominio. Este capítulo documenta \emph{cómo} se ha
 construido, y lo hace en dos mitades deliberadamente asimétricas.
 
-La primera mitad ---diseño--- parte de un hecho que condiciona todo lo demás: el usuario principal es una
+La primera mitad, diseño, parte de un hecho que condiciona todo lo demás: el usuario principal es una
 persona mayor con posible deterioro visual y brecha digital. Esa restricción no se resuelve con una capa
 de estilo aplicada al final, sino que gobierna el sistema de diseño desde la primera decisión. Se
-documentan los principios rectores, las decisiones concretas de accesibilidad ---con los criterios WCAG~2.2
-que las respaldan y las mediciones de contraste realmente calculadas sobre la paleta--- y la evolución del
+documentan los principios rectores, las decisiones concretas de accesibilidad (con los criterios WCAG~2.2 que las respaldan y las mediciones de contraste realmente calculadas sobre la paleta) y la evolución del
 diseño de interfaz desde los bocetos a mano hasta el código.
 
-La segunda mitad ---desarrollo--- describe la arquitectura \textbf{tal como se construyó}, no tal como se
+La segunda mitad, desarrollo, describe la arquitectura \textbf{tal como se construyó}, no tal como se
 planificó. Se enuncia el \emph{stack} en uso, se detalla la realización del modelo Clean Feature-Sliced y
 se narran las veinte decisiones de arquitectura registradas durante el proyecto, agrupadas por tema. El
 capítulo cierra con la cronología real del desarrollo, reconstruida a partir del historial de versiones.
@@ -31,8 +30,8 @@ Dos criterios de redacción atraviesan el capítulo y conviene enunciarlos por a
 una capacidad se describe como \textbf{implementada} únicamente cuando existe el código que la sostiene;
 cuando una decisión está tomada pero no construida, se dice así y se remite su realización al
 \autoref{cap:desarrollo-futuro}. El segundo es que las alternativas descartadas se documentan con el mismo
-cuidado que las adoptadas: en un proyecto con un único desarrollador y plazo fijo, lo que no se construyó
----y por qué--- es parte sustancial de la ingeniería.
+cuidado que las adoptadas: en un proyecto con un único desarrollador y plazo fijo, lo que no se construyó,
+ y por qué, es parte sustancial de la ingeniería.
 
 \partesep{Parte I: Diseño}
 
@@ -40,8 +39,7 @@ cuidado que las adoptadas: en un proyecto con un único desarrollador y plazo fi
 
 \subsection{Diseño centrado en la persona mayor}
 
-El problema que ataca el sistema ---la soledad no deseada en personas mayores, caracterizada en el
-Capítulo~2--- determina un usuario con un perfil muy concreto: edad avanzada, agudeza visual y sensibilidad
+El problema que ataca el sistema (la soledad no deseada en personas mayores, caracterizada en el capítulo~\ref{cap:marco-teorico}) determina un usuario con un perfil muy concreto: edad avanzada, agudeza visual y sensibilidad
 al contraste reducidas, y una relación con la tecnología que a menudo es de desconfianza más que de
 desconocimiento. De ahí se derivan tres principios que actúan como restricciones de diseño y no como
 recomendaciones.
@@ -49,14 +47,13 @@ recomendaciones.
 \textbf{La voz es la interfaz primaria; la pantalla es su respaldo.} La conversación hablada es la
 modalidad de interacción que menos alfabetización digital exige y la única que no degrada con la pérdida
 de agudeza visual. La pantalla principal del mayor tiene, en consecuencia, un solo control accionable
-grande ---el botón de micrófono--- y el resto es información. El texto de la respuesta se muestra en
+grande, el botón de micrófono, y el resto es información. El texto de la respuesta se muestra en
 paralelo a la locución porque la redundancia sensorial beneficia también a quien oye mal, no porque se
 espere que el usuario lea.
 
 \textbf{La predecibilidad prima sobre la inteligencia.} Un sistema que se reconfigura solo es
 desorientador para un colectivo que ya parte de una relación frágil con el dispositivo. Este principio se
-formalizó como decisión de arquitectura (ADR-0013): la accesibilidad se ajusta de forma explícita ---por el
-propio mayor o por su familiar--- y nunca se infiere automáticamente. Es un rechazo deliberado de la
+formalizó como decisión de arquitectura (ADR-0013): la accesibilidad se ajusta de forma explícita, por el propio mayor o por su familiar, y nunca se infiere automáticamente. Es un rechazo deliberado de la
 adaptación por IA en el único punto donde habría sido técnicamente sencilla.
 
 \textbf{Ningún camino puede terminar en un callejón sin salida.} Los errores se comunican con texto
@@ -67,24 +64,23 @@ patrón de error.
 
 \subsection{Revelación progresiva como principio rector}
 
-El sistema atiende a dos perfiles de mayor ---Independiente y Vinculado--- que difieren en quién gestiona
+El sistema atiende a dos perfiles de mayor, Independiente y Vinculado, que difieren en quién gestiona
 la configuración, no en qué hacen con la aplicación. La tentación de diseño era construir dos flujos, o
 incluso dos aplicaciones. Se descartó: duplicar la superficie de interfaz es inviable para un desarrollador
 único y garantiza que ambas versiones diverjan con el tiempo.
 
-La solución adoptada (ADR-0007) es la \textbf{Revelación Progresiva}: un único núcleo de aplicación ---la
-pantalla de chat por voz--- sirve a los dos perfiles, y la diferencia se resuelve \emph{mostrando u
+La solución adoptada (ADR-0007) es la \textbf{Revelación Progresiva}: un único núcleo de aplicación, la pantalla de chat por voz, sirve a los dos perfiles, y la diferencia se resuelve \emph{mostrando u
 ocultando} capacidades en función del atributo \code{autonomy} del modelo de usuario. La autonomía es un
 dato de configuración, no una identidad distinta, en coherencia con el modelo conceptual de dominio del
-Capítulo~4.
+capítulo~\ref{cap:analisis}.
 
 La realización en código es más estricta que el enunciado original. El botón de Ajustes de la pantalla
 principal no consulta directamente \code{autonomy}: consulta la función pura
 \code{visibleSettingsRows(user)}, que devuelve las filas de ajustes visibles para ese usuario concreto, y
 se muestra si la lista no está vacía. La misma función decide qué renderiza la pantalla de ajustes. La
 razón es defensiva: si el botón y la pantalla calculasen su visibilidad por separado, acabarían
-divergiendo, y el resultado sería un botón que abre una pantalla vacía ---un fallo tan grave, para este
-usuario, como un botón que no responde.
+divergiendo, y el resultado sería un botón que abre una pantalla vacía, un fallo tan grave para este
+usuario como un botón que no responde.
 
 Esta decisión tiene un coste registrado. El enumerado \code{AutonomyStatus} terminó con cuatro valores
 (\code{independent}, \code{dependent}, \code{linked}, \code{none}) frente a los dos que enuncia RF-1:
@@ -106,14 +102,13 @@ El alcance del compromiso es acotado y conviene declararlo con precisión: \text
 aplica a la interfaz del mayor}, no al panel del familiar. La justificación es de asignación de esfuerzo,
 no de indiferencia: el familiar es un adulto sin limitaciones asumidas que opera un panel de gestión
 convencional, mientras que el mayor es el usuario cuyas limitaciones definieron el proyecto. Esta
-asimetría se materializa en el código como dos temas separados ---\code{elderTheme} y
-\code{companionTheme}--- con reglas tipográficas y de tamaño distintas.
+asimetría se materializa en el código como dos temas separados, \code{elderTheme} y \code{companionTheme}, con reglas tipográficas y de tamaño distintas.
 
 El mecanismo que hace sostenible el cumplimiento es la \textbf{centralización}. Los pisos tipográficos, las
 alturas mínimas de los elementos táctiles y los colores viven en una única clase, \code{AppTheme}
 (\code{lib/core/theme/app\_theme.dart}), y no en cada pantalla. Las cuatro constantes de tamaño de fuente
-llevan en el código el comentario normativo \emph{«WCAG --- do not go below these»}: son pisos, no valores
-por defecto negociables a la baja. Cualquier pantalla del mayor hereda las propiedades de accesibilidad por
+llevan en el código un comentario normativo que las declara pisos derivados de WCAG, y no valores por
+defecto negociables a la baja. Cualquier pantalla del mayor hereda las propiedades de accesibilidad por
 construcción, sin depender de que el desarrollador las recuerde pantalla a pantalla.
 
 \subsection{Decisiones de interacción}
@@ -131,7 +126,7 @@ teléfono y 260~px en tableta.
 \textbf{Solo pulsación simple.} Toda la interacción del mayor se resuelve con \code{onTap}. No hay
 \code{onLongPress}, ni \code{onDoubleTap}, ni gestos de deslizamiento en ninguna pantalla del mayor. La
 motivación es doble: el temblor y la reducción de destreza fina hacen que el doble toque y la pulsación
-mantenida fallen con frecuencia, y ninguno de los dos tiene afordancia visible ---un gesto que no se ve no
+mantenida fallen con frecuencia, y ninguno de los dos tiene afordancia visible: un gesto que no se ve no
 se descubre. Nielsen Norman Group documenta precisamente este patrón de dificultad en usuarios mayores
 \autocite{Kane2019}. La consecuencia de diseño es que \textbf{cada acción necesita su propio control
 visible}, lo que a su vez presiona hacia pantallas con muy pocas acciones: la restricción de interacción y
@@ -139,25 +134,25 @@ la simplicidad de la interfaz se refuerzan mutuamente.
 
 Una decisión relacionada, tomada al implementar la pantalla de emergencia, es que ésta se presenta como
 ruta completa a pantalla partida (\code{fullscreenDialog}) y no como diálogo modal. El razonamiento consta
-en el código: la barrera de un diálogo ---la zona que lo cierra al tocarla--- es superficie de error en
+en el código: la barrera de un diálogo, la zona que lo cierra al tocarla, es superficie de error en
 mitad de una emergencia.
 
 \subsection{Tipografía y escalado dinámico}
 
 RNF-3 fija cuerpo $\geq 20$~sp y títulos $\geq 28$~sp. El sistema de diseño define cuatro pisos
----\code{fontButton} (20), \code{fontMedium} (24), \code{fontLarge} (32) y \code{fontHuge} (40)--- y no
+(\code{fontButton} (20), \code{fontMedium} (24), \code{fontLarge} (32) y \code{fontHuge} (40)) y no
 existe ningún tamaño por debajo de 20 en las pantallas del mayor.
 
 Sobre ese suelo actúa el multiplicador \code{textSizeMultiplier} de \code{UserPreferences}, cuyo valor por
 defecto es \textbf{1.2} y no 1.0. La elección no es neutra: el valor de fábrica ya está sesgado hacia la
-accesibilidad, de modo que un mayor que nunca toque la configuración ---el caso más probable--- recibe una
+accesibilidad, de modo que un mayor que nunca toque la configuración, el caso más probable, recibe una
 tipografía ampliada por omisión. El mismo criterio se aplica a \code{speechRate}, cuyo valor por defecto
 (0.4 en la escala de \code{flutter\_tts}, por debajo del 0.5 natural) produce una voz deliberadamente más
 lenta que la nominal.
 
 El escalado es dinámico y se aplica en tiempo de construcción del widget, multiplicando cada tamaño base
 por el factor leído del documento de usuario (\code{AppTheme.font* * textScale}). Al ser el documento la
-fuente reactiva descrita en el \autoref{sec:ssot}, el efecto observable es que la letra del mayor cambia de
+fuente reactiva descrita en el apartado~\ref{sec:ssot}, el efecto observable es que la letra del mayor cambia de
 tamaño en pantalla en aproximadamente un segundo cuando el familiar mueve el deslizador en su dispositivo,
 sin reiniciar la aplicación ni intervención alguna del mayor.
 
@@ -199,7 +194,7 @@ el código.
         \toprule
         \textbf{Token} & \textbf{Valor} & \textbf{Ratio} & \textbf{Cumple} \\
         \midrule
-        \texttt{elderTextPrimary} (cuerpo)     & \#1A1A2E & 16{,}19:1 & AAA \\
+        \texttt{elderTextPrimary} (cuerpo)    & \#1A1A2E & 16{,}19:1 & AAA \\
         \texttt{elderTextSecondary}            & \#4A4A6A & 8{,}04:1  & AAA \\
         \texttt{emergency112}                  & \#A4031F & 7{,}63:1  & AAA \\
         \texttt{emergencyContactCall}          & \#1B5E20 & 7{,}47:1  & AAA \\
@@ -279,8 +274,7 @@ cuáles son las dos que importan.
 
 La tercera etapa produjo \emph{mockups} de alta fidelidad con Claude Design, ya con color, tipografía y
 jerarquía definitivos. Es la primera representación sobre la que se pueden tomar decisiones de paleta con
-fundamento ---y de hecho es donde se decidió sustituir el teal azulado inicial por la gama cálida
-justificada en el \autoref{sec:color}--- porque es la primera en la que el color aparece en su proporción
+fundamento (y de hecho es donde se decidió sustituir el teal azulado inicial por la gama cálida justificada en el apartado~\ref{sec:color}) porque es la primera en la que el color aparece en su proporción
 real y no como una muestra aislada.
 
 \begin{figure}[htbp]\centering
@@ -298,8 +292,7 @@ preciso sobre el motivo, que es estructural y no una cuestión de calidad gráfi
 
 Un \emph{mockup} tradicional es una imagen: el desarrollador la mira y reconstruye por su cuenta la
 jerarquía de contenedores que la produce. Los \emph{mockups} de esta etapa llegaron descritos como
-marcado con estilos, es decir, con una \textbf{jerarquía de composición ya explícita} ---contenedores
-anidados, dirección de apilamiento, separaciones, alineaciones---, y esa jerarquía es isomorfa al árbol de
+marcado con estilos, es decir, con una \textbf{jerarquía de composición ya explícita} (contenedores anidados, dirección de apilamiento, separaciones, alineaciones), y esa jerarquía es isomorfa al árbol de
 widgets de Flutter. La correspondencia es casi mecánica: un contenedor en columna con separación uniforme
 es una \code{Column} con \code{spacing}; una caja con relleno y esquinas redondeadas es un \code{Container}
 con \code{padding} y \code{BorderRadius}; un valor de color repetido es una constante del tema. Lo que se
@@ -308,7 +301,7 @@ partir de un dibujo, que es donde se introducen las divergencias entre lo diseñ
 
 La ventaja tiene un límite que conviene declarar. La traducción es fiable para la composición estática, y
 no dice nada sobre el estado, la animación ni el comportamiento reactivo, que es donde reside la
-complejidad real de la pantalla principal ---los cuatro estados del ciclo conversacional, el
+complejidad real de la pantalla principal: los cuatro estados del ciclo conversacional, el
 desplazamiento automático durante la locución, la reconciliación de los deslizadores del panel del
 familiar. Los \emph{mockups} acortaron la distancia hasta el borde del comportamiento; a partir de ahí, el
 trabajo es el de siempre.
@@ -319,11 +312,11 @@ trabajo es el de siempre.
 \label{sec:stack}
 
 Esta sección enuncia el \emph{stack} y cómo encajan sus piezas. La justificación de cada elección se
-desarrolla en el \autoref{sec:adr}, y las versiones son las fijadas en \code{pubspec.yaml}, verificadas
+desarrolla en el apartado~\ref{sec:adr}, y las versiones son las fijadas en \code{pubspec.yaml}, verificadas
 sobre el árbol de código.
 
 El sistema es una \textbf{aplicación cliente Flutter} (Dart, SDK $\wedge$3.7.2) compilada para Android
----\code{minSdk} 24, \code{compileSdk} 36--- apoyada en \textbf{Firebase} como \emph{Backend-as-a-Service}
+(\code{minSdk} 24, \code{compileSdk} 36) apoyada en \textbf{Firebase} como \emph{Backend-as-a-Service}
 y en dos servicios de Google Cloud consumidos como API: Gemini para la conversación y Cloud
 Text-to-Speech para la voz.
 
@@ -372,6 +365,56 @@ durante la evaluación del proyecto.
 Esta sección describe la arquitectura \textbf{tal como está construida}. Cuando la realización diverge del
 modelo ideal, se indica.
 
+\subsection{Visión general del sistema}
+\label{sec:arquitectura-general}
+
+Antes de entrar en la organización interna del código conviene situar las piezas que intervienen y cómo se
+comunican entre sí, porque el sistema dejó de ser una aplicación aislada en el momento en que adquirió
+servidor propio. La \autoref{fig:arquitectura} recoge esa visión de conjunto.
+
+El sistema se despliega sobre \textbf{dos instancias del mismo binario}: la que ejecuta la persona mayor y
+la que ejecuta el familiar. No son dos aplicaciones distintas, sino la misma, que se comporta de una u otra
+forma en función del rol almacenado en el perfil, según el principio de revelación progresiva ya descrito.
+Ambas se autentican contra \textbf{Firebase Authentication}, de forma anónima en el caso del mayor y con
+correo y contraseña en el del familiar, y ambas observan la colección \code{users} de \textbf{Cloud
+Firestore}, que actúa como memoria compartida entre los dos dispositivos y como mecanismo de propagación en
+tiempo real de las preferencias.
+
+El ciclo conversacional atraviesa cuatro piezas. La transcripción de la voz se resuelve \textbf{en el propio
+dispositivo}, mediante el reconocedor del sistema operativo Android, de modo que el audio del mayor no sale
+del terminal. El texto transcrito viaja a la \textbf{API de Gemini}, que devuelve la respuesta y que puede
+además solicitar la ejecución de una función declarada por el cliente para guardar el nombre del mayor. Esa
+respuesta se trocea en frases y cada una se envía a la \emph{callable} \code{synthesizeSpeech}, desplegada
+en \textbf{Cloud Functions} sobre la región \code{europe-west1}, que a su vez invoca la \textbf{API de Cloud
+Text-to-Speech} con una voz fija de servidor y devuelve el audio codificado. El reproductor del cliente lo
+reproduce aplicando el volumen y la velocidad que el usuario tenga configurados y, si la síntesis en la nube
+falla o agota su tiempo límite, la frase se pronuncia con el motor de voz del propio dispositivo.
+
+Dos caminos más completan el diagrama. El \textbf{emparejamiento} no se resuelve contra Firestore desde el
+cliente, sino a través de la \emph{callable} \code{validateAndLink}, que localiza al mayor por su código con
+credenciales de administrador y actualiza ambos perfiles en una única transacción. Y la \textbf{llamada de
+emergencia} no atraviesa el \emph{backend} en absoluto: construye un URI \code{tel:} y cede el control al
+marcador del sistema operativo. Cerrando el conjunto, las \textbf{reglas de seguridad de Firestore} se
+interponen en todo acceso de cliente a la base de datos, de manera que ni siquiera un binario modificado
+puede leer o escribir fuera de lo que esas reglas permiten.
+
+\begin{figure}[htbp]\centering
+  %\includegraphics[width=\textwidth]{imagenes/arquitectura/arquitectura-sistema.png}
+  \caption{Arquitectura del sistema: dispositivos, servicios gestionados y flujos de datos.}
+  \label{fig:arquitectura}
+
+  \vspace{2pt}
+  {\footnotesize Fuente: Elaboración propia.}
+\end{figure}
+% **note:** añadir imagen del diagrama de arquitectura
+% (imagenes/arquitectura/arquitectura-sistema.png) y descomentar el \includegraphics.
+
+Merece la pena señalar una asimetría que el diagrama hace evidente y que el código no siempre deja ver: el
+\emph{backend} propio interviene en la voz y en el emparejamiento, pero \textbf{no} en la conversación con
+el modelo de lenguaje, que el cliente sigue invocando directamente. Ésa es exactamente la pieza que ADR-0014
+dejó diseñada y sin construir, y la razón por la que RNF-8 permanece incumplido, según se detalla más
+adelante en este mismo capítulo.
+
 \subsection{Estructura core/ y features/, y capas por \emph{slice}}
 
 El código se organiza según el modelo híbrido Clean Feature-Sliced (CFS) prescrito por RNF-11: rebanadas
@@ -383,7 +426,7 @@ lib/
 |   |-- config/                  # app_router, env, settings_rows, tts_config
 |   |-- constants/               # firestore_paths
 |   |-- models/                  # UserModel, UserPreferences, EmergencyContact
-|   |-- providers/               # currentUserProvider, ttsServiceProvider, ...
+|   |-- providers/               # currentUserProvider, ttsServiceProvider...
 |   |-- services/                # Gemini, Speech, Tts (x5), EmergencyCall, Permission
 |   |-- theme/                   # AppTheme
 |   |-- utils/                   # sentence_splitter
@@ -444,8 +487,7 @@ suscripción al mismo documento, en paralelo al proveedor: dos escuchas y una vi
 única cuya consecuencia práctica era que el enrutador tomaba decisiones con datos obsoletos del controlador.
 La suscripción se eliminó en la fase de estabilización; el controlador pasó a reaccionar únicamente a
 \code{authStateChanges()} con una lectura puntual inicial, y el enrutador a priorizar el dato en vivo. Un
-camino redundante sobrevive a esa limpieza ---el método \code{checkPairingStatus()} y su botón
-«Continuar», innecesarios desde que el desbloqueo es automático--- y sigue marcado en el código para
+camino redundante sobrevive a esa limpieza (el método \code{checkPairingStatus()} y su botón «Continuar», innecesarios desde que el desbloqueo es automático) y sigue marcado en el código para
 eliminación.
 
 \subsection{Gestión de estado e inyección de dependencias}
@@ -453,7 +495,7 @@ eliminación.
 Todo estado de negocio se modela como un \code{StateNotifier} sobre una clase de estado inmutable con
 \code{copyWith}. No se usa \code{setState} para lógica de negocio en ningún punto; las pantallas son
 \code{ConsumerWidget} o \code{ConsumerStatefulWidget} que observan y renderizan. El único estado local
-admitido en la capa de presentación es el estrictamente efímero de un widget ---la posición de un
+admitido en la capa de presentación es el estrictamente efímero de un widget: la posición de un
 deslizador mientras se arrastra, la posición de un \code{ScrollController}.
 
 Riverpod cubre simultáneamente el estado reactivo y la inyección de dependencias (RNF-12): servicios y
@@ -480,7 +522,7 @@ actualiza ambos documentos en una sola operación. La implementación migró de 
 \code{runTransaction} por una razón concreta: un lote de escritura no puede \emph{leer}, y la
 desnormalización del contacto de emergencia exige leer antes el documento del mayor para respetar la
 precedencia de un contacto fijado manualmente sobre el heredado del familiar. Las implicaciones de
-seguridad de que esta transacción se ejecute en el cliente se tratan en el \autoref{sec:adr-identidad}.
+seguridad de que esta transacción se ejecute en el cliente se tratan en el apartado~\ref{sec:adr-identidad}.
 
 El enrutado es reactivo. \code{RouterNotifier} observa los dos controladores de autenticación, el estado de
 Firebase Auth y \code{currentUserProvider}, y notifica a \code{go\_router} en cada cambio para que
@@ -504,7 +546,7 @@ La elección del \textbf{framework de cliente} (ADR-0001) enfrentó el desarroll
 Native, una aplicación web y Flutter. El desarrollo nativo se descartó de inmediato: duplica el esfuerzo de
 un desarrollador único. La discriminación real fue entre las opciones multiplataforma, y el criterio
 decisivo no fue la productividad sino el \textbf{control de la interfaz}. La accesibilidad de este proyecto
-exige redefinir por completo el sistema de diseño ---tamaños, superficies táctiles, contraste---, y Flutter
+exige redefinir por completo el sistema de diseño (tamaños, superficies táctiles, contraste), y Flutter
 lo permite sin depender de los componentes estándar del sistema operativo. La aplicación web añadía además
 un peor acceso al micrófono y a los permisos. El coste asumido queda registrado: iOS es una plataforma
 potencial pero \textbf{no verificada}, porque el proyecto es Android-primario y no se ha compilado ni
@@ -516,7 +558,7 @@ framework por su alcance a terminales de gama media-baja y exigir después a eso
 inferencia neuronal local, que requiere NPU y memoria de las que carecen. La segunda alternativa
 descartada fue el \emph{fine-tuning} de un modelo propio, inviable por falta del volumen de datos
 conversacionales que exigiría. El tono empático se consigue por tanto mediante \emph{prompt engineering}
----\code{systemInstruction} y \code{safetySettings} configurados en \code{GeminiService}--- y no
+(\code{systemInstruction} y \code{safetySettings} configurados en \code{GeminiService}) y no
 reentrenando la red. El proveedor concreto seleccionado es Gemini \code{gemini-2.5-flash}.
 % **note:** la selección de Gemini frente a GPT-4o-mini o Claude Haiku está evidenciada por el código pero
 % su justificación (capa gratuita, function calling, mismo proyecto GCP) no consta en la fuente documental;
@@ -527,7 +569,7 @@ tipo Spring Boot o Django. Un desarrollador único con plazo fijo no puede const
 persistencia y cifrado de credenciales desde cero, y la alternativa de prescindir de backend es imposible:
 mayor y familiar están en dispositivos distintos y necesitan sincronización bidireccional. La elección de
 Firestore como base de datos en tiempo real es, además, lo que hace viable el patrón de fuente única de
-verdad del \autoref{sec:ssot}: sin \emph{streams} de documento, la propagación en caliente de HU-4 exigiría
+verdad del apartado~\ref{sec:ssot}: sin \emph{streams} de documento, la propagación en caliente de HU-4 exigiría
 sondeo periódico.
 
 La \textbf{gestión de estado} (ADR-0005) es la única decisión de este bloque que contradice a la
@@ -536,7 +578,7 @@ Riverpod porque un solo mecanismo cubre estado e inyección, con menos ceremonia
 BLoC/localizador de servicios, y porque \code{StreamProvider} mapea de forma natural los \emph{snapshots}
 de Firestore. La divergencia respecto a la recomendación es consciente y se registra como tal. Su coste
 también: el proyecto queda anclado en la línea 2.x por el conflicto con \code{scheduleNewFrame} descrito en
-el \autoref{sec:stack}.
+el apartado~\ref{sec:stack}.
 
 Cierra el bloque la \textbf{alineación de dependencias} (ADR-0011), que fija todo el ecosistema FlutterFire
 sobre \code{firebase\_core} 3.x. Es una decisión menor en ambición y no en efecto: versiones desalineadas
@@ -546,23 +588,21 @@ dependencias transitivas.
 \subsection{Arquitectura y gestión de estado}
 
 El \textbf{modelo arquitectónico} (ADR-0004) descartó dos extremos. La organización por capas técnicas
-(\emph{layer-first}) se rechazó por su fricción cognitiva al escalar ---carpetas con decenas de archivos
-sin relación funcional---, y la organización por \emph{features} pura, por carecer de reglas que impidan
+(\emph{layer-first}) se rechazó por su fricción cognitiva al escalar, carpetas con decenas de archivos sin relación funcional, y la organización por \emph{features} pura, por carecer de reglas que impidan
 los acoplamientos laterales y las dependencias circulares. También se descartó el FSD estricto, con sus
 segmentos propios y su pila de herramientas, por riesgo de sobreingeniería frente al plazo. El resultado
 adoptado toma la macroestructura de CFS con la nomenclatura de Clean Architecture, que es la que un
 tribunal reconoce sin glosario.
 
-La \textbf{fuente única de verdad} (ADR-0009) y su realización se han descrito en el \autoref{sec:ssot}.
-Merece constar aquí que la deuda que el propio ADR registraba ---la colección \code{'users'} escrita como
-literal en lugar de usar las constantes de \code{FirestorePaths}--- \textbf{está resuelta en el código
+La \textbf{fuente única de verdad} (ADR-0009) y su realización se han descrito en el apartado~\ref{sec:ssot}.
+Merece constar aquí que la deuda que el propio ADR registraba (la colección \code{'users'} escrita como literal en lugar de usar las constantes de \code{FirestorePaths}) \textbf{está resuelta en el código
 actual}: el proveedor usa hoy \code{FirestorePaths.usersCollection}.
 
 La \textbf{persistencia de preferencias desde el panel del familiar} (ADR-0010) resuelve dos problemas en el
 mismo camino de escritura. El primero es de coste: un deslizador emite decenas de eventos por segundo al
 arrastrarlo, y escribir en Firestore en cada uno saturaría la red y agotaría la cuota gratuita; la
 persistencia se dispara por tanto en \code{onChangeEnd}, una escritura por gesto. El segundo es de
-honestidad de la interfaz: la actualización es optimista ---el valor nuevo se muestra de inmediato--- pero
+honestidad de la interfaz: la actualización es optimista, el valor nuevo se muestra de inmediato, pero
 con \textbf{reversión real} si la escritura falla, en lugar de dejar en pantalla un valor que nunca llegó a
 persistirse. La alternativa descartada, una interfaz optimista sin reversión, es más simple y miente al
 familiar. El coste asumido es la lógica de reconciliación del propio deslizador, que debe distinguir un
@@ -577,7 +617,7 @@ moverían, se persistirían y no cambiarían nada. La solución adoptada aplica 
 reproductor ajusta velocidad y volumen. La equivalencia entre escalas vive en una función pura
 (\code{playerSpeedFor}) cuyo factor de conversión, 2.0, no es arbitrario sino exactamente el que
 \code{flutter\_tts} aplica en Android, de modo que el deslizador significa lo mismo con las dos voces. El
-coste ---estirar audio ya sintetizado suena menos natural en los extremos del recorrido--- se acepta frente
+coste (estirar audio ya sintetizado suena menos natural en los extremos del recorrido) se acepta frente
 a la alternativa, que era una regresión funcional silenciosa en la única palanca que el familiar tiene
 sobre la experiencia del mayor.
 
@@ -593,7 +633,7 @@ generaría un identificador nuevo en el siguiente arranque y perdería su perfil
 solo se monta en pantallas del familiar. El coste asumido es la fragilidad de la identidad del mayor: una
 reinstalación genera un usuario nuevo, y no existe migración de cuenta entre dispositivos.
 
-La \textbf{revelación progresiva} (ADR-0007) se ha tratado en el \autoref{sec:evolucion-diseno} y en la
+La \textbf{revelación progresiva} (ADR-0007) se ha tratado en el apartado~\ref{sec:evolucion-diseno} y en la
 sección de principios; su alternativa descartada era construir dos flujos o dos aplicaciones.
 
 La \textbf{configuración explícita de accesibilidad} (ADR-0013) rechaza deliberadamente la adaptación
@@ -603,19 +643,18 @@ colectivo un cambio de interfaz no solicitado es desorientador, la inferencia es
 error del sistema erosiona una confianza que costó construir.
 
 Esta decisión estuvo mucho tiempo implementada solo a medias, y el proceso de cierre ilustra el valor de
-declararlo: durante casi todo el proyecto funcionó únicamente la ruta remota ---el familiar ajusta desde su
-panel---, mientras \code{settings\_rows.dart} contenía una sola fila, la del contacto de emergencia. La
+declararlo: durante casi todo el proyecto funcionó únicamente la ruta remota, el familiar ajusta desde su panel, mientras \code{settings\_rows.dart} contenía una sola fila, la del contacto de emergencia. La
 interfaz del mayor honraba los tres parámetros de accesibilidad pero no ofrecía cómo cambiarlos desde su
 propio dispositivo, de modo que CU-05 quedaba cubierto solo en parte. La arquitectura declarativa de las
 filas de ajustes hizo que cerrarlo costara añadir filas y no refactorizar: desde ADR-0021 existen las
-\textbf{tres escalas locales} ---tamaño de letra, volumen y velocidad de la voz---, resueltas como peldaños
+\textbf{tres escalas locales} (tamaño de letra, volumen y velocidad de la voz), resueltas como peldaños
 discretos con nombre («Normal», «Grande», «Muy grande») en lugar de deslizadores continuos, porque un
 deslizador exige una precisión motora fina que esta población no tiene por qué tener, y porque un valor
 numérico sin nombre no le dice nada a quien lo está eligiendo. Están disponibles para todo mayor y no solo
 para el independiente. CU-05 queda, por tanto, \textbf{cubierto}.
 
 El \textbf{emparejamiento} fue durante cuatro meses la decisión más incómoda del proyecto, y su historia
-completa ---incluida la parte en que estuvo mal--- es más instructiva que su estado final.
+completa, incluida la parte en que estuvo mal, es más instructiva que su estado final.
 
 ADR-0008 lo implementó como una \textbf{transacción de cliente} que escribía en el documento del mayor
 desde la sesión del familiar. Fue una decisión de desbloqueo consciente: sin infraestructura server-side
@@ -627,7 +666,7 @@ de que nadie la cobrase.
 La factura llegó al escribir las reglas de seguridad reales (ADR-0025), y fue más cara de lo anotado. La
 reserva de ADR-0008 hablaba de una \emph{escritura} que las reglas denegarían; el problema mayor estaba en
 la \emph{lectura}. Encontrar al mayor a partir de su código de cuatro caracteres es una consulta de
-colección ---\code{where('linkCode', '==', code)}---, y \textbf{las reglas de Firestore no ven las cláusulas
+colección (\code{where('linkCode', '==', code)}), y \textbf{las reglas de Firestore no ven las cláusulas
 de una consulta}: solo pueden permitir o denegar la operación entera. Mientras la búsqueda viviera en el
 cliente, \code{/users} tenía que ser consultable por cualquier usuario autenticado; es decir, cualquiera con
 la aplicación instalada y una sesión anónima podía enumerar el directorio de usuarios, con sus nombres y sus
@@ -645,13 +684,11 @@ ADR-0008 queda formalmente superado por ADR-0024.
 
 Conviene subrayar el orden de los acontecimientos, porque es el argumento de proceso y no de resultado:
 \textbf{primero se escribieron las reglas, y fueron las reglas las que obligaron a mover el código}. Los
-primeros veintinueve casos de prueba se redactaron incluyendo los huecos ---casos que documentaban lo que
-las reglas todavía permitían---, y fue eso lo que hizo visible el problema de la enumerabilidad. El test se
+primeros veintinueve casos de prueba se redactaron incluyendo los huecos, casos que documentaban lo que las reglas todavía permitían, y fue eso lo que hizo visible el problema de la enumerabilidad. El test se
 escribió antes que la solución y sirvió para encontrarla.
 
 Las \textbf{reglas de seguridad} (ADR-0025) responden a una pregunta que no es obvia: qué se modela, el
-sistema que se quiere o el que existe. Las reglas anteriores describían la arquitectura pretendida ---con
-una colección \code{/pairings/} que ningún código escribía--- y su efecto real fue enmascarar durante meses
+sistema que se quiere o el que existe. Las reglas anteriores describían la arquitectura pretendida (con una colección \code{/pairings/} que ningún código escribía) y su efecto real fue enmascarar durante meses
 que el código las contradecía. Las actuales modelan \textbf{operación por operación} lo que hacen el
 repositorio y el panel: lectura solo por identificador, para el dueño y para el familiar vinculado; alta del
 propio documento; borrado siempre denegado, porque eliminar una cuenta es una acción explícita de datos y
@@ -663,9 +700,7 @@ muestra un error visible y las pruebas lo señalan, en vez de quedar siendo fals
 
 La \textbf{verificación de esas reglas} (ADR-0026) es una decisión aparte porque las reglas son código con
 una particularidad incómoda: cuando fallan no avisan al desarrollador, fallan en el dispositivo del usuario.
-Se prueban con veintinueve casos contra el emulador de Firestore, agrupados por sujeto ---el dueño, el
-familiar vinculado, un autenticado cualquiera, un no autenticado, las colecciones inexistentes y la no
-enumerabilidad de \code{/users}---, y la lógica de negocio pura de la vinculación se prueba aparte, sin
+Se prueban con veintinueve casos contra el emulador de Firestore, agrupados por sujeto (el dueño, el familiar vinculado, un autenticado cualquiera, un no autenticado, las colecciones inexistentes y la no enumerabilidad de \code{/users}), y la lógica de negocio pura de la vinculación se prueba aparte, sin
 emulador, con diez casos más. El paquete vive fuera del \emph{codebase} desplegable para no engordar cada
 despliegue con dependencias de prueba, y el emulador exige un JDK~21 que convive con el JDK~11 del
 \emph{build} de Android anteponiéndolo solo en el comando que lo necesita (ADR-0023). Es la única parte del
@@ -701,8 +736,7 @@ gratuita, pero introduce un segundo proveedor en una arquitectura enteramente Fi
 funcional; ElevenLabs es el más expresivo del mercado y su capa gratuita, de unos 10\,000 caracteres al
 mes, es incompatible con el perfil de coste; OpenAI TTS carece de capa gratuita y sus voces están
 optimizadas para inglés; los modelos abiertos en dispositivo reintroducen el problema de hardware que
-ADR-0002 evitó. La alternativa arquitectónicamente «correcta» a largo plazo ---la API Live de Gemini, con
-audio bidireccional nativo--- sustituiría por completo el pipeline STT\,$\rightarrow$\,LLM\,$\rightarrow$\,TTS,
+ADR-0002 evitó. La alternativa arquitectónicamente «correcta» a largo plazo (la API Live de Gemini, con audio bidireccional nativo) sustituiría por completo el pipeline STT\,$\rightarrow$\,LLM\,$\rightarrow$\,TTS,
 lo que es incompatible con la congelación de arquitectura previa a las pruebas y queda como línea principal
 de trabajo futuro.
 
@@ -712,7 +746,7 @@ sintetizan las siguientes, con un prefetch de exactamente una. Esto acota el tie
 un solo viaje de red sin necesidad de síntesis por \emph{streaming}. El segundo es la \textbf{política de
 respaldo sin reintentos}: si la síntesis falla o supera su tiempo límite, esa locución se dice con el motor
 del dispositivo, sin reintentos ni retroceso exponencial. Es una aplicación deliberada del principio de
-predecibilidad ---para este usuario, una voz peor pero inmediata es preferible a un silencio de duración
+predecibilidad: para este usuario, una voz peor pero inmediata es preferible a un silencio de duración
 imprevisible.
 
 La \textbf{creación del codebase de Cloud Functions} (ADR-0018) documenta un descubrimiento de
@@ -724,25 +758,24 @@ sobre \emph{firebase-functions} v6 de segunda generación, Node~22 y región \co
 también el proxy de Gemini se descartó explícitamente: cierra RNF-8, pero toca el camino conversacional en
 vivo justo antes de las pruebas, y el riesgo de romper HU-2 pesa más que adelantar una migración que no
 bloquea a nadie. La región no es un detalle: el SDK cliente apunta por omisión a \code{us-central1}, y un
-desajuste aquí no produce un error visible sino respaldo permanente al TTS del dispositivo ---exactamente
-el modo de fallo silencioso contra el que el ADR advertía.
+desajuste aquí no produce un error visible sino respaldo permanente al TTS del dispositivo, que es
+exactamente el modo de fallo silencioso contra el que el ADR advertía.
 
 La \textbf{excepción de tráfico en claro hacia loopback} (ADR-0020) es la consecuencia imprevista de la
 anterior y el mejor ejemplo del capítulo sobre los límites de la verificación automatizada. En el primer
-despliegue real, la síntesis funcionaba ---los registros de la función muestran invocaciones con
-autenticación válida y sin errores--- y el audio no sonaba. La causa: \code{just\_audio} no reproduce bytes
+despliegue real, la síntesis funcionaba (los registros de la función muestran invocaciones con
+autenticación válida y sin errores) y el audio no sonaba. La causa: \code{just\_audio} no reproduce bytes
 directamente, sino que levanta un servidor HTTP local en \code{127.0.0.1} y le pasa esa dirección al
 reproductor; desde Android~9 el tráfico en claro está prohibido por defecto y la prohibición no distingue
 entre un servidor remoto y el del propio proceso. Se declaró una configuración de seguridad de red que
 permite tráfico en claro \textbf{exclusivamente} hacia loopback, descartando la alternativa de una línea
 (el atributo global \texttt{usesCleartextTraffic} a \texttt{true}) que habría abierto el tráfico en claro a
 cualquier destino,
-degradando la postura de seguridad de toda la aplicación ---incluidos los datos conversacionales de una
-persona mayor--- para resolver un problema de loopback.
+degradando la postura de seguridad de toda la aplicación, incluidos los datos conversacionales de una persona mayor, para resolver un problema de loopback.
 
 Este bloque deja una lección metodológica que la memoria recoge deliberadamente. En la misma sesión de
 pruebas apareció un segundo defecto: las respuestas de varias frases reproducían solo la primera y la
-última. La causa no estaba en el troceado sino en la costura con el reproductor ---el futuro de
+última. La causa no estaba en el troceado sino en la costura con el reproductor: el futuro de
 \code{play()} completa de inmediato si el reproductor ya está reproduciendo, de modo que solo es señal de
 fin válida para la primera pista. Ninguno de los dos defectos era detectable por los tests, y no por falta
 de cobertura: el doble de prueba del reproductor cumple el contrato «completa cuando termina de sonar» por
@@ -775,7 +808,7 @@ persistir no equivale a no procesar: para generar el resumen, la transcripción 
 al proveedor en una segunda llamada. Presentar el diseño «solo resúmenes» como si resolviera la privacidad
 sería deshonesto. La política del proyecto es consentimiento explícito desactivado por omisión, pero queda
 por decidir si ese consentimiento cubre también el envío del transcript completo al resumen, y quién lo
-otorga ---el mayor como titular del dato, o el familiar como tercero. La cuestión debe cerrarse antes de
+otorga, si el mayor como titular del dato o el familiar como tercero. La cuestión debe cerrarse antes de
 implementar HU-5, y su tratamiento completo corresponde al \autoref{cap:desarrollo-futuro}.
 % **note:** UNRESOLVED (ADR-0016): modelo de consentimiento RGPD sin cerrar — alcance del opt-in, titular
 % del consentimiento, mecanismo de recogida y de revocación, base jurídica y plazos de conservación.
@@ -796,7 +829,7 @@ razonada pero no hay artefacto que la realice.
 \textbf{ID} & \textbf{Decisión} & \textbf{Alternativa descartada} & \textbf{Estado} \\
 \midrule
 \endfirsthead
-\multicolumn{4}{c}{\tablename\ \thetable{} --- \textit{continuación}} \\
+\multicolumn{4}{c}{\tablename\ \thetable{} \textit{(continuación)}} \\
 \toprule
 \textbf{ID} & \textbf{Decisión} & \textbf{Alternativa descartada} & \textbf{Estado} \\
 \midrule
@@ -807,9 +840,9 @@ razonada pero no hay artefacto que la realice.
 \endlastfoot
 0001 & Flutter multiplataforma            & Desarrollo nativo por plataforma        & Implementado \\
 0002 & LLM conversacional en la nube      & Modelo abierto en el dispositivo        & Implementado \\
-0003 & Firebase como BaaS                 & Servidor propio (Spring Boot / Django)  & Implementado \\
+0003 & Firebase como BaaS                 & Servidor propio (Spring Boot / Django) & Implementado \\
 0004 & Arquitectura Clean Feature-Sliced  & \emph{Layer-first} / FSD estricto       & Implementado \\
-0005 & Riverpod (estado + DI)             & BLoC + GetIt + fpdart                   & Implementado \\
+0005 & Riverpod (estado + DI)            & BLoC + GetIt + fpdart                   & Implementado \\
 0006 & Auth dual anónima / correo         & Correo y contraseña para ambos roles    & Implementado \\
 0007 & Revelación progresiva              & Dos flujos o dos aplicaciones           & Implementado \\
 0008 & Emparejamiento por transacción de cliente & \emph{Cloud Function} \emph{callable} & Superada\,\textsuperscript{a} \\
@@ -821,7 +854,7 @@ razonada pero no hay artefacto que la realice.
 0014 & \emph{Proxy} de Functions para la clave del LLM & Clave en el cliente (estado actual) & Diseñado \\
 0015 & Persistencia solo de resúmenes     & Persistir la transcripción cruda        & Diseñado \\
 0016 & Consentimiento sobre la salida del transcript & Presentarlo como ya resuelto & Diseñado\,\textsuperscript{d} \\
-0017 & TTS en la nube (Chirp 3: HD)       & Mantener \texttt{flutter\_tts} nativo   & Implementado \\
+0017 & TTS en la nube (Chirp 3: HD)      & Mantener \texttt{flutter\_tts} nativo   & Implementado \\
 0018 & Codebase de Functions con una \emph{callable} & Migrar también el proxy de Gemini & Implementado \\
 0019 & Preferencias de voz en el reproductor & Enviar \texttt{speakingRate} a la \emph{callable} & Implementado \\
 0020 & Tráfico en claro solo hacia loopback & \texttt{usesCleartextTraffic} global   & Implementado \\
@@ -837,7 +870,7 @@ razonada pero no hay artefacto que la realice.
 \textsuperscript{a}~Superada por ADR-0024 el 6 de septiembre de 2026: la vinculación se ejecuta hoy en el
 servidor y RNF-9 se cumple (\autoref{sec:adr-identidad}).
 \textsuperscript{b}~Verificación en dispositivo físico Android~11+ pendiente.
-\textsuperscript{c}~Parcial hasta ADR-0021 ---solo existía la ruta remota del familiar---; con las tres
+\textsuperscript{c}~Parcial hasta ADR-0021, solo existía la ruta remota del familiar; con las tres
 escalas locales del mayor, CU-05 queda cubierto.
 \textsuperscript{d}~Decisión de consentimiento explícitamente abierta.
 \textsuperscript{e}~Implementada y corregida al día siguiente por un defecto de duplicación de texto;
@@ -848,9 +881,9 @@ verificación en dispositivo pendiente.
 \label{sec:cronologia}
 
 La cronología que sigue se ha reconstruido \textbf{exclusivamente a partir del historial de versiones}
----48 \emph{commits} entre el 5 de marzo y el 6 de septiembre de 2026---, sin interpolar fechas que el
+(48 \emph{commits} entre el 5 de marzo y el 6 de septiembre de 2026), sin interpolar fechas que el
 repositorio no sostenga. El plan de hitos previsto se
-documenta en el Capítulo~3; lo que sigue es cómo se construyó realmente.
+documenta en el capítulo~\ref{cap:metodologia}; lo que sigue es cómo se construyó realmente.
 
 \begin{figure}[htbp]\centering
 % babel-spanish activa `.`, `<` y `>` como abreviaturas tipográficas, y eso rompe
@@ -876,35 +909,33 @@ documenta en el Capítulo~3; lo que sigue es cómo se construyó realmente.
 \label{fig:hitos}
 \end{figure}
 
-\textbf{Fase 0 --- Arranque (5 de marzo).} Tres \emph{commits} de documentación, sin código.
+\textbf{Fase 0. Arranque (5 de marzo).} Tres \emph{commits} de documentación, sin código.
 
-\textbf{Fase 1 --- Prototipo funcional y stack (10 al 17 de marzo, 14 \emph{commits}).} El proyecto arrancó
-demostrando lo más arriesgado primero: que el pipeline de voz completo ---transcripción, modelo de lenguaje
-y síntesis--- funcionaba de extremo a extremo. En paralelo se fijó el \emph{stack} (ADR-0001 a ADR-0003,
+\textbf{Fase 1. Prototipo funcional y stack (10 al 17 de marzo, 14 \emph{commits}).} El proyecto arrancó
+demostrando lo más arriesgado primero: que el pipeline de voz completo (transcripción, modelo de lenguaje y síntesis) funcionaba de extremo a extremo. En paralelo se fijó el \emph{stack} (ADR-0001 a ADR-0003,
 ADR-0005) y se movió el modelo de usuario a \code{core/}, sentando la arquitectura. El \emph{commit} que
 borra el prototipo para la reunión de seguimiento marca el cierre de la primera versión presentable.
 
-\textbf{Fase 2 --- Onboarding dual, dashboard y configuración adaptativa (14 al 28 de abril, 4
-\emph{commits}).} Sobre esos cimientos se construyó la identidad de los dos actores ---onboarding dual y
-emparejamiento por código--- y el bucle de configuración remota. Aquí nacen la fuente única de verdad
+\textbf{Fase 2. Onboarding dual, dashboard y configuración adaptativa (14 al 28 de abril, 4
+\emph{commits}).} Sobre esos cimientos se construyó la identidad de los dos actores, onboarding dual y emparejamiento por código, y el bucle de configuración remota. Aquí nacen la fuente única de verdad
 (ADR-0009) y la política de escritura de preferencias (ADR-0010).
 
-\textbf{Fase 3 --- Estabilización (13 de mayo, 3 \emph{commits}).} No añadió funcionalidad de usuario:
+\textbf{Fase 3. Estabilización (13 de mayo, 3 \emph{commits}).} No añadió funcionalidad de usuario:
 consolidó lo existente antes de las pruebas para que los tests no hubiera que rehacerlos. Se pulió la
-navegación ---punto débil declarado del proyecto---, se completó la migración a inyección de dependencias
-por proveedores y se eliminó la duplicación de \emph{streams} descrita en el \autoref{sec:ssot}.
+navegación, punto débil declarado del proyecto, se completó la migración a inyección de dependencias
+por proveedores y se eliminó la duplicación de \emph{streams} descrita en el apartado~\ref{sec:ssot}.
 
-\textbf{Fase 4 --- Emergencia, ajustes y suite de tests (16 de julio, 9 \emph{commits}).} Tras una pausa
+\textbf{Fase 4. Emergencia, ajustes y suite de tests (16 de julio, 9 \emph{commits}).} Tras una pausa
 larga, la última ráfaga añadió la llamada de emergencia (ADR-0012), la pantalla de ajustes y, sobre todo,
 la \textbf{suite de tests}. El emparejamiento se reescribió de lote a transacción para poder leer antes de
 escribir (ADR-0008).
 
-\textbf{Fase 5 --- Voz en la nube, accesibilidad local y endurecimiento (6 de septiembre, 15
+\textbf{Fase 5. Voz en la nube, accesibilidad local y endurecimiento (6 de septiembre, 15
 \emph{commits}).} La ráfaga más densa del proyecto y la que cambia su naturaleza: la aplicación deja de ser
 un cliente que habla con servicios ajenos y pasa a tener \textbf{servidor propio}. Se encadenan tres
 bloques. El primero sustituye el TTS del dispositivo por voz de nube sintetizada en una Cloud Function, tras
-una abstracción con respaldo al motor local (ADR-0017 a ADR-0020). El segundo corrige la entrada de voz
----que perdía palabras en cada pausa del mayor--- y añade las escalas locales de accesibilidad que cierran
+una abstracción con respaldo al motor local (ADR-0017 a ADR-0020). El segundo corrige la entrada de voz,
+ que perdía palabras en cada pausa del mayor, y añade las escalas locales de accesibilidad que cierran
 CU-05 (ADR-0021 y ADR-0022). El tercero es el endurecimiento de seguridad: reglas de Firestore que modelan
 el código real, verificadas con veintinueve casos contra el emulador, y la vinculación trasladada al
 servidor (ADR-0024 a ADR-0026).
@@ -928,12 +959,10 @@ el código compilable y estabilizado.
 
 La segunda es que \textbf{el bucle de revisión es visible en el propio historial}, y ésa es la evidencia de
 proceso más valiosa que ofrece. El hito 2.5 de HU-4 no estaba planificado: existe porque una revisión de
-arquitectura, al auditar el hito anterior, detectó dos violaciones de reglas preexistentes ---la
-instanciación directa de servicios y el acoplamiento horizontal del \emph{dashboard}---. Ambas se
+arquitectura, al auditar el hito anterior, detectó dos violaciones de reglas preexistentes (la instanciación directa de servicios y el acoplamiento horizontal del \emph{dashboard}). Ambas se
 corrigieron a mitad del hito. El mismo patrón se repite con el defecto de re-login del familiar en la fase 3,
 con el test en rojo de la fase 4 y, con más nitidez que ninguno, con las reglas de seguridad de la fase 5:
-los primeros veintinueve casos de prueba se escribieron \emph{incluyendo los huecos} ---documentando lo que
-las reglas todavía permitían--- y fue eso lo que hizo visible que la vinculación desde el cliente obligaba a
+los primeros veintinueve casos de prueba se escribieron \emph{incluyendo los huecos}, documentando lo que las reglas todavía permitían, y fue eso lo que hizo visible que la vinculación desde el cliente obligaba a
 dejar el directorio de usuarios enumerable. El test se escribió antes que la solución y sirvió para
 encontrarla. Un grafo de \emph{commits} impecable habría sido menos informativo: revisión, hallazgo y
 refactorización es lo que se pretende demostrar.
@@ -955,20 +984,17 @@ las tres suites juntas.
 
 Los \textbf{compromisos abiertos} son dos, de naturaleza distinta. El primero es de seguridad: la clave de
 Gemini reside en el cliente, de modo que RNF-8 sigue sin cumplirse (ADR-0014). Se resuelve con la misma
-pieza que ya resolvió la vinculación ---una función en el \emph{codebase} de Cloud Functions que existe y
-está desplegado desde ADR-0018---, y es el único incumplimiento de seguridad que le queda al proyecto. El
+pieza que ya resolvió la vinculación (una función en el \emph{codebase} de Cloud Functions que existe y está desplegado desde ADR-0018), y es el único incumplimiento de seguridad que le queda al proyecto. El
 segundo es de privacidad: el modelo de consentimiento que debe gobernar el tratamiento conversacional
 (ADR-0016) está deliberadamente sin cerrar, y bloquea HU-5.
 
 Dos compromisos que este capítulo declaró abiertos durante la mayor parte del desarrollo se \textbf{cerraron}
 antes de las pruebas: RNF-9, con el traslado de la vinculación al servidor y unas reglas de seguridad
 verificadas (ADR-0024 a ADR-0026), y CU-05, con las escalas locales de accesibilidad en el dispositivo del
-mayor (ADR-0021). Ambos se documentan aquí con su historia completa ---incluido el tiempo que estuvieron
-abiertos--- porque el modo en que se cerraron, y sobre todo el hallazgo que los cerró, dice más del proceso
+mayor (ADR-0021). Ambos se documentan aquí con su historia completa, incluido el tiempo que estuvieron abiertos, porque el modo en que se cerraron, y sobre todo el hallazgo que los cerró, dice más del proceso
 que su estado final.
 
-La \textbf{deuda menor} verificada sobre el código incluye un afordance anunciado pero inerte ---el botón
-«¿Teclado?» de la pantalla principal, que tiene una acción vacía---, un camino de desbloqueo redundante
+La \textbf{deuda menor} verificada sobre el código incluye un afordance anunciado pero inerte (el botón «¿Teclado?» de la pantalla principal, que tiene una acción vacía), un camino de desbloqueo redundante
 sobreviviente de la estabilización, la ausencia de reintento ante colisión de códigos de vinculación (con un
 espacio de unas 923\,000 combinaciones, riesgo asumido a la escala de pruebas) y el token de color del
 estado \emph{Pensando}, que no alcanza el umbral de contraste no textual según se ha medido en el
@@ -976,6 +1002,4 @@ estado \emph{Pensando}, que no alcanza el umbral de contraste no textual según 
 
 Ninguno de estos puntos invalida el MVP: la aplicación conversa, se configura en remoto, llama a emergencias
 y se adapta a las capacidades de quien la usa. Pero delimitan con precisión dónde termina lo construido y
-empieza lo decidido. Esa frontera, y las líneas de trabajo que arrancan de ella ---el proxy de Gemini, el
-emparejamiento server-side, la persistencia por resúmenes, el análisis emocional de HU-5 y HU-6, y la
-evolución hacia una conversación de audio nativa---, se desarrollan en el \autoref{cap:desarrollo-futuro}.
+empieza lo decidido. Esa frontera, y las líneas de trabajo que arrancan de ella (el proxy de Gemini, el emparejamiento server-side, la persistencia por resúmenes, el análisis emocional de HU-5 y HU-6, y la evolución hacia una conversación de audio nativa), se desarrollan en el \autoref{cap:desarrollo-futuro}.
