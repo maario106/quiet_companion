@@ -1,7 +1,6 @@
 # ADR-0033 — "Mi semana": el mayor ve su propio análisis, con los mismos datos y otra pantalla
 
-- **Estado:** Propuesta — la vista para el mayor independiente la decidió el autor; su extensión al mayor
-  vinculado está pendiente de confirmación (ver `UNRESOLVED` al final)
+- **Estado:** Aceptada — implementada el 2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** HU-6 (RF-8: *"presentar el agregado en una vista accesible al mayor independiente y al
   familiar, según el modo"*).
@@ -10,7 +9,10 @@
   sienten y poder darse cuenta de qué les preocupa más"*); `doc/pdfs/Solución Propuesta - Historias de
   Usuario.pdf` (pantalla "Mi semana", refuerzo positivo; citado en `scope.md`);
   `lib/core/config/app_router.dart` (`RouterNotifier.redirect`); `CLAUDE.md` (sin acoplamiento horizontal).
-  Commits: pendientes.
+  Implementación: `features/my_week/`, `core/utils/week_summary.dart`, `core/models/conversation_record.dart`,
+  `core/repositories/conversation_repository.dart`, `dashboard/presentation/wellbeing_section.dart`,
+  `dashboard/presentation/conversation_detail_screen.dart`, `route_redirect.dart` (prefijo `/dashboard`),
+  `home_screen.dart`. Commits: fase 5 y 6 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0007 (un núcleo, autonomía como configuración), ADR-0021 (visibilidad para todo
   mayor), ADR-0029, ADR-0030, ADR-0031, ADR-0013 (accesibilidad explícita).
 
@@ -94,3 +96,21 @@ Criterio de cierre:
 
 > **UNRESOLVED — requiere decisión del autor:** ¿"Mi semana" es solo para el mayor independiente, o para todo
 > mayor con consentimiento (también el vinculado)?
+
+## Confirmación del autor (2026-09-26)
+
+El autor confirma la extensión propuesta: **"Mi semana" la ve todo mayor con el consentimiento activo,
+independiente o vinculado.** El `UNRESOLVED` de arriba queda cerrado. El predicado de visibilidad del acceso
+en `HomeScreen` pasa a ser: consentimiento vigente y al menos una conversación analizada, sin mirar
+`autonomy`.
+
+## Implementación (2026-09-26)
+
+- **Posición del acceso (decisión pendiente §4):** un botón ancho "Mi semana" encima de la fila inferior de
+  `HomeScreen`, no en ella. La fila ya tiene tres botones y el de teclado tiene su propia tarea pendiente.
+- "Mi semana" enseña una fila de siete días marcando **cuándo** se habló, no el ánimo de cada día: refuerzo, no
+  evaluación. El ánimo aparece solo como frase de la semana.
+- El panel ordena sus secciones por fiabilidad: actividad (sin IA), señales, ánimo, temas, lista de
+  conversaciones con detalle, y "Lo que el asistente recuerda". Todo lo estimado por el modelo lleva el aviso
+  "Orientativo […] No es un diagnóstico". Si hubo señal `risk`, el panel lo dice arriba, en rojo, con el 112 y
+  el 024, que atiende también a familiares.

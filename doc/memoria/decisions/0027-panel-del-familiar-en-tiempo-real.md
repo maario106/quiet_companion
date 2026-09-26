@@ -1,6 +1,6 @@
 # ADR-0027 — El panel del familiar escucha al mayor en tiempo real y escribe solo el campo que cambia
 
-- **Estado:** Aceptada — pendiente de implementación
+- **Estado:** Aceptada — implementada el 2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** Panel del familiar (HU-4). Requisito previo de HU-5 y HU-6: sin él, ningún campo nuevo del
   documento del mayor sobrevive a un deslizador.
@@ -8,7 +8,9 @@
 - **Evidencia:** `lib/features/dashboard/domain/dashboard_controller.dart` (`_init` → `refreshElderData` →
   `getUser`, una única lectura; `updateElderPreferences` → `saveUser`),
   `lib/features/onboarding/data/auth_repository.dart` (`saveUser` = `set(user.toMap())`), `firestore.rules`
-  (regla 2 de `update`), observación del autor (*"la UI no muestra el valor que hay"*). Commits: pendientes.
+  (regla 2 de `update`), observación del autor (*"la UI no muestra el valor que hay"*). Implementación: `lib/core/providers/linked_elder_provider.dart`, `dashboard_controller.dart`, `dashboard_state.dart`,
+  `dashboard_screen.dart`, `auth_repository.dart` (`updatePreferenceField`), `user_preferences.dart` (claves),
+  `test/features/dashboard/dashboard_controller_test.dart`. Commits: fase 0 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0009 (SSOT), ADR-0010 (escritura optimista con *rollback*), ADR-0021 (escalas
   locales del mayor), ADR-0023 (misma lección: dependencia más gruesa de lo pretendido), ADR-0025 (reglas).
 
@@ -98,3 +100,9 @@ Criterio de cierre, manual con dos dispositivos (o dos emuladores contra el emul
    se rechaza: queda en cola y se aplica al reconectar. No es el mismo caso.)
 
 Automático: `flutter analyze` sin incidencias y los tests del controlador reescritos en verde.
+
+## Implementación (2026-09-26)
+
+- Hecho como se diseñó. `saveUser` queda documentado como "solo para crear".
+- Sin ADR propio, en la misma fase: `EmergencyContactSetupScreen` precarga el contacto vigente (el campo
+  del teléfono recibe los 9 dígitos nacionales; el `+34` es un prefijo fijo).

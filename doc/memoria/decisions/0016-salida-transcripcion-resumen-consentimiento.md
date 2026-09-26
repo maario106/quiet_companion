@@ -1,6 +1,6 @@
 # ADR-0016 — La transcripción sale al proveedor del LLM para resumirse aunque no se persista: cuestión de consentimiento
 
-- **Estado:** Propuesta (decisión de consentimiento **pendiente**)
+- **Estado:** Aceptada; la cuestión abierta la cerró ADR-0030 (2026-09-26)
 - **Fecha:** 2026-07-12
 - **Ámbito:** Privacidad del tratamiento conversacional (prerequisito de HU-5). **Diseñado, sin resolver.**
 - **Decisores:** Autor del TFG.
@@ -64,3 +64,7 @@ confirme los tres puntos que ese ADR deja marcados.
 
 La alternativa *"resumen extractivo/local sin segunda llamada al LLM"* sigue sin diseñar y no se retoma: el
 análisis emocional de HU-6 no se puede hacer de forma extractiva.
+
+**Cierre (2026-09-26).** El autor confirmó ADR-0030 el mismo día, con una modificación: retirar el
+consentimiento no borra de inmediato, sino tras la mitad del plazo de conservación, con los datos congelados
+e inaccesibles para el familiar mientras tanto. El `UNRESOLVED` de este ADR queda cerrado.

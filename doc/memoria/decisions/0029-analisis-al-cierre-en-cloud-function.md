@@ -1,6 +1,6 @@
 # ADR-0029 — La conversación se analiza una sola vez, al cerrarla, en una Cloud Function que no guarda la transcripción
 
-- **Estado:** Aceptada — pendiente de implementación
+- **Estado:** Aceptada — implementada el 2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** HU-5 (RF-7) y HU-6 (RF-8); RNF-8 y RNF-10.
 - **Decisores:** Autor del TFG.
@@ -9,7 +9,9 @@
 - **Evidencia:** ADR-0015; `pending.md` §4 (incluido *"Después (HU-5)"*: clasificación en Function
   `onDocumentCreated`); `doc/plan/archive/hu4-plan.md` §C y §E; `functions/index.js` (codebase gen 2 en
   `europe-west1`, credenciales del entorno para Cloud TTS); TFG cap. 4, RF-8 (*"Positivo, Neutro o
-  Negativo"*; entrada: *"transcripción de la conversación finalizada"*). Commits: pendientes.
+  Negativo"*; entrada: *"transcripción de la conversación finalizada"*). Implementación: `functions/index.js` (`closeConversation`), `functions/conversation.js`, `functions/conversation.test.js`,
+  `functions/package.json` (`@google/genai`), `firestore.rules`, `core/services/cloud_conversation_closer.dart`,
+  `core/constants/firestore_paths.dart`, `gemini_service.dart` (regla 5, crisis). Commits: fase 3 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0014 (proxy del LLM), ADR-0016 (salida de la transcripción), ADR-0018 y ADR-0024
   (codebase de Functions), ADR-0025 y ADR-0026 (reglas y su verificación), ADR-0028 (frontera), ADR-0030
   (consentimiento), ADR-0031 (qué ve el familiar), ADR-0032 (memoria), ADR-0034 (plazos).
@@ -134,3 +136,14 @@ Criterio de cierre:
   esperado, sin ningún campo de texto crudo.
 - Sin consentimiento, devuelve `failed-precondition` y no escribe nada.
 - Los registros de la Function no contienen texto de la conversación (comprobación con `grep`).
+
+## Implementación (2026-09-26)
+
+- **Decisión pendiente §4 resuelta: Vertex AI con las credenciales del entorno**, región `europe-west1`
+  (constante `GEMINI_LOCATION`). No hay clave en ningún sitio. Requiere habilitar la API de Vertex AI en el
+  proyecto; si el modelo no estuviera disponible en la región, el síntoma es un 404 del modelo en el registro
+  y se corrige cambiando la constante.
+- El servidor **cuenta él mismo** los turnos del mayor cuando recibe el texto, en vez de fiarse del número
+  que declara el cliente, y rechaza roles desconocidos (un turno `system` colado invalida la petición).
+- La regla de crisis del chat en vivo (024 y 112) se añadió al `systemInstruction` como regla 5.
+- Lectura de las subcolecciones solo para el dueño en esta fase; la del familiar llega con ADR-0031.

@@ -23,8 +23,9 @@ Out of scope for this plan: companion notifications (FCM), moving the live chat'
 - `go_router ^17.0.0`, `speech_to_text ^7.3.0`, `flutter_tts ^4.2.5`, `permission_handler ^12.0.1`, `flutter_dotenv ^6.0.0`
 - `just_audio ^0.10.6` (cloud TTS playback, ADR-0017), `url_launcher ^6.3.2` (emergency dialer, ADR-0012)
 - Cloud Functions: `functions/`, JavaScript, gen 2, Node 22, region **`europe-west1`** (must match
-  `kFunctionsRegion`). Callables today: `synthesizeSpeech`, `validateAndLink`. Planned: `closeConversation`,
-  `setConversationConsent`.
+  `kFunctionsRegion`). Callables: `synthesizeSpeech`, `validateAndLink`, `setConversationConsent`,
+  `closeConversation` (the last two from 2026-09-26, unverified). The analysis calls Gemini through Vertex AI
+  with ADC (`@google/genai`), no key. Pure logic lives in `pairing.js` / `conversation.js` with `node --test`.
 - Security rules: `firestore.rules`, verified against the emulator in `firestore-tests/` (ADR-0025, ADR-0026)
 - Plan: Firebase Blaze
 
@@ -95,10 +96,10 @@ conversation records read by both the companion panel and the elder's "Mi semana
 - emergencyContact { name, phone, source: companion|manual } (elder) | absent
 ```
 
-Planned for HU-5/HU-6 — **not implemented yet**; see `doc/plan/ACTIVE.md` before touching:
+HU-5/HU-6 — **coded on 2026-09-26, not yet compiled or verified on device**; see `doc/plan/ACTIVE.md`:
 ```
 /users/{elderId}
-- conversationConsent { granted, answeredAt, textVersion }   ← only via setConversationConsent (ADR-0030)
+- conversationConsent { granted, answeredAt, textVersion, revokedAt?, deleteAfter? } ← only via setConversationConsent (ADR-0030)
 - companionSharing ("none" | "wellbeing" | "full")          ← only the elder writes it (ADR-0031)
 - conversationSettings { inactivityMinutes, retentionDays } ← companion (linked) or elder (independent) (ADR-0034)
 
@@ -107,8 +108,12 @@ Planned for HU-5/HU-6 — **not implemented yet**; see `doc/plan/ACTIVE.md` befo
 /users/{elderId}/conversationContents/{id}   ← Function only; companion reads at "full"
 - endedAt, topics[], summary, expireAt
 /users/{elderId}/memory/profile              ← Function only; companion reads at "full" (ADR-0032)
-- facts {key: value} (≤ 30), recent [{endedAt, summary}] (3), updatedAt
+- facts {key: value} (≤ 30), recent [{endedAt, summary}] (3), updatedAt, expireAt? (only while frozen)
 ```
+
+Consent withdrawal freezes everything above: companion loses read access at once, analysis stops, and
+`expireAt` is moved to `revokedAt + retentionDays / 2` so the TTL policy deletes it unless the elder
+re-consents in time (ADR-0030, epilogue).
 
 ### Auth strategy
 - **Elder:** Anonymous Firebase Auth. Identity tied to device. **No logout** — sign-out would generate a new UID on next session and lose data. If reset needed, it's an explicit data-wipe action, not logout.
@@ -117,13 +122,18 @@ Planned for HU-5/HU-6 — **not implemented yet**; see `doc/plan/ACTIVE.md` befo
 ## Reactive Backbone
 - `firebaseAuthUserProvider` → Stream of Firebase `User?`
 - `currentUserProvider` → Stream of `users/{uid}` doc as `UserModel?`. **Single source of truth.** Any widget anywhere uses `ref.watch(currentUserProvider)`.
-- `RouterNotifier` listens to `elderAuthControllerProvider`, `companionAuthControllerProvider`,
-  `firebaseAuthUserProvider` and `currentUserProvider`, and recalculates redirects. Companions are pinned to
-  `/dashboard` (exact match today; must become a prefix match before companion sub-screens exist, ADR-0033).
+- `RouterNotifier` gathers its inputs (`elderAuthControllerProvider`, `companionAuthControllerProvider`,
+  `firebaseAuthUserProvider`, `currentUserProvider`, `consentPromptDeferredProvider`) and delegates to the
+  pure `routeRedirect` in `core/config/route_redirect.dart`, which is what `router_redirect_test.dart` tests.
+  Companions are pinned to `/dashboard/*` (prefix); onboarded elders who never answered the consent question
+  go to `/consent` once (ADR-0030).
 - `chatControllerProvider` rebuilds only on uid change (`select`); the name reaches it by `ref.listen`
   (ADR-0023).
-- Planned: `linkedElderProvider` (companion's live view of the elder, ADR-0027) and `elderMemoryProvider`
-  (ADR-0032).
+- `linkedElderProvider`: the companion's live view of the elder (ADR-0027). The panel never keeps a copy.
+- `conversationRecordsProvider` / `conversationContentsProvider` / `elderMemoryProvider` (family by elder id,
+  in `core/providers/conversation_providers.dart`): shared by the companion panel and the elder's "Mi semana".
+  Only request what the elder's `companionSharing` level allows, or the stream ends in permission-denied.
+- The chat receives consent, conversation settings and memory by `ref.listen`, never by rebuilding.
 
 ## Completed (do not regress)
 - Firebase Auth + Firestore (anonymous elder, email companion)
@@ -145,14 +155,15 @@ Planned for HU-5/HU-6 — **not implemented yet**; see `doc/plan/ACTIVE.md` befo
 
 ## Current Sprint — HU-5 + HU-6
 
-Follow `doc/plan/ACTIVE.md` phase by phase. Phases 0 (companion panel live, ADR-0027) and 2 (conversation
-boundary, ADR-0028) are unblocked. Phase 1 (consent) waits for the author to confirm ADR-0030; everything that
-analyses or stores conversations depends on it.
+All eight design decisions are accepted and phases 0–7 of `doc/plan/ACTIVE.md` were coded on 2026-09-26
+without a working Flutter toolchain. **Next step is verification**, not new features: `flutter analyze`,
+`flutter test`, the emulator rules tests, the manual deploy steps and the on-device script in `ACTIVE.md`.
+Fix what they surface before building anything else. Consent withdrawal does **not** delete immediately: data freezes and is TTL-deleted
+after half the retention period unless the elder re-consents (ADR-0030, epilogue).
 
 ### Known technical debt
-- **Companion panel works on a one-shot copy of the elder** (`DashboardController._init` → `getUser`) and
-  rewrites the whole doc with `saveUser` on every slider: it reverts the elder's own changes or fails against
-  the rules. Fix = ACTIVE.md phase 0 (ADR-0027). Do not add fields to the elder doc before it lands.
+- ~~Companion panel works on a one-shot copy of the elder~~ — fixed in code (ADR-0027), pending verification.
+  `saveUser` is for creating documents only; edit with field-level `update()`.
 - Two ADR files share number 0023 (chat controller lifecycle, JDK 21). Not renumbered; next new ADR is 0035.
 - ~~`chat_controller.dart:86` — `new GeminiService()` antipattern~~ — fixed (Milestone 2.5.1, DI via providers).
 - ~~`home_screen.dart` — `withOpacity` deprecations, stray `print()` calls~~ — no longer in the tree.

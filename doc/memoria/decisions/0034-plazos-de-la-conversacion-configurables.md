@@ -1,6 +1,6 @@
 # ADR-0034 — Los plazos de la conversación los fija el familiar o el mayor independiente, dentro de márgenes que impone el servidor
 
-- **Estado:** Aceptada — pendiente de implementación
+- **Estado:** Aceptada — implementada el 2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** HU-5 y HU-6. Configuración del cierre por inactividad (ADR-0028) y del plazo de conservación
   (ADR-0029); RNF-10 (limitación del plazo de conservación).
@@ -8,7 +8,9 @@
 - **Evidencia:** decisión del autor del 2026-09-26 (*"los plazos me parecen correctos, pero que sean
   parametrizables en ajustes, bien por el companion, o por el elder independiente"*); TFG cap. 4, RNF-10 (nota
   pendiente: *"documentar […] periodos de retención"*); `lib/core/config/preference_scales.dart` y
-  `settings_rows.dart`. Commits: pendientes.
+  `settings_rows.dart`. Implementación: `core/models/conversation_settings.dart`, `core/config/settings_rows.dart`,
+  `features/privacy/presentation/choice_screen.dart`, `dashboard/presentation/conversation_settings_card.dart`,
+  `auth_repository.dart` (`updateConversationSettingField`), `firestore.rules`. Commits: fase 4 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0007 (revelación progresiva según `autonomy`), ADR-0021 (escalas con nombre; aquí
   se decide lo contrario sobre la visibilidad), ADR-0027 (escritura por campo desde el panel), ADR-0028,
   ADR-0029, ADR-0030, ADR-0025 (reglas).
@@ -91,3 +93,11 @@ Criterio de cierre:
 - Test de visibilidad de las filas de Ajustes: independiente sí, vinculado no.
 - Manual: cambiar la inactividad a 2 minutos desde el panel → la siguiente conversación del mayor se cierra a
   los 2 minutos.
+
+## Implementación (2026-09-26)
+
+- Las etiquetas de la inactividad son **minutos concretos** ("5 minutos") y no los nombres previstos ("Normal",
+  "Un rato"): a diferencia del volumen o la velocidad, aquí el número significa algo para quien lo lee. La
+  conservación mantiene sus nombres ("Tres meses"), que ya eran concretos.
+- Las dos filas de Ajustes del mayor independiente solo aparecen con el consentimiento activo: sin él no hay
+  nada que cerrar ni que conservar.

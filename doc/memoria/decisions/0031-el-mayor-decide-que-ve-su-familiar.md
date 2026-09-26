@@ -1,13 +1,14 @@
 # ADR-0031 — El mayor decide qué ve su familiar, y lo hacen cumplir las reglas, no la interfaz
 
-- **Estado:** Aceptada — pendiente de implementación
+- **Estado:** Aceptada — implementada el 2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** HU-6 (RF-8), RNF-10. Lectura, desde el panel del familiar, de lo que produce el análisis.
 - **Decisores:** Autor del TFG.
 - **Evidencia:** decisión del autor del 2026-09-26 (*"el familiar sí verá el resumen […] es lo más invasivo,
   pero también lo que más valor aporta. Que el propio mayor pueda reajustar lo que su companion ve o no"*);
   `firestore.rules` (las lecturas son de documento completo); ADR-0025 (las reglas no ven las cláusulas de
-  una consulta). Commits: pendientes.
+  una consulta). Implementación: `firestore.rules` (`companionMayRead`), `firestore-tests/rules.test.js`, `core/models/companion_sharing.dart`,
+  `features/privacy/presentation/choice_screen.dart`, `features/privacy/data/consent_repository.dart`. Commits: fase 4 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0029 (qué se guarda), ADR-0030 (consentimiento), ADR-0021 (escalas con nombre),
   ADR-0025 y ADR-0026 (reglas y su verificación), ADR-0033 (lo que ve el propio mayor).
 
@@ -86,3 +87,16 @@ Criterio de cierre. Tests de reglas contra el emulador (ADR-0026), casos nuevos 
 - un familiar no vinculado no lee nada;
 - el familiar no puede escribir `companionSharing`;
 - el dueño lee las tres colecciones y ninguno de los dos puede escribirlas.
+
+## Epílogo — el consentimiento también cuenta (2026-09-26)
+
+Con la retirada diferida de ADR-0030, los datos pueden seguir existiendo semanas después de retirar el
+consentimiento. Por eso, las reglas de lectura del familiar exigen **dos** condiciones: el nivel de este ADR y
+`conversationConsent.granted == true`. Retirar el consentimiento equivale, para el familiar, a bajar el nivel
+a "Nada", con efecto inmediato.
+
+## Implementación (2026-09-26)
+
+- Hecho como se diseñó, más la condición del epílogo: el familiar solo lee con el consentimiento vigente.
+- El mayor elige el nivel en una lista de tres opciones grandes (una pantalla compartida con los plazos,
+  `PrivacyChoiceScreen`) y no con "Más/Menos": son pocas y con nombre, y verlas todas a la vez es más claro.

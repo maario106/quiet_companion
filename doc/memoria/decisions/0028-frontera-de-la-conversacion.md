@@ -1,6 +1,6 @@
 # ADR-0028 — Una conversación termina tras un silencio largo o al salir de la app, y es la unidad de todo lo que se guarda
 
-- **Estado:** Aceptada — pendiente de implementación
+- **Estado:** Aceptada — implementada el 2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** Conversación (HU-2). Requisito previo de HU-5 (memoria, RF-7) y HU-6 (ánimo, RF-8).
 - **Decisores:** Autor del TFG.
@@ -8,7 +8,8 @@
   en el constructor y al cambiar el nombre; no existe la noción de conversación),
   `lib/core/providers/intentional_background_exit_provider.dart` (*"Consumidor previsto: el disparador de fin
   de sesión de pending.md §4 […] Hoy nadie lo lee"*), `pending.md` §4, ADR-0015 (disparador: `paused` +
-  inactividad). Commits: pendientes.
+  inactividad). Implementación: `chat_controller.dart`, `core/services/conversation_closer.dart`, `core/config/conversation_config.dart`,
+  `gemini_service.dart` (`GeminiResponse.failed`), `test/features/conversation/chat_controller_test.dart`. Commits: fase 2 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0022 (turno de escucha), ADR-0023 (el controlador sobrevive a los cambios del
   documento), ADR-0029 (análisis al cierre), ADR-0032 (memoria), ADR-0034 (plazos configurables), ADR-0030
   (consentimiento).
@@ -106,3 +107,13 @@ sin red):
 Manual, contra el emulador: hablar tres turnos y esperar *N* minutos → aparece el documento en
 `conversations`; hablar y pulsar el botón de inicio de Android → aparece; hablar, abrir el marcador de
 emergencia y volver → no aparece y la conversación sigue.
+
+## Implementación (2026-09-26)
+
+- El ciclo de vida se escucha con un `AppLifecycleListener` **dentro del provider** del chat, no en
+  `HomeScreen`: la conversación tiene que cerrarse aunque el mayor esté en Ajustes al salir de la app, y así
+  la interfaz sigue sin lógica.
+- `GeminiResponse` gana `failed` para distinguir una respuesta del modelo de un mensaje de error de la app;
+  sin eso el búfer no podía excluir los errores.
+- Los primeros tests de `ChatController` (diferidos desde `test.md`) cubren los seis casos del criterio de
+  cierre, con temporizador y reloj inyectados.

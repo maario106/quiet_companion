@@ -5,6 +5,54 @@ _Abierto el 2026-09-26. Sustituye a la *spec* del TTS, terminada y archivada en
 
 ---
 
+## Estado a 2026-09-26
+
+**Las siete fases (0 a 7) están programadas y sin verificar.** Se escribieron en una máquina sin Flutter
+operativo, por decisión del autor: el código no se ha compilado ni ejecutado. Sí se han ejecutado, en verde,
+los 44 tests puros de `functions/` (Node 18). Quedan pendientes `flutter analyze`, `flutter test`, los tests
+de reglas contra el emulador y la verificación en dispositivo.
+
+### Pasos manuales antes de probar
+
+```bash
+# 1. Dependencia nueva de Functions (actualiza package-lock.json; sin esto el deploy falla en `npm ci`)
+cd functions && npm install && npm test && cd ..
+
+# 2. Vertex AI para el análisis (ADR-0029): el análisis se hace sin clave, con las credenciales del entorno
+gcloud services enable aiplatform.googleapis.com --project quiet-companion-df0af
+
+# 3. Comprobaciones locales
+flutter analyze
+flutter test
+cd firestore-tests && npm test && cd ..
+
+# 4. Despliegue de las callables nuevas y de las reglas
+firebase deploy --only functions,firestore:rules
+
+# 5. Borrado automático por caducidad (TTL) sobre `expireAt` (ADR-0029, ADR-0030)
+for g in conversations conversationContents memory; do
+  gcloud firestore fields ttls update expireAt --collection-group=$g --enable-ttl \
+    --project quiet-companion-df0af
+done
+```
+
+Si el análisis falla con un 404 del modelo en el registro de `closeConversation`, `gemini-2.5-flash` no está
+disponible en `europe-west1`: se cambia `GEMINI_LOCATION` en `functions/index.js` y se redespliega.
+
+### Qué hay que verificar en dispositivo
+
+1. **Fase 0:** el guion de ADR-0027 (panel en vivo; un deslizador no revierte lo que cambió el mayor).
+2. **Fase 1:** mayor nuevo independiente → pregunta tras elegir modo. Mayor nuevo vinculado → pregunta tras
+   vincular. "Ahora no" no vuelve a preguntar. Retirar en Ajustes → aviso con la fecha de borrado; el familiar
+   deja de ver al instante.
+3. **Fase 2:** conversación de 3 turnos, esperar el plazo → aparece el documento en `conversations`; salir al
+   marcador de emergencia no cierra.
+4. **Fase 3:** el documento tiene ánimo, señales, y su gemelo en `conversationContents` tiene temas y resumen;
+   el registro de la Function no contiene texto.
+5. **Fase 4:** con nivel "Cómo me encuentro", el panel no enseña temas ni resúmenes.
+6. **Fases 5 y 6:** panel y "Mi semana" coinciden en días y ánimo.
+7. **Fase 7:** decir "vivo en Granada", dejar cerrar, y en la conversación siguiente el asistente lo sabe.
+
 ## Objetivo
 
 Que el lado del familiar sirva para algo más que mover tres deslizadores, y que el análisis también le sirva
@@ -25,22 +73,22 @@ al propio mayor, sin guardar nunca lo que dice palabra por palabra.
 | 0027 | Aceptada | El panel escucha al mayor en tiempo real (`linkedElderProvider`) y escribe cada campo con `update()`. |
 | 0028 | Aceptada | Una conversación termina tras *N* minutos sin turnos o al pasar a segundo plano (salvo al ir al marcador de emergencia). Por debajo de 3 turnos del mayor no sale texto del móvil. |
 | 0029 | Aceptada | Análisis único al cierre en la callable `closeConversation`. La transcripción no se guarda en ningún sitio. Supera a ADR-0015. |
-| 0030 | **Propuesta** | Consiente el mayor, con un gesto explícito, una vez: tras elegir el modo independiente o tras vincularse. Retirarlo lo borra todo. |
+| 0030 | Aceptada | Consiente el mayor, con un gesto explícito, una vez: tras elegir el modo independiente o tras vincularse. Un solo consentimiento que explica por separado análisis y memoria. Al retirarlo, lo guardado se congela y se borra tras la mitad del plazo de conservación, salvo que vuelva a consentir. |
 | 0031 | Aceptada | Tres niveles de lo que ve el familiar (`none`, `wellbeing`, `full`; por defecto `full`), impuestos por las reglas repartiendo los datos en dos colecciones. |
 | 0032 | Aceptada | Memoria extraída al cierre (cambios, tope de 30), en `memory/profile`, inyectada al empezar cada conversación. Se descarta `guardarContexto` en tiempo real. |
-| 0033 | **Propuesta** | "Mi semana": el mayor ve su análisis, con los mismos datos que el panel y otra pantalla. |
+| 0033 | Aceptada | "Mi semana": todo mayor con consentimiento (independiente o vinculado) ve su análisis, con los mismos datos que el panel y otra pantalla. |
 | 0034 | Aceptada | Inactividad {2, 5, 10, 15} min y conservación {30, 60, 90, 180} días. Los fija el familiar (vinculado) o el propio mayor (independiente). Tope de 180 días en el servidor. |
 
 ## Pendiente de decidir
 
 | # | Decisión | Bloquea | Dónde |
 |---|---|---|---|
-| 1 | Confirmar el momento del consentimiento, el borrado al retirarlo y un único consentimiento para análisis y memoria | Fase 1, y con ella de la 3 en adelante | ADR-0030, `UNRESOLVED` |
-| 2 | "Mi semana": ¿solo para el independiente o para todo mayor con consentimiento? | Solo el predicado de visibilidad de la fase 6 | ADR-0033, `UNRESOLVED` |
+| ~~1~~ | ~~Momento del consentimiento, borrado al retirar, consentimiento único~~ | **Resuelta 2026-09-26** (ADR-0030, epílogo) | — |
+| ~~2~~ | ~~"Mi semana" para el vinculado~~ | **Resuelta 2026-09-26**: todo mayor con consentimiento (ADR-0033, epílogo) | — |
 | 3 | Vertex AI con credenciales del entorno o clave de AI Studio en Secret Manager | Fase 3 | ADR-0029 §4 |
 | 4 | Posición del acceso a "Mi semana" en `HomeScreen` | Fase 6 | ADR-0033 §4 |
 
-**Las fases 0 y 2 no dependen de ninguna de estas decisiones** y pueden empezar ya.
+Ya no queda nada que bloquee las fases 0, 1 y 2.
 
 ---
 
@@ -61,7 +109,7 @@ vigente.
 
 **Aceptación:** el guion de ADR-0027 §Verificación, puntos 1 a 4.
 
-## Fase 1 — Consentimiento (ADR-0030) · _bloqueada por la decisión 1_
+## Fase 1 — Consentimiento (ADR-0030)
 
 - `core/models/`: `ConversationConsent { granted, answeredAt, textVersion }`. `UserModel` gana
   `conversationConsent`, `companionSharing` y `conversationSettings`, omitidos en `toMap` cuando son nulos
@@ -69,9 +117,10 @@ vigente.
 - `functions/`: callable `setConversationConsent`.
   - Al conceder, escribe el registro con la hora del servidor y, si el mayor está vinculado, deja
     `companionSharing: 'full'`.
-  - Al retirar, hace `recursiveDelete` de `conversations`, `conversationContents` y `memory`, y guarda
-    `granted: false`.
-- `firestore.rules`: el dueño no puede escribir `conversationConsent`. Tests contra el emulador.
+  - Al retirar, guarda `granted: false` y `revokedAt`, y adelanta el `expireAt` de todo lo guardado a
+    `revokedAt + retentionDays / 2`: borrado diferido por la política TTL.
+  - Al volver a conceder dentro del periodo de gracia, restaura el `expireAt` normal.
+- `firestore.rules`: el dueño no puede escribir `conversationConsent`, y la lectura del familiar exige el consentimiento vigente. Tests contra el emulador.
 - Router: un mayor dado de alta sin `conversationConsent` va a `/consent`. Test en
   `router_redirect_test.dart`.
 - Pantallas del mayor:
@@ -158,7 +207,7 @@ vigente.
 **Aceptación:** tests de la agregación y del router, y un recorrido manual con tres conversaciones reales en
 el emulador.
 
-## Fase 6 — "Mi semana" (ADR-0033) · _visibilidad según la decisión 2_
+## Fase 6 — "Mi semana" (ADR-0033)
 
 - *Feature* nueva del mayor, con la ruta `/my-week` y un acceso desde `HomeScreen`, visible con el
   consentimiento activo y al menos una conversación analizada.

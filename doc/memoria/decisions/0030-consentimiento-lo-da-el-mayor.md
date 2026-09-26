@@ -1,6 +1,7 @@
 # ADR-0030 — Consentimiento: lo da el propio mayor, con un gesto explícito, una sola vez y al empezar; el familiar no puede darlo por él
 
-- **Estado:** Propuesta — pendiente de confirmación del autor (ver `UNRESOLVED` al final)
+- **Estado:** Aceptada, con la modificación del epílogo (retirada con borrado diferido) — implementada el
+  2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** Privacidad del tratamiento conversacional (RNF-10), requisito previo de HU-5 y HU-6. Responde
   a la cuestión abierta de ADR-0016.
@@ -8,7 +9,9 @@
 - **Evidencia:** ADR-0016 (`UNRESOLVED`: alcance del *opt-in*, quién consiente, recogida y revocación); TFG
   cap. 4, RNF-10 (*"consentimiento explícito (opt-in) desactivado por defecto, y será controlable por el mayor
   o por el familiar gestor"*); RGPD arts. 4.11, 7, 9.1, 9.2.a y 17.1.b, considerando 32; conversación de diseño
-  con el autor del 2026-09-26. Commits: pendientes.
+  con el autor del 2026-09-26. Implementación: `functions/index.js` (`setConversationConsent`), `functions/conversation.js`, `firestore.rules`
+  (`serverOnlyFields`), `core/models/conversation_consent.dart`, `core/config/route_redirect.dart`,
+  `features/privacy/`, `core/config/settings_rows.dart`, `dashboard/presentation/conversation_status_card.dart`. Commits: fase 1 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0016, ADR-0029 (qué se analiza), ADR-0031 (qué ve el familiar), ADR-0034
   (plazos), ADR-0007 (autonomía como configuración), ADR-0013 (configuración explícita, nunca inferida).
 
@@ -134,3 +137,52 @@ Criterio de cierre:
 > 3. ¿Un solo consentimiento para análisis y memoria, con el nivel del familiar como control aparte?
 >
 > Con las tres confirmadas, este ADR pasa a *Aceptada* y ADR-0016 queda cerrado.
+
+## Confirmación del autor y cambio en la retirada (2026-09-26)
+
+El autor resolvió el `UNRESOLVED` de arriba el mismo día:
+
+1. **Momento de la pregunta: confirmado.** Tras elegir el modo independiente y tras completarse la
+   vinculación, *"los momentos más tempranos posibles"*.
+2. **Un solo consentimiento: confirmado**, con dos condiciones para el texto: que explique **por separado**
+   el análisis y la memoria, y que diga que lo que ve el familiar se ajusta después en Ajustes (ADR-0031).
+3. **La retirada NO borra de inmediato.** Esto cambia el punto 7 de la decisión. Lo guardado se borra tras un
+   **periodo de gracia igual a la mitad del plazo de conservación vigente** al retirar (45 días con el plazo
+   por defecto de 90).
+
+Cómo queda la retirada:
+
+- **Al instante:** se detiene el análisis (`closeConversation` exige `granted == true`), la memoria deja de
+  inyectarse, y el familiar **pierde el acceso**: las reglas de lectura del familiar exigen además el
+  consentimiento vigente, no solo el nivel de ADR-0031.
+- **Durante el periodo de gracia:** los datos quedan congelados. Nadie los trata ni los lee salvo el propio
+  mayor.
+- **Al terminar el periodo:** el borrado lo hace la política TTL de Firestore que ADR-0029 ya prevé. La
+  callable reescribe `expireAt` de cada documento al más temprano entre su caducidad normal y
+  `revokedAt + retentionDays / 2`, así que no hace falta ninguna tarea programada nueva.
+- **Si el mayor vuelve a consentir dentro del periodo**, se recupera todo: la callable restaura `expireAt`
+  según el plazo normal.
+
+**Por qué (autor):** proteger al mayor de una retirada accidental o de un arrepentimiento. Un toque
+equivocado en esta población no debería costarle meses de historia.
+
+**Límite que se registra:** el art. 17.1.b pide suprimir los datos *"sin dilación indebida"* cuando se retira
+el consentimiento y no hay otra base jurídica. El periodo de gracia se defiende por su finalidad (proteger de
+un error al propio titular) y porque durante él los datos no se tratan. Una opción **"Borrarlo ya"** en la
+pantalla de retirada cerraría del todo la tensión con el art. 17. Queda anotada como mejora y no forma parte
+de esta decisión.
+
+## Implementación (2026-09-26)
+
+- **Un "Ahora no" que no se puede guardar no encierra al mayor.** Si la callable falla (sin red, o sin
+  desplegar), el mayor pasa a su pantalla principal y se le vuelve a preguntar en el siguiente arranque
+  (`consentPromptDeferredProvider`, solo en memoria). Un "Sí" que no se guarda, en cambio, no se da por dado:
+  se enseña el error. Alternativa rechazada: guardar el "no" en el dispositivo, que sería una respuesta que
+  el servidor no conoce.
+- El texto (`kConsentTextVersion = 1`) tiene una versión corta en la pregunta y una completa en "Saber más",
+  que es la misma pantalla que gestiona el consentimiento desde Ajustes (`/settings/conversations`). Retirar
+  pide un segundo toque de confirmación con la fecha de borrado.
+- El `redirect` del enrutador se extrajo a una función pura (`routeRedirect`) para que
+  `router_redirect_test.dart` pruebe la lógica real: antes probaba una copia escrita a mano.
+- El nombre del familiar que aparece en el texto sale del contacto de emergencia desnormalizado al vincular:
+  el documento del mayor no guarda otro.

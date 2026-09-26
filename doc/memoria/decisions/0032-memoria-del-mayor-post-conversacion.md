@@ -1,6 +1,6 @@
 # ADR-0032 — La memoria del mayor se extrae al cerrar cada conversación, vive en un documento aparte y se inyecta al empezar la siguiente
 
-- **Estado:** Aceptada — pendiente de implementación
+- **Estado:** Aceptada — implementada el 2026-09-26, pendiente de verificación en dispositivo
 - **Fecha:** 2026-09-26
 - **Ámbito:** HU-5 (RF-7, memoria conversacional). Descarta el camino principal del plan de HU-4 §D
   (`guardarContexto` en tiempo real) y convierte su extensión opcional §D.6 en el camino principal.
@@ -9,7 +9,11 @@
   (`startSession`, `guardarNombre`, `systemInstruction`); `lib/features/conversation/domain/chat_controller.dart`;
   `lib/features/onboarding/data/auth_repository.dart` (`saveUser` reescribe el documento entero); ADR-0023
   (*"startSession borra el hilo de la conversación"*); TFG cap. 4, RF-7 (*"datos básicos del usuario […] y un
-  resumen del contexto reciente de conversaciones previas"*). Commits: pendientes.
+  resumen del contexto reciente de conversaciones previas"*). Implementación: `functions/conversation.js` (prompt v2, `normalizeMemoryChanges`, `applyMemoryChanges`,
+  `pushRecentSummary`), `functions/index.js`, `core/models/elder_memory.dart`,
+  `core/repositories/conversation_repository.dart`, `core/providers/conversation_providers.dart`
+  (`elderMemoryProvider`), `gemini_service.dart` (`memoryContext`, `startSession(history:)`), `chat_controller.dart`,
+  `dashboard/presentation/wellbeing_section.dart`. Commits: fase 7 de `doc/plan/ACTIVE.md`, SHA pendiente.
 - **Relacionada con:** ADR-0002 (el "RAG parcial" que anunciaba), ADR-0023, ADR-0027, ADR-0028, ADR-0029,
   ADR-0030, ADR-0031.
 
@@ -102,3 +106,13 @@ Criterio de cierre:
   no los hay.
 - Manual: decir "vivo en Granada" en una conversación, dejar que se cierre, y en la siguiente comprobar que el
   asistente lo sabe sin preguntarlo.
+
+## Implementación (2026-09-26)
+
+- El esquema estructurado no admite objetos con claves libres, así que los cambios de memoria viajan como
+  lista de pares `{key, value}` y el servidor los convierte en mapa. Las claves se sanean (minúsculas, sin
+  símbolos, 30 caracteres) y se aceptan como mucho 10 cambios por conversación.
+- La memoria solo se inyecta con el consentimiento vigente. Si llega o cambia el consentimiento sin
+  conversación en curso, la siguiente empieza con la sesión al día; con conversación en curso, se espera.
+- Al resembrar por un cambio de nombre, el turno que lo aprendió se apunta **antes** de resembrar, para que la
+  sesión nueva lo incluya.

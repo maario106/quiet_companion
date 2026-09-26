@@ -1,6 +1,6 @@
 # ADR-0010 — Persistencia de preferencias desde el dashboard: `onChangeEnd` + actualización optimista con rollback
 
-- **Estado:** Aceptada
+- **Estado:** Superseded by ADR-0027 en el mecanismo de *rollback* (2026-09-26); `onChangeEnd` sigue vigente
 - **Fecha:** 2026-04-28 (`96cfd57`, HU-4 Milestone 1)
 - **Ámbito:** Escritura de preferencias del familiar hacia Firestore (HU-4). Implementado.
 - **Decisores:** Autor del TFG.
@@ -61,3 +61,6 @@ cambios o hace fallar la escritura. Cuando ADR-0027 se implemente:
 - `saveUser` deja de usarse para editar: el panel escribe cada campo con `update()`.
 
 Al implementarse, este ADR pasará a *Superseded by ADR-0027* en lo relativo al mecanismo de *rollback*.
+
+**Implementado (2026-09-26).** El panel ya pinta desde `linkedElderProvider` y escribe cada magnitud con
+`updatePreferenceField`; el *rollback* manual y sus tests desaparecieron (ADR-0027).
