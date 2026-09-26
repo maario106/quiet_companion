@@ -1,35 +1,34 @@
 \chapter{Análisis y Especificación del Sistema}
-Una vez establecida la metodología y la planificación del proyecto (Capítulo~3), este capítulo
+\label{cap:analisis}
+
+Una vez establecida la metodología y la planificación del proyecto (capítulo~\ref{cap:metodologia}), este capítulo
 formaliza el análisis del sistema desarrollado. Se identifican los actores, se derivan los requisitos
 funcionales y no funcionales a partir de las Historias de Usuario gestionadas en el tablero,
 se especifican los casos de uso del MVP y se establece la trazabilidad entre todos los artefactos.
 Cierra el capítulo un modelo conceptual de dominio que abstrae las entidades principales del sistema,
-dejando las decisiones de implementación para el capítulo de diseño (Capítulo~5).
+dejando las decisiones de implementación para el capítulo de diseño (capítulo~\ref{cap:diseno-desarrollo}).
 
 \section{Actores del Sistema}
-El sistema reconoce \textbf{tres actores primarios y un actor secundario} (externo, pero indispensable
-para el funcionamiento del sistema).
 
-\textbf{Actores primarios:}
-\begin{itemize}
-    \item \textbf{Mayor Independiente.} Persona mayor que ha optado en el onboarding por gestionar
-    la aplicación por sí misma. Tiene acceso al chat por voz y a los ajustes de accesibilidad en su
-    propio dispositivo. Se autentica de forma anónima (identidad ligada al dispositivo).
-    \item \textbf{Mayor Vinculado.} Persona mayor cuya configuración delega en un familiar. Su interfaz
-    se restringe al chat por voz (\textit{Modo Ultra-Simple}) hasta que el emparejamiento con el familiar
-    se completa. Se autentica también de forma anónima.
-    \item \textbf{Familiar (Companion).} Adulto que asume el rol de gestor de la configuración del
-    Mayor Vinculado. Accede a un panel remoto desde su propio dispositivo, donde modifica las preferencias
-    del mayor. Se autentica con correo electrónico y contraseña.
-\end{itemize}
+El sistema reconoce tres actores primarios, que son las personas que lo utilizan, y dos actores
+secundarios, servicios externos que no son humanos pero sin los cuales el sistema no puede completar sus
+casos de uso principales.
 
-\textbf{Actor secundario:}
-\begin{itemize}
-    \item \textbf{API de Gemini (Google Generative AI).} Servicio externo al que se delega la generación
-    de respuestas conversacionales. Aunque no es un actor humano, su consideración como actor del sistema
-    es coherente con la práctica UML cuando un agente externo dispara o atiende eventos del sistema. Se
-    autentica mediante una clave de API y se comunica con el sistema mediante llamadas REST.
-\end{itemize}
+El \textbf{Mayor Independiente} es la persona mayor que ha optado durante el \textit{onboarding} por
+gestionar la aplicación por sí misma. Tiene acceso al chat por voz y a los ajustes de accesibilidad en su
+propio dispositivo, y se autentica de forma anónima, de modo que su identidad queda ligada al terminal. El
+\textbf{Mayor Vinculado} es aquel cuya configuración delega en un familiar: su interfaz se restringe al
+chat por voz, en el llamado \textit{modo ultrasimple}, mientras el emparejamiento no se completa, y se
+autentica igualmente de forma anónima. El \textbf{Familiar}, por último, es el adulto que asume la gestión
+de la configuración del Mayor Vinculado, accede a un panel remoto desde su propio dispositivo y se
+autentica con correo electrónico y contraseña, porque necesita una cuenta portable entre terminales.
+
+En cuanto a los actores secundarios, la \textbf{API de Gemini} es el servicio al que se delega la
+generación de las respuestas conversacionales, y la \textbf{API de Cloud Text-to-Speech} es la que
+sintetiza la voz con la que esas respuestas se pronuncian. Aunque ninguno de los dos es un actor humano, su
+consideración como actores del sistema es coherente con la práctica habitual en UML cuando un agente
+externo dispara o atiende eventos del sistema. Ambos se consumen mediante llamadas a través de la red y
+ambos condicionan la disponibilidad del caso de uso conversacional, tal y como recoge RNF-14.
 
 Los dos perfiles de Mayor (Independiente y Vinculado) heredan del mismo concepto de usuario \textit{Mayor};
 la diferencia entre ambos es de \textbf{configuración}, no de identidad, y se materializa en el
@@ -49,7 +48,7 @@ especificación detallada de cada caso de uso se desarrolla en la Sección~\ref{
 
 \section{Catálogo de requisitos}
 Los requisitos se han derivado a partir de las Historias de Usuario (HU-1 a HU-6), las restricciones técnicas
-declaradas por el análisis previo y los principios de diseño establecidos en el Capítulo~1. Se distinguen
+declaradas por el análisis previo y los principios de diseño establecidos en el capítulo~\ref{cap:introduccion}. Se distinguen
 \textbf{requisitos funcionales} (RF), que describen las capacidades del sistema, y \textbf{requisitos no
 funcionales} (RNF), que describen las restricciones bajo las cuales esas capacidades deben cumplirse.
 
@@ -71,7 +70,7 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \textbf{Prioridad} & Alta \\
         \hline
         \textbf{Descripción} & En el primer arranque, el sistema debe presentar al usuario dos opciones
-            excluyentes ---modo independiente o vinculación con un familiar--- y configurar el perfil
+            excluyentes, esto es, el modo independiente o la vinculación con un familiar, y configurar el perfil
             en función de la elección. \\
         \hline
         \textbf{Entradas} & Selección del usuario en la pantalla de onboarding. \\
@@ -99,12 +98,14 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \hline
         \textbf{Descripción} & Si el mayor opta por el modo vinculado, el sistema debe generar un código
             corto de 4~caracteres en su dispositivo. El familiar, desde su propio dispositivo, debe poder
-            introducir dicho código para completar el emparejamiento de forma atómica. \\
+            introducir dicho código para completar el emparejamiento de forma atómica, sin que pueda
+            quedar un estado intermedio en el que solo uno de los dos perfiles esté vinculado. \\
         \hline
         \textbf{Entradas} & Solicitud de generación de código (mayor) e introducción del código (familiar). \\
         \hline
-        \textbf{Salidas} & Vinculación bidireccional persistida en la base de datos (\code{linkedPartnerId}
-            actualizado en ambos perfiles dentro de una misma transacción). \\
+        \textbf{Salidas} & Vinculación bidireccional persistida en la base de datos: el campo
+            \code{linkedCompanionId} en el perfil del mayor y \code{linkedElderId} en el del familiar,
+            ambos escritos dentro de una misma transacción. \\
         \hline
     \end{tabular}
     \caption{Requisito Funcional RF-2: Generación y Consumo de Código de Vinculación.}
@@ -153,8 +154,9 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \textbf{Prioridad} & Alta \\
         \hline
         \textbf{Descripción} & Durante una interacción de voz, el sistema debe comunicar visualmente en
-            qué estado se encuentra: \textit{Escuchando}, \textit{Pensando} o \textit{Hablando}. La
-            señalización debe ser perceptible por usuarios con limitaciones visuales moderadas. \\
+            qué estado se encuentra, mediante las etiquetas «Te escucho», «Pensando» y «Respondiendo». La
+            señalización debe ser perceptible por usuarios con limitaciones visuales moderadas y no puede
+            descansar únicamente en el color. \\
         \hline
         \textbf{Entradas} & Cambios de estado internos del pipeline conversacional. \\
         \hline
@@ -313,8 +315,10 @@ salvo indicación contraria.
     migración a Cloud Functions de Firebase para producción, de modo que el cliente nunca acceda
     directamente al LLM.
     \item \textbf{RNF-9. Aislamiento de identidades.} Las operaciones de escritura que afecten a documentos
-    de un usuario distinto del autenticado (p.\,ej., el emparejamiento elder--companion) deben ejecutarse
-    desde un entorno servidor de confianza y no desde el cliente.
+    de un usuario distinto del autenticado, señaladamente el emparejamiento entre el mayor y el familiar,
+    deben ejecutarse desde un entorno servidor de confianza y no desde el cliente. El requisito quedó
+    cubierto al trasladar la vinculación a una función en la nube, según se documenta en el
+    capítulo~\ref{cap:diseno-desarrollo}.
 \end{itemize}
 
 \paragraph{Privacidad y protección de datos}
@@ -353,7 +357,7 @@ salvo indicación contraria.
 \section{Casos de Uso}
 \label{sec:casos-de-uso}
 Esta sección formaliza los casos de uso del MVP estabilizado (HU-1 a HU-4). Las HU diferidas
-(HU-5 y HU-6) no se especifican aquí; quedan documentadas en el Capítulo~1 como líneas de trabajo
+(HU-5 y HU-6) no se especifican aquí; quedan documentadas en el capítulo~\ref{cap:desarrollo-futuro} como líneas de trabajo
 futuro.
 
 \subsection{Diagramas de casos de uso (UML)}
@@ -370,7 +374,7 @@ futuro.
 Cada caso de uso se documenta según la plantilla: identificador, nombre, actor primario,
 precondiciones, flujo principal, flujos alternativos y postcondiciones.
 
-\paragraph{CU-01 --- Seleccionar modo de uso}
+\paragraph{CU-01. Seleccionar modo de uso}
 
 \noindent\textbf{Actor primario:} Mayor (Independiente o Vinculado, según resultado del caso).
 
@@ -396,7 +400,7 @@ definida.
 
 \bigskip
 
-\paragraph{CU-02 --- Generar código de vinculación}
+\paragraph{CU-02. Generar código de vinculación}
 
 \noindent\textbf{Actor primario:} Mayor Vinculado.
 
@@ -408,19 +412,20 @@ definida.
     confundibles: O e I).
     \item El sistema persiste el código en el perfil del mayor y lo presenta en pantalla con tipografía de
     gran tamaño.
-    \item La interfaz del mayor permanece bloqueada en Modo Ultra-Simple mientras \code{linkedPartnerId}
-    sea nulo.
+    \item La interfaz del mayor permanece bloqueada en modo ultrasimple mientras el campo
+    \code{linkedCompanionId} sea nulo.
 \end{enumerate}
 
-\noindent\textbf{Flujos alternativos:} Si el código generado coincide con uno ya existente en uso, el
-sistema reintenta la generación.
+\noindent\textbf{Flujos alternativos:} El alfabeto empleado ofrece unas 923.000 combinaciones posibles y el
+sistema no reintenta la generación ante una eventual colisión. Es una limitación conocida y asumida a la
+escala de pruebas del MVP, que se documenta como deuda en el capítulo~\ref{cap:diseno-desarrollo}.
 
 \noindent\textbf{Postcondiciones:} Existe un código de vinculación activo en el perfil del mayor,
 pendiente de ser consumido por un familiar.
 
 \bigskip
 
-\paragraph{CU-03 --- Introducir código de vinculación}
+\paragraph{CU-03. Introducir código de vinculación}
 
 \noindent\textbf{Actor primario:} Familiar.
 
@@ -431,9 +436,11 @@ posee un código de vinculación válido proporcionado por el mayor.
 \begin{enumerate}[nosep]
     \item El familiar accede a la pantalla de emparejamiento desde su dispositivo.
     \item El familiar introduce el código de 4~caracteres.
-    \item El sistema valida que el código existe y no está consumido.
+    \item El sistema valida en el servidor que el código existe y no ha sido consumido, y comprueba que
+    quien solicita la vinculación es efectivamente un familiar registrado.
     \item El sistema ejecuta una operación atómica que actualiza, en una misma transacción, el campo
-    \code{linkedPartnerId} de ambos perfiles (mayor y familiar).
+    \code{linkedCompanionId} del mayor y el campo \code{linkedElderId} del familiar, y consume el código
+    para que no pueda reutilizarse.
     \item El sistema notifica el emparejamiento exitoso al familiar y desbloquea automáticamente la
     interfaz del mayor.
 \end{enumerate}
@@ -445,11 +452,12 @@ posee un código de vinculación válido proporcionado por el mayor.
 \end{itemize}
 
 \noindent\textbf{Postcondiciones:} Los perfiles de mayor y familiar están vinculados de forma
-bidireccional. La interfaz del mayor sale del Modo Ultra-Simple.
+bidireccional y el código ha quedado consumido. La interfaz del mayor sale del modo ultrasimple sin que
+éste tenga que intervenir.
 
 \bigskip
 
-\paragraph{CU-04 --- Conversar por voz}
+\paragraph{CU-04. Conversar por voz}
 
 \noindent\textbf{Actor primario:} Mayor (cualquier modalidad).
 
@@ -462,15 +470,16 @@ internet y de permisos de micrófono concedidos.
 \begin{enumerate}[nosep]
     \item El mayor pulsa el botón central de micrófono en la pantalla principal.
     \item El sistema solicita permiso de micrófono si no estaba ya concedido y comienza la captura de
-    audio. La interfaz indica visualmente el estado \textit{Escuchando}.
+    audio. La interfaz indica visualmente el estado mediante la etiqueta «Te escucho».
     \item El sistema transcribe el audio a texto mediante el servicio de reconocimiento de voz
     (locale \code{es-ES}).
-    \item El sistema cambia el estado a \textit{Pensando} y envía el texto transcrito a la API de Gemini,
-    junto con el \code{systemInstruction} configurado.
+    \item El sistema cambia el estado a «Pensando» y envía el texto transcrito a la API de Gemini, junto
+    con el \code{systemInstruction} configurado.
     \item La API de Gemini devuelve una respuesta textual.
-    \item El sistema cambia el estado a \textit{Hablando}, muestra el texto de la respuesta en pantalla
-    con tipografía de gran tamaño y lo reproduce mediante síntesis de voz, aplicando los parámetros del
-    usuario (\code{volume}, \code{speechRate}).
+    \item El sistema cambia el estado a «Respondiendo», muestra el texto de la respuesta en pantalla con
+    tipografía de gran tamaño y lo reproduce mediante síntesis de voz, aplicando los parámetros del usuario
+    (\code{volume} y \code{speechRate}). Si la síntesis en la nube no está disponible, la respuesta se
+    pronuncia con el motor de voz del propio dispositivo.
     \item Al finalizar la reproducción, el sistema vuelve al estado de reposo.
 \end{enumerate}
 
@@ -487,7 +496,7 @@ internet y de permisos de micrófono concedidos.
 
 \bigskip
 
-\paragraph{CU-05 --- Ajustar preferencias (modo independiente)}
+\paragraph{CU-05. Ajustar preferencias (modo independiente)}
 
 \noindent\textbf{Actor primario:} Mayor Independiente.
 
@@ -510,12 +519,12 @@ internet y de permisos de micrófono concedidos.
 
 \bigskip
 
-\paragraph{CU-06 --- Ajustar preferencias (modo remoto, desde el Familiar)}
+\paragraph{CU-06. Ajustar preferencias (modo remoto, desde el Familiar)}
 
 \noindent\textbf{Actor primario:} Familiar.
 
-\noindent\textbf{Precondiciones:} El familiar está vinculado a un mayor (\code{linkedPartnerId} no nulo
-en ambos perfiles).
+\noindent\textbf{Precondiciones:} El familiar está vinculado a un mayor, es decir, existen
+\code{linkedElderId} en su perfil y \code{linkedCompanionId} en el del mayor.
 
 \noindent\textbf{Flujo principal:}
 \begin{enumerate}[nosep]
@@ -551,10 +560,10 @@ HU del MVP estabilizado se ha traducido en al menos un caso de uso especificado.
         \midrule
         HU-1 & RF-1, RF-2                & CU-01, CU-02, CU-03 \\
         HU-2 & RF-3, RF-4                & CU-04 \\
-        HU-3 & ---                       & --- \\
+        HU-3 & No procede                & No procede \\
         HU-4 & RF-5, RF-6                & CU-05, CU-06 \\
-        HU-5 & RF-7 (diferido)           & --- \\
-        HU-6 & RF-8 (diferido)           & --- \\
+        HU-5 & RF-7 (diferido)           & No procede \\
+        HU-6 & RF-8 (diferido)           & No procede \\
         \bottomrule
     \end{tabularx}
     \caption{Trazabilidad entre Historias de Usuario, Requisitos Funcionales y Casos de Uso.}
@@ -571,25 +580,19 @@ HU de naturaleza no funcional.
 El modelo conceptual identifica las entidades principales que el sistema manipula y las relaciones entre
 ellas, con independencia de las decisiones tecnológicas de implementación.
 
-\textbf{Entidades:}
-\begin{itemize}
-    \item \textbf{Usuario.} Representa a una persona que interactúa con el sistema. Tiene un rol
-    (\textit{Mayor} o \textit{Companion}) y, en el caso del \textit{Mayor}, un grado de autonomía
-    (\textit{Independiente} o \textit{Vinculado}). Cada Usuario posee unas preferencias de accesibilidad.
-    \item \textbf{Preferencias.} Conjunto de parámetros de accesibilidad asociados a un Usuario
-    \textit{Mayor} (volumen de voz, velocidad de habla, multiplicador del tamaño de texto).
-    \item \textbf{Conversación.} Representa una interacción de voz entre el mayor y el asistente,
-    incluyendo transcripciones, respuestas generadas y metadatos de la sesión.
-    % **NOTE: por implementar (HU-5, HU-6)
-\end{itemize}
+El sistema manipula tres entidades. El \textbf{Usuario} representa a una persona que interactúa con el
+sistema; tiene un rol, que puede ser \textit{Mayor} o \textit{Familiar}, y, en el caso del mayor, un grado
+de autonomía que distingue al independiente del vinculado. Las \textbf{Preferencias} son el conjunto de
+parámetros de accesibilidad asociados a un usuario mayor, esto es, el volumen de la voz, la velocidad del
+habla y el multiplicador del tamaño de texto. La \textbf{Conversación}, por último, representa una
+interacción de voz entre el mayor y el asistente, con sus transcripciones, las respuestas generadas y los
+metadatos de la sesión; se incluye en el modelo porque el dominio la contiene, aunque su persistencia
+corresponde a HU-5 y no forma parte del MVP entregado.
+% **NOTE: la entidad Conversación queda en el modelo conceptual pero sin implementar (HU-5, HU-6).
 
-\textbf{Relación principal:}
-\begin{itemize}
-    \item \textbf{Vinculación (Mayor $\leftrightarrow$ Familiar).} Relación binaria, bidireccional y
-    opcional, que liga un Usuario \textit{Mayor} con un Usuario \textit{Companion}. Al establecerse,
-    autoriza al familiar a leer y modificar las Preferencias del Mayor. Su establecimiento se media por
-    un código temporal de vinculación.
-\end{itemize}
+La relación principal es la \textbf{vinculación} entre un mayor y un familiar. Es binaria, bidireccional y
+opcional, se establece mediante un código temporal de un solo uso y, una vez establecida, autoriza al
+familiar a leer el perfil del mayor y a modificar sus preferencias, y solo esas.
 
 \begin{figure}[htbp]
     \centering
