@@ -1,3 +1,6 @@
+% Los preliminares no llevan cabecera ni numero, tampoco las paginas de relleno
+\pagestyle{empty}
+
 \chapter*{}
 
 \thispagestyle{empty}
@@ -9,20 +12,41 @@
 \theauthor\\
 \end{center}
 
+\vspace{0.5cm}
 \noindent{\textbf{Resumen}}\\
 
-\vspace{0.5cm}
+La soledad no deseada es un fenómeno que afecta a una parte considerable de la población pasando
+desapercibida. En España alcanza al 20\% de los adultos y se agrava con la edad, hasta afectar a una de cada
+cinco personas mayores de 75 años: se estima que cerca de tres millones de mayores de 65 la padecen, con un
+coste para el Estado cifrado en torno a los 14.141 millones de euros anuales. Son numerosas las herramientas,
+iniciativas y metodologías estudiadas para combatirla, algunas más fructíferas que otras.
 
-Las smart cities utilizan tecnologías de la información y comunicación para mejorar la calidad de vida de sus habitantes. Un componente esencial de estas ciudades inteligentes es la capacidad de capturar y procesar grandes volúmenes de datos provenientes de diversas fuentes, como sensores, dispositivos IoT (Internet of Things), sistemas de transporte, servicios públicos y redes sociales. Estos datos se utilizan para monitorear y gestionar los recursos urbanos de manera eficiente.
+El análisis del mercado actual revela, sin embargo, un hueco significativo. Los robots sociales de gama alta
+ofrecen una experiencia cuidada a un precio inasumible para el pensionista medio español, mientras que los
+compañeros conversacionales de uso masivo, optimizados para maximizar el tiempo de uso, no se diseñaron
+pensando en personas mayores y han derivado en patrones documentados de dependencia emocional.
 
-Para llevar a cabo esta monitorización, se emplean dashboards. Los cuadros de mando, paneles de control o dashboards son herramientas fundamentales para la gestión y supervisión de distintos aspectos de las smart cities. Estos paneles ofrecen visualizaciones de datos en tiempo real, lo que facilita a los responsables de la toma de decisiones la gestión de recursos, la optimización de servicios y la mejora de la calidad de vida de los ciudadanos.
+El objeto de este proyecto no pretende darle una solución a un problema de tal magnitud, sino contribuir a
+mitigarlo desde el terreno que le es propio, el de la ingeniería del software. Se presenta el análisis, el
+diseño y la implementación de \textbf{Quiet Companion}, una aplicación móvil que acompaña a la persona mayor
+mediante un asistente conversacional por voz sobre hardware de uso común. La propuesta se articula
+en torno a tres principios: la accesibilidad, con una interfaz que cumple los criterios de perceptibilidad y
+operabilidad de la norma WCAG 2.2 y renuncia a cualquier gesto que no sea la pulsación simple; la revelación
+progresiva, que reconoce que el mayor no es ni plenamente autónomo ni plenamente dependiente y le permite
+gestionar la herramienta por sí mismo o delegarla en un familiar; y el cuidado distribuido, un modelo dual en
+el que el familiar ajusta en remoto los parámetros de accesibilidad y los cambios se propagan en tiempo real
+al dispositivo del mayor, de modo que la tecnología complemente el vínculo humano en lugar de sustituirlo.
 
-En este trabajo se presenta el análisis, diseño e implementación de una solución integral para la monitorización de estos datos, cumpliendo con los requisitos de utilizar software libre, asegurar que el sistema esté contenerizado para garantizar su desacoplamiento, y emplear un orquestador de contenedores que asegure una alta disponibilidad.
+El sistema se ha desarrollado en Flutter sobre una arquitectura limpia con organización por funcionalidades, y
+se apoya en Firebase para la autenticación, la persistencia y la lógica de servidor, en un modelo de lenguaje
+generativo y en servicios en la nube de reconocimiento y síntesis de voz. El resultado es un prototipo
+funcional que cumple los objetivos comprometidos, con una limitación asumida que se propone como línea de
+trabajo futuro: la ausencia de validación con usuarios reales que permita medir su efecto sobre la dimensión
+social de la soledad.
 
-\vspace{0.7cm}
-\noindent{\textbf{Palabras clave}: Cuadro de mandos, Base de datos, ETL, Orquestación de contenedores, Kubernetes, Software Libre, Monitorización}\\
+\vspace{0.4cm}
+\noindent{\textbf{Palabras clave}: Soledad no deseada, Personas mayores, Accesibilidad, WCAG 2.2, Asistente conversacional por voz, Inteligencia artificial generativa, Flutter, Firebase}\\
 
-\cleardoublepage
 \chapter*{}
 
 \thispagestyle{empty}
@@ -37,14 +61,35 @@ En este trabajo se presenta el análisis, diseño e implementación de una soluc
 \vspace{0.5cm}
 \noindent{\textbf{Abstract}}\\
 
-Smart cities use information and communication technologies to improve the quality of life of their inhabitants. An essential component of these intelligent cities is the ability to capture and process large volumes of data from various sources, such as sensors, Internet of Things (IoT) devices, transportation systems, public services, and social networks. This data is used to monitor and manage urban resources efficiently.
+Unwanted loneliness affects a considerable share of the population while going largely unnoticed. In Spain it
+reaches 20\% of adults and worsens with age, up to one in five people over 75: close to three million people
+over 65 are estimated to experience it, at a cost to the State of around 14.1 billion euros a year. Many
+tools, initiatives and methodologies have been studied to counter it, some more fruitful than others.
 
-To carry out this monitoring, dashboards are employed. Dashboards, also known as control panels or command boards, are essential tools for the management and supervision of different aspects of smart cities. These panels provide real-time data visualizations, which help decision-makers manage resources, optimize services, and improve the quality of life for citizens.
+A review of the current market reveals, however, a significant gap. High-end social robots offer a polished
+experience at a price beyond the reach of the average Spanish pensioner, whereas mass-market conversational
+companions, optimised to maximise time spent in the app, were not designed with older people in mind and have
+led to documented patterns of emotional dependence.
 
-This work presents the analysis, design, and implementation of a comprehensive solution for monitoring this data, meeting the requirements of using open-source software, ensuring that the system is containerized to guarantee decoupling, and employing a container orchestrator to ensure high availability.
+This project does not claim to solve a problem of such magnitude, but to help mitigate it from the field it
+belongs to, software engineering. It presents the analysis, design and implementation of \textbf{Quiet
+Companion}, a mobile application that accompanies older people through a voice-based conversational assistant
+on commodity hardware. The proposal rests on three principles: accessibility, through an interface
+that meets the perceivability and operability criteria of the WCAG 2.2 standard and restricts interaction to a
+single tap; progressive disclosure, which acknowledges that an older person is neither fully autonomous nor
+fully dependent and lets them either manage the application themselves or delegate it to a relative; and
+distributed care, a dual model in which the relative adjusts the accessibility settings remotely and the
+changes propagate in real time to the older person's device, so that technology complements the human bond
+instead of replacing it.
 
-\vspace{0.7cm}
-\noindent{\textbf{Keywords}: Dashboard, Database, ETL, Container Orchestration, Kubernetes, Open Source Software, Monitoring}\\
+The system has been developed in Flutter on a clean architecture with feature-sliced organisation, and relies
+on Firebase for authentication, persistence and server-side logic, on a generative language model, and on
+cloud speech recognition and synthesis services. The result is a working prototype that meets the committed
+objectives, with one acknowledged limitation proposed as future work: the absence of validation with real
+users that would measure its effect on the social dimension of loneliness.
+
+\vspace{0.4cm}
+\noindent{\textbf{Keywords}: Unwanted loneliness, Older adults, Accessibility, WCAG 2.2, Voice conversational assistant, Generative artificial intelligence, Flutter, Firebase}\\
 
 \chapter*{}
 \thispagestyle{empty}
@@ -105,7 +150,8 @@ Yo, \textbf{\theauthor}, alumno de la titulación \grado \ de la \myFacultyShort
 \vspace{3cm}
 
 \doclicenseThis
-The source code of this text and developed programs are available in the Github repository \url{https://github.com/}
+El código fuente de este documento y de los programas desarrollados está disponible en el repositorio de
+GitHub \url{https://github.com/maario106/quiet_companion}
 
 
 \chapter*{Agradecimientos}
@@ -116,3 +162,5 @@ The source code of this text and developed programs are available in the Github 
 
 Agradecimientos escritos...
 
+% Se restituye el estilo de pagina para el resto del documento
+\pagestyle{fancy}
