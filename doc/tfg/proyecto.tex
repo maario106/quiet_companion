@@ -25,6 +25,13 @@
   backend = biber,
   ]
 {biblatex}
+\DeclareLanguageMapping{spanish}{spanish-apa}
+% APA 7 conserva la abreviatura latina «et al.» tambien en espanol; babel la
+% traduce por defecto como «y col.», asi que se redefine la cadena.
+\DefineBibliographyStrings{spanish}{%
+  andothers = {et\addabbrvspace al\adddot},
+  andmore   = {et\addabbrvspace al\adddot},
+}
 \addbibresource{bibliografia.bib}
 %\bibliography{bibliografia/bibliografia}\addcontentsline{toc}{chapter}{Bibliografía}
 
@@ -61,6 +68,13 @@
 \usepackage{rotating}   % tabla apaisada (sidewaystable) para la de 7 columnas
 \usepackage{enumitem}   % nosep, leftmargin=* en listas dentro de tablas
 \usepackage{tikz}       % línea de hitos del capítulo 5 (cronología del desarrollo)
+\usepackage{pgfplots}   % gráficas de datos (capítulo 2: evolución de mayores que viven solos)
+\pgfplotsset{compat=1.16}
+\usepgfplotslibrary{groupplots}
+% Paleta de las gráficas: tonos distinguibles también con daltonismo y en impresión
+\definecolor{vizAzul}{HTML}{2A78D6}
+\definecolor{vizNaranja}{HTML}{EB6834}
+\definecolor{vizVioleta}{HTML}{4A3AA7}
 % Opcional, para zebra striping:
 % \usepackage[table]{xcolor}
 
@@ -77,8 +91,8 @@
 % ********************************************************************
 \newcommand{\director}{Daniel Bolaños Martínez}
 \newcommand{\otrodirector}{Alberto Durán López}
-\newcommand{\thetitle}{Título del Trabajo}
-\newcommand{\thetitleen}{Title in english}
+\newcommand{\thetitle}{Quiet Companion: asistente conversacional por voz accesible frente a la soledad no deseada en la tercera edad}
+\newcommand{\thetitleen}{Quiet Companion: an accessible voice conversational assistant to address unwanted loneliness in older adults}
 \newcommand{\theauthor}{Mario Rosas Navarro}
 \newcommand{\curso}{2025-2026}
 \newcommand{\dni}{77650905FF}
@@ -250,9 +264,11 @@ pdfproducer = {pdflatex}
 \input{capitulos/05_Diseño_Desarrollo}
 \input{capitulos/06_Desarrollo_Futuro}
 
-%%% --- The following two lines are what needs to be added --- %%%
-\setcounter{biburllcpenalty}{7000}
-\setcounter{biburlucpenalty}{8000}
+%%% --- Permite partir las URL largas de la bibliografia para que no invadan el margen --- %%%
+\setcounter{biburlnumpenalty}{9000}
+\setcounter{biburllcpenalty}{9000}
+\setcounter{biburlucpenalty}{9000}
+\setlength{\emergencystretch}{3em}
 \nocite{*}
 \printbibliography[
 title={Bibliografía},
