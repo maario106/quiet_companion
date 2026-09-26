@@ -51,3 +51,58 @@ sin emulador:
 ```bash
 cd functions && npm test
 ```
+
+---
+
+## Recorrido de extremo a extremo contra el emulador
+
+Los tests de aquí verifican las reglas, y los de `functions/` la lógica de
+vinculación. Ninguno ve a la app hablar con las reglas de verdad. Eso se hace
+arrancando la suite y apuntando la app a ella.
+
+**1. Levantar los emuladores** (desde la raíz del repo):
+
+```bash
+firebase emulators:start --only auth,firestore,functions
+```
+
+Si sale `no longer supports Java version before 21`, es el JDK del PATH — mira
+la sección del JDK más arriba.
+
+**2. Redirigir los puertos al móvil** (solo con dispositivo por USB; el
+`127.0.0.1` del teléfono no es el del portátil):
+
+```bash
+adb reverse tcp:9099 tcp:9099   # auth
+adb reverse tcp:8080 tcp:8080   # firestore
+adb reverse tcp:5001 tcp:5001   # functions
+```
+
+**3. Arrancar la app apuntando ahí:**
+
+```bash
+flutter run --dart-define=USE_EMULATOR=true
+```
+
+En un emulador de Android (AVD) no hace falta `adb reverse`; se añade
+`--dart-define=EMULATOR_HOST=10.0.2.2`.
+
+### Qué recorrer, y qué se está probando en cada paso
+
+| Paso | Verifica |
+|---|---|
+| Alta del mayor (onboarding → independiente) | `allow create` sobre el propio documento |
+| Ajustes del mayor: subir letra, volumen, velocidad | `allow update` del dueño (`updatePreferences`) |
+| Contacto de emergencia desde ajustes | `allow update` del dueño (`updateEmergencyContact`) |
+| Alta del mayor dependiente → sale el código | Escritura del `linkCode` por su dueño |
+| Registro del familiar (nombre + teléfono) | `ensureCompanionUserDoc` |
+| Meter el código en el panel del familiar | **`validateAndLink`**: la callable, no el cliente |
+| El panel enseña al mayor | `allow get` del familiar vinculado |
+| Mover los deslizadores del panel | `allow update` acotado a `preferences` |
+| Cambiar el nombre del mayor desde el panel | `allow update` acotado a `name` |
+
+La UI en `localhost:4000` enseña cada denegación con la regla que la produjo:
+es el sitio donde mirar si algo sale como "Error al guardar".
+
+Los datos del emulador son efímeros: al pararlo desaparecen. Para reiniciar el
+recorrido desde cero, basta con reiniciar la suite.

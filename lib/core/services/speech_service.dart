@@ -52,6 +52,18 @@ class SpeechService {
 
   Timer? _silenceTimer;
   bool _turnActive = false;
+
+  /// Si la sesión nativa en curso sigue admitiendo resultados.
+  ///
+  /// Sin esto se duplicaba lo dicho. El reconocedor no ordena sus avisos: el
+  /// `error_no_match` de la pausa puede llegar ANTES del resultado final, y el
+  /// paquete además sintetiza un final propio pasado `finalTimeout` (lo arma
+  /// `stop()`). Cada uno de esos avisos consolidaba el texto, y el siguiente
+  /// volvía a rellenar `_current` con las MISMAS palabras: "hola qué tal" se
+  /// convertía en "hola qué tal hola qué tal". Cerrada la sesión, sus
+  /// resultados tardíos se ignoran hasta que se abra la siguiente.
+  bool _sessionOpen = false;
+
   bool _resumeScheduled = false;
   int _resumeFailures = 0;
 
@@ -89,6 +101,7 @@ class SpeechService {
     _current = '';
     _resumeFailures = 0;
     _resumeScheduled = false;
+    _sessionOpen = false;
     _turnActive = true;
     _onPartial = onPartial;
     _onFinal = onFinal;
@@ -118,6 +131,7 @@ class SpeechService {
 
   void _closeTurn() {
     _turnActive = false;
+    _sessionOpen = false;
     _resumeScheduled = false;
     _silenceTimer?.cancel();
     _silenceTimer = null;
@@ -153,6 +167,7 @@ class SpeechService {
           listenMode: stt.ListenMode.dictation,
         ),
       );
+      _sessionOpen = true;
       _resumeFailures = 0;
     } catch (error) {
       _resumeFailures++;
@@ -164,13 +179,16 @@ class SpeechService {
   }
 
   void _handleResult(SpeechRecognitionResult result) {
-    if (!_turnActive) return;
+    // `_sessionOpen`, no solo `_turnActive`: un resultado de una sesión ya
+    // consolidada repetiría texto (ver el campo).
+    if (!_turnActive || !_sessionOpen) return;
 
     _current = result.recognizedWords;
     if (result.finalResult) {
-      // El sistema cierra la frase: se consolida y se espera a la siguiente
-      // sesión, que empezará a contar palabras desde cero.
+      // El sistema cierra la frase: se consolida, se da la sesión por
+      // terminada y se espera a la siguiente, que contará desde cero.
       _commitCurrent();
+      _sessionOpen = false;
     }
 
     _onPartial?.call(transcript);
@@ -187,6 +205,7 @@ class SpeechService {
       // Fin de la sesión nativa, no del turno: Android la cierra sola mucho
       // antes de la pausa que damos por buena.
       _commitCurrent();
+      _sessionOpen = false;
       _scheduleResume();
     }
   }
@@ -198,6 +217,7 @@ class SpeechService {
     // nativa terminó": se conserva lo dicho y se reanuda.
     if (kDebugMode) debugPrint('[STT] ${error.errorMsg} — reanudando turno.');
     _commitCurrent();
+    _sessionOpen = false;
     _scheduleResume();
   }
 
@@ -213,11 +233,21 @@ class SpeechService {
     }
 
     _resumeScheduled = true;
-    Timer(_resumeDelay, () {
-      _resumeScheduled = false;
-      if (!_turnActive || _speech.isListening) return;
-      _startNativeSession();
-    });
+    Timer(_resumeDelay, _resumeNow);
+  }
+
+  Future<void> _resumeNow() async {
+    _resumeScheduled = false;
+    if (!_turnActive) return;
+
+    // Cerrar antes de reabrir, siempre. Es el contrato explícito del paquete
+    // ("When listening is done always invoke either cancel or stop to end the
+    // session, even if it times out") y aquí importa el doble: si la sesión
+    // anterior sigue viva, `isListening` se queda en true y la reanudación no
+    // llegaba a ocurrir — el micrófono se quedaba encendido sin transcribir.
+    await _speech.stop();
+    if (!_turnActive) return;
+    await _startNativeSession();
   }
 
   void _restartSilenceTimer() {
