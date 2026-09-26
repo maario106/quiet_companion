@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/tts_service_provider.dart';
@@ -24,7 +25,23 @@ class ChatController extends StateNotifier<ChatState> {
     this._uid,
     String? elderName,
   ) : super(const ChatState()) {
+    _elderName = elderName;
     _geminiService.startSession(elderName);
+  }
+
+  /// Nombre con el que está sembrada la sesión del modelo. Se guarda para no
+  /// resembrarla dos veces por el mismo nombre: `startSession` borra el hilo
+  /// de la conversación, y hacerlo de más le costaría al mayor el contexto de
+  /// lo que acaba de contar.
+  String? _elderName;
+
+  /// Lleva un nombre nuevo al modelo sin reconstruir el controlador. Lo usan
+  /// las dos vías por las que aparece: `guardarNombre` en mitad de un turno y
+  /// el familiar escribiéndolo desde su panel.
+  void updateElderName(String? name) {
+    if (name == _elderName) return;
+    _elderName = name;
+    _geminiService.startSession(name);
   }
 
   Future<void> sendMessage(String message) async {
@@ -38,16 +55,17 @@ class ChatController extends StateNotifier<ChatState> {
 
     try {
       final geminiResponse = await _geminiService.sendMessage(message);
+      if (!mounted) return;
 
       // If Gemini called guardarNombre, persist the name before speaking.
       final nombreToSave = geminiResponse.nombreToSave;
       if (nombreToSave != null && _uid != null) {
         await _authRepository.updateName(_uid, nombreToSave);
-        // Refresh the session so the model no longer asks for the name.
-        // currentUserProvider will emit the updated UserModel automatically;
-        // the provider will rebuild this controller with the new name on the
-        // next state change. Refreshing here covers the current session turn.
-        _geminiService.startSession(nombreToSave);
+        if (!mounted) return;
+        // Resiembra la sesión para que el modelo deje de preguntar. Va por
+        // `updateElderName` y no por `startSession` directamente para que la
+        // emisión de currentUserProvider que viene detrás no la repita.
+        updateElderName(nombreToSave);
       }
 
       final replyText =
@@ -59,9 +77,13 @@ class ChatController extends StateNotifier<ChatState> {
       );
 
       await _ttsService.speak(replyText);
+      if (!mounted) return;
 
       state = state.copyWith(status: ChatStatus.initial);
     } catch (e) {
+      // Asignar `state` en un notifier ya desechado lanza, y lanzaría otra vez
+      // dentro de este mismo catch: el error saldría del turno sin recoger.
+      if (!mounted) return;
       state = state.copyWith(
         status: ChatStatus.error,
         responseAI: 'Ups, ha habido un problema de conexión. ¿Puedes repetir?',
@@ -128,11 +150,26 @@ class ChatController extends StateNotifier<ChatState> {
 
 final chatControllerProvider =
     StateNotifierProvider<ChatController, ChatState>((ref) {
-  final currentUser = ref.watch(currentUserProvider).valueOrNull;
-  final uid = currentUser?.id ?? FirebaseAuth.instance.currentUser?.uid;
-  final elderName = currentUser?.name;
+  // `select` sobre el uid, no `watch` del UserModel entero.
+  //
+  // Observar el modelo completo ataba la vida del controlador a CUALQUIER
+  // cambio del documento del mayor. Y el turno que enseña su nombre cambia el
+  // documento: `guardarNombre` escribe `name`, Firestore emite (dos veces: la
+  // escritura local y el eco del servidor) y el provider destruía el
+  // controlador **en mitad de `sendMessage`**. La respuesta de ese turno moría
+  // con él y la pantalla se reiniciaba con el estado nuevo: el nombre se
+  // guardaba, pero el turno que lo guardó no llegaba nunca a la interfaz.
+  //
+  // Con `select`, solo un cambio de identidad reconstruye. El nombre lo
+  // refresca el propio controlador (`startSession`) al guardarlo, y la
+  // cabecera lo lee de `currentUserProvider` por su cuenta. De paso, mover un
+  // ajuste de accesibilidad tampoco tumba ya la conversación.
+  final uid = ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id)) ??
+      FirebaseAuth.instance.currentUser?.uid;
+  // `read`, no `watch`: solo siembra la sesión inicial de Gemini.
+  final elderName = ref.read(currentUserProvider).valueOrNull?.name;
 
-  return ChatController(
+  final controller = ChatController(
     ref.watch(geminiServiceProvider),
     ref.watch(speechServiceProvider),
     ref.watch(ttsServiceProvider),
@@ -140,4 +177,14 @@ final chatControllerProvider =
     uid,
     elderName,
   );
+
+  // El nombre ya no reconstruye el controlador, así que se le entrega en vivo.
+  // Cubre los dos casos que el `select` deja fuera: que el documento cargue
+  // después de construirse el chat, y que sea el familiar quien escriba el
+  // nombre desde su panel mientras el mayor conversa.
+  ref.listen<AsyncValue<UserModel?>>(currentUserProvider, (previous, next) {
+    controller.updateElderName(next.valueOrNull?.name);
+  });
+
+  return controller;
 });
