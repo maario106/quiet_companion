@@ -169,14 +169,14 @@ proyecto se recoge en la tabla~\ref{tab:catalogo-hu}.
     \label{tab:catalogo-hu}
     \begin{tabularx}{\textwidth}{@{}c >{\RaggedRight\arraybackslash}X c c@{}}
         \toprule
-        \textbf{ID} & \textbf{Título} & \textbf{Prioridad} & \textbf{Estado al cierre del MVP} \\
+        \textbf{ID} & \textbf{Título} & \textbf{Prioridad} & \textbf{Estado} \\
         \midrule
         HU-1 & Selección de autonomía              & Alta  & Completada \\
         HU-2 & Interfaz conversacional             & Alta  & Completada \\
         HU-3 & Interfaz accesible y comprensible   & Alta  & Completada \\
         HU-4 & Configuración adaptativa            & Alta  & Completada \\
-        HU-5 & Memoria conversacional básica       & Media & Diferida a trabajo futuro \\
-        HU-6 & Seguimiento del estado de ánimo     & Media & Diferida a trabajo futuro \\
+        HU-5 & Memoria conversacional básica       & Media & Completada tras el MVP \\
+        HU-6 & Seguimiento del estado de ánimo     & Media & Completada tras el MVP \\
         \bottomrule
     \end{tabularx}
 
@@ -225,10 +225,15 @@ de ellas se derivan.
     {\footnotesize Fuente: Elaboración propia.}
 \end{table}
 
-La aplicación efectiva del principio Lean de construir solo lo necesario se manifiesta en la decisión
-deliberada de diferir HU-5 y HU-6. Una vez constatado durante el desarrollo que la estabilización de HU-1 a
-HU-4 requería más esfuerzo del estimado inicialmente, se priorizó la entrega de un núcleo robusto sobre la
-cobertura amplia pero superficial de las seis historias.
+La aplicación efectiva del principio Lean de construir solo lo necesario, y del límite de trabajo en curso
+que lo hace operativo, se manifiesta en la decisión deliberada de posponer HU-5 y HU-6 hasta cerrar el MVP.
+Una vez constatado durante el desarrollo que la estabilización de HU-1 a HU-4 requería más esfuerzo del
+estimado inicialmente, se priorizó la entrega de un núcleo robusto sobre la cobertura amplia pero superficial
+de las seis historias. Conviene precisar el alcance de esa decisión, porque no fue una renuncia: ambas
+historias se retomaron una vez estabilizado ese núcleo y se completaron dentro del plazo del proyecto, tal
+y como recoge el plan de hitos de la tabla~\ref{tab:plan-hitos}. Lo que se decidió no fue prescindir de ellas, sino no tenerlas
+abiertas al mismo tiempo que las otras cuatro, que es precisamente lo que prescribe el límite de trabajo en
+curso del tablero.
 
 \subsection{Tarjetas técnicas y desglose de tareas}
 
@@ -274,9 +279,9 @@ compila, pasa el análisis estático sin advertencias y queda consolidado en el 
 
 \subsection{Plan de iteraciones e hitos}
 
-El trabajo se agrupó en siete hitos, de los cuales cinco se completaron dentro del alcance del MVP y dos
-quedaron diferidos junto a las historias que los motivaban. La tabla~\ref{tab:plan-hitos} recoge el plan y
-su estado al cierre del proyecto.
+El trabajo se agrupó en siete hitos. Los cinco primeros delimitan el MVP; los dos últimos, que dependen de
+HU-5 y HU-6, se abrieron solo cuando ese MVP estuvo estabilizado, y se cerraron ya en la recta final del
+proyecto. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
 
 \begin{table}[htbp]
     \centering
@@ -291,14 +296,19 @@ su estado al cierre del proyecto.
         M3 & Panel remoto y configuración adaptativa              & HU-4        & Completado \\
         M4 & Estabilización: refactorización, DI y deuda técnica   & HU-1 a HU-4 & Completado \\
         M5 & Voz en la nube, accesibilidad local y endurecimiento  & HU-2 a HU-4 & Completado \\
-        M6 & Persistencia conversacional y memoria                & HU-5        & Diferido \\
-        M7 & Análisis emocional y panel de bienestar              & HU-6        & Diferido \\
+        M6 & Persistencia conversacional y memoria                & HU-5        & Completado \\
+        M7 & Análisis emocional y panel de bienestar              & HU-6        & Completado \\
         \bottomrule
     \end{tabularx}
 
     \vspace{2pt}
     {\footnotesize Fuente: Elaboración propia.}
 \end{table}
+
+Conviene matizar qué significa aquí «completado». Los cinco primeros hitos están completados y verificados
+sobre dispositivo real; M6 y M7 están implementados y cubiertos por pruebas automáticas de su lógica pura,
+pero su verificación en dispositivo quedó pendiente en el momento de redactar esta memoria. La distinción se
+hace explícita porque afecta a lo que puede afirmarse en el capítulo de conclusiones.
 
 La ejecución real de estos hitos, reconstruida a partir del historial de versiones y con las desviaciones
 que se produjeron, se documenta en el apartado~\ref{sec:cronologia}, dentro del capítulo de diseño y

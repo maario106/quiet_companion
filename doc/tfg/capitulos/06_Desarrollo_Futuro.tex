@@ -4,20 +4,38 @@
 \section{Líneas de trabajo futuro}
 \label{sec:lineas-futuras}
 
-El diseño completo del producto contempla funcionalidades adicionales que, por las restricciones de tiempo
-propias de un Trabajo Fin de Grado, han quedado fuera del alcance del MVP entregado y se proponen como líneas
-de trabajo futuro.
+Las seis Historias de Usuario planificadas se han implementado, de modo que las líneas que siguen no son
+funcionalidades pendientes del plan original sino las que ese plan ha ido dejando al descubierto. Se ordenan
+de mayor a menor alcance, que no coincide con el orden de dificultad técnica.
 
-La primera es dotar al asistente de \textbf{memoria conversacional}, inyectando en el contexto del modelo el
-nombre y los datos básicos del usuario, así como un resumen de las conversaciones previas, de modo que el
-sistema pueda retomar lo hablado en sesiones anteriores. La segunda consiste en incorporar un módulo de
-\textbf{seguimiento del estado de ánimo} que catalogue el sentimiento de las conversaciones y lo presente al
-familiar como un indicador agregado de bienestar, con las cautelas de privacidad y de consentimiento que esa
-funcionalidad exige. La tercera, de alcance más acotado, es añadir una función de \textbf{llamada de
-emergencia} accesible desde la pantalla principal.
+La limitación más relevante del trabajo, señalada ya en el capítulo~\ref{cap:marco-teorico}, es la
+\textbf{ausencia de validación con usuarios reales}. Un estudio de campo con personas mayores, con
+instrumentos validados como la Escala de Soledad de De Jong Gierveld \citep{DeJongGierveld2010}, permitiría
+contrastar si la herramienta produce algún efecto medible sobre la dimensión social de la soledad, que es la
+única que la propuesta aspira a abordar. Esa validación tiene además un requisito previo más modesto pero
+igual de necesario: la \textbf{verificación sobre dispositivo real} de las funcionalidades incorporadas en
+último lugar, cuya lógica está cubierta por pruebas automáticas pero cuyo comportamiento en un terminal de
+gama media con una persona mayor delante no se ha comprobado todavía.
 
-Más allá de estas tres funcionalidades, la limitación más relevante del trabajo, señalada ya en el
-capítulo~\ref{cap:marco-teorico}, es la ausencia de validación con usuarios reales. Un estudio de campo con
-personas mayores, con instrumentos validados como la Escala de Soledad de De Jong Gierveld
-\citep{DeJongGierveld2010}, permitiría contrastar si la herramienta produce algún efecto medible sobre la
-dimensión social de la soledad, que es la única que la propuesta aspira a abordar.
+La segunda línea es de seguridad y está identificada con precisión: la \textbf{llamada conversacional en
+vivo sigue partiendo del cliente} con la clave del proveedor gestionada en el dispositivo, de modo que RNF-8
+solo se cumple en las funcionalidades que ya se apoyan en el servidor. La pieza que lo resuelve es la misma
+que resolvió el emparejamiento y el análisis al cierre, esto es, una función en la nube que actúe como
+intermediaria, y su coste es de integración y de latencia antes que de diseño. Es el único incumplimiento de
+seguridad que le queda al proyecto y por eso encabeza la lista de deuda.
+
+En el terreno funcional quedan tres extensiones de alcance acotado. La primera son las
+\textbf{notificaciones al familiar}, que hoy debe abrir el panel para enterarse de cualquier cambio, cuando
+el valor de un seguimiento reside justamente en no tener que consultarlo. La segunda es el \textbf{modo de
+entrada por teclado}, anunciado en la interfaz del mayor pero inerte, y que importa más de lo que su tamaño
+sugiere porque es la única alternativa para quien tiene dificultades de habla o se encuentra en un entorno
+ruidoso. La tercera es admitir \textbf{varios familiares por mayor}, ampliando a $0..n$ la cardinalidad que
+el modelo conceptual del capítulo~\ref{cap:analisis} fijó deliberadamente en $0..1$, decisión razonable para
+un MVP pero que no resiste el caso frecuente de varios hijos repartiéndose el cuidado.
+
+Por último, dos líneas de naturaleza técnica. La evolución hacia una \textbf{conversación de audio nativa},
+sustituyendo la cadena de transcripción, generación y síntesis por un modelo multimodal que reciba y devuelva
+voz, atacaría directamente la latencia percibida que fija RNF-7 y eliminaría la pérdida de matiz que supone
+convertir el habla en texto antes de interpretarla. Y la \textbf{integración continua}, hoy inexistente, que
+ejecute de forma automática las tres suites de pruebas del proyecto, sin la cual la cobertura conseguida se
+degrada con el tiempo sin que nadie se entere.

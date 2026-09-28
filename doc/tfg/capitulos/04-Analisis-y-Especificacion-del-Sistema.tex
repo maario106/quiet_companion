@@ -4,7 +4,7 @@
 Una vez establecida la metodología y la planificación del proyecto (capítulo~\ref{cap:metodologia}), este capítulo
 formaliza el análisis del sistema desarrollado. Se identifican los actores, se derivan los requisitos
 funcionales y no funcionales a partir de las Historias de Usuario gestionadas en el tablero,
-se especifican los casos de uso del MVP y se establece la trazabilidad entre todos los artefactos.
+se especifican los casos de uso y se establece la trazabilidad entre todos los artefactos.
 Cierra el capítulo un modelo conceptual de dominio que abstrae las entidades principales del sistema,
 dejando las decisiones de implementación para el capítulo de diseño (capítulo~\ref{cap:diseno-desarrollo}).
 
@@ -43,8 +43,8 @@ mediante un único condicional sobre \code{autonomy}.
     \label{fig:actores}
 \end{figure}
 
-Este diagrama refleja la jerarquía de actores y las relaciones primarias con los casos de uso del MVP. La
-especificación detallada de cada caso de uso se desarrolla en la Sección~\ref{sec:casos-de-uso}.
+Este diagrama refleja la jerarquía de actores y sus relaciones primarias con los casos de uso. La
+especificación detallada de cada uno se desarrolla en la Sección~\ref{sec:casos-de-uso}.
 
 \section{Catálogo de requisitos}
 Los requisitos se han derivado a partir de las Historias de Usuario (HU-1 a HU-6), las restricciones técnicas
@@ -232,19 +232,23 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \hline
         \textbf{Origen} & HU-5 \\
         \hline
-        \textbf{Prioridad} & Diferida a trabajo futuro \\
+        \textbf{Prioridad} & Media \\
         \hline
-        \textbf{Descripción} & El asistente debe inyectar en el contexto del modelo de lenguaje datos
-            básicos del usuario (al menos su nombre) y un resumen del contexto reciente de conversaciones
-            previas, de forma que las respuestas resulten personalizadas y coherentes con interacciones
-            anteriores. \\
+        \textbf{Descripción} & Al cerrar cada conversación, el sistema debe extraer de ella los datos
+            estables del mayor (su nombre, las personas de su entorno, sus aficiones y sus preocupaciones
+            recurrentes) junto a un resumen breve, mantenerlos en un documento de memoria independiente
+            del registro de conversaciones, e inyectar ese documento en el contexto del modelo de lenguaje
+            al iniciar la conversación siguiente, de forma que las respuestas resulten personalizadas y
+            coherentes con lo hablado en interacciones anteriores. \\
         \hline
-        \textbf{Entradas} & Perfil del usuario y registro de conversaciones previas. \\
+        \textbf{Entradas} & Transcripción de la conversación que se cierra y documento de memoria vigente
+            del mayor. \\
         \hline
-        \textbf{Salidas} & Respuestas del asistente que reflejan el contexto personalizado del usuario. \\
+        \textbf{Salidas} & Documento de memoria actualizado y respuestas del asistente que reflejan el
+            contexto personalizado del usuario. \\
         \hline
     \end{tabular}
-    \caption{Requisito Funcional RF-7: Memoria Conversacional Contextualizada (diferido).}
+    \caption{Requisito Funcional RF-7: Memoria Conversacional Contextualizada.}
     \label{tab:rf7}
 \end{table}
 
@@ -259,19 +263,55 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \hline
         \textbf{Origen} & HU-6 \\
         \hline
-        \textbf{Prioridad} & Diferida a trabajo futuro \\
+        \textbf{Prioridad} & Media \\
         \hline
         \textbf{Descripción} & Al finalizar una conversación, el sistema debe clasificar su sentimiento
-            general (Positivo, Neutro o Negativo) y presentar el agregado en una vista accesible al mayor
-            independiente y al familiar, según el modo. \\
+            general (Positivo, Neutro o Negativo) y generar un resumen, ambos producidos en un entorno
+            servidor y sin que la transcripción llegue a almacenarse, y presentar el agregado tanto en una
+            vista accesible al propio mayor como en el panel del familiar, en este último caso solo en la
+            medida en que el mayor lo haya autorizado. \\
         \hline
-        \textbf{Entradas} & Transcripción de la conversación finalizada. \\
+        \textbf{Entradas} & Transcripción de la conversación finalizada, retenida únicamente en memoria
+            durante el análisis. \\
         \hline
-        \textbf{Salidas} & Etiqueta de sentimiento almacenada y agregado visible en el panel de bienestar. \\
+        \textbf{Salidas} & Etiqueta de sentimiento y resumen almacenados en el registro de la conversación,
+            y agregado semanal visible en la vista del mayor y en el panel de bienestar del familiar. \\
         \hline
     \end{tabular}
-    \caption{Requisito Funcional RF-8: Catalogación Emocional de las Conversaciones (diferido).}
+    \caption{Requisito Funcional RF-8: Catalogación Emocional de las Conversaciones.}
     \label{tab:rf8}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|>{\raggedright\arraybackslash}p{0.72\textwidth}|}
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Requisito Funcional: Consentimiento sobre las Conversaciones}} \\
+        \hline
+        \textbf{ID} & RF-9 \\
+        \hline
+        \textbf{Origen} & HU-5, HU-6 (deriva de RNF-10) \\
+        \hline
+        \textbf{Prioridad} & Alta \\
+        \hline
+        \textbf{Descripción} & El tratamiento de las conversaciones debe quedar supeditado a un
+            consentimiento explícito otorgado por el propio mayor, desactivado por omisión y revocable en
+            cualquier momento, sin que el familiar pueda otorgarlo en su nombre. El mayor debe poder decidir
+            además qué parte del resultado del análisis es visible para su familiar, y esa decisión debe
+            hacerse cumplir en el servidor y no únicamente en la interfaz. Los plazos de cierre por
+            inactividad y de conservación de los datos derivados deben ser configurables dentro de los
+            márgenes que fije el servidor. \\
+        \hline
+        \textbf{Entradas} & Gesto explícito del mayor en la pantalla de consentimiento, y ajustes de
+            compartición y de plazos. \\
+        \hline
+        \textbf{Salidas} & Estado de consentimiento, ámbito de compartición y plazos persistidos en el
+            perfil, y reglas de seguridad que los aplican a toda lectura del familiar. \\
+        \hline
+    \end{tabular}
+    \caption{Requisito Funcional RF-9: Consentimiento y Control del Tratamiento Conversacional.}
+    \label{tab:rf9}
 \end{table}
 
 \subsection{Requisitos No Funcionales (RNF)}
@@ -282,7 +322,7 @@ salvo indicación contraria.
 \paragraph{Usabilidad y accesibilidad}
 \begin{itemize}
     \item \textbf{RNF-1. Cumplimiento WCAG~2.2.} La interfaz dirigida al mayor debe cumplir los criterios
-    de éxito de nivel~AA de la norma WCAG~2.2, en particular los relativos a perceptibilidad (contraste,
+    de éxito de nivel~AA de la norma WCAG~2.2 \citep{wcag}, en particular los relativos a perceptibilidad (contraste,
     tamaño de texto) y operabilidad (área activa de elementos táctiles, ausencia de gestos complejos).
     \item \textbf{RNF-2. Áreas táctiles mínimas.} Todo elemento interactivo de la interfaz del mayor debe
     tener un área activa de al menos $80 \times 80$ píxeles lógicos.
@@ -311,9 +351,11 @@ salvo indicación contraria.
 \begin{itemize}
     \item \textbf{RNF-8. Protección de credenciales de servicios externos.} Las claves de API de servicios
     externos (en particular la clave de la API de Gemini) no deben residir en el binario distribuido al
-    usuario. Actualmente la clave se gestiona vía \code{flutter\_dotenv} en desarrollo; está prevista la
-    migración a Cloud Functions de Firebase para producción, de modo que el cliente nunca acceda
-    directamente al LLM.
+    usuario. El requisito está cubierto en las funcionalidades que se apoyan en el servidor, esto es, la
+    síntesis de voz y el análisis de la conversación al cierre, que se resuelven desde Cloud Functions con
+    credenciales del entorno. Queda sin cubrir en la llamada conversacional en vivo, que sigue partiendo del
+    cliente con la clave gestionada mediante \code{flutter\_dotenv}; su traslado al servidor se documenta
+    como línea abierta en el capítulo~\ref{cap:desarrollo-futuro}.
     \item \textbf{RNF-9. Aislamiento de identidades.} Las operaciones de escritura que afecten a documentos
     de un usuario distinto del autenticado, señaladamente el emparejamiento entre el mayor y el familiar,
     deben ejecutarse desde un entorno servidor de confianza y no desde el cliente. El requisito quedó
@@ -323,14 +365,16 @@ salvo indicación contraria.
 
 \paragraph{Privacidad y protección de datos}
 \begin{itemize}
-    \item \textbf{RNF-10. Tratamiento de datos personales.} El sistema procesa datos de carácter personal
-    (identificadores anónimos, preferencias del usuario y, en futuras versiones, transcripciones
-    conversacionales y categorizaciones emocionales). Su tratamiento se ajustará al Reglamento General de
-    Protección de Datos (Reglamento UE 2016/679, RGPD), aplicando los principios de minimización de datos,
-    limitación de la finalidad y limitación del plazo de conservación. El registro de conversaciones, cuando
-    se implemente, se gobernará por consentimiento explícito (\textit{opt-in}) desactivado por defecto, y
-    será controlable por el mayor o por el familiar gestor.
-    % **NOTE: pendiente de formalización completa una vez se implementen HU-5 y HU-6; documentar base legal, periodos de retención y procedimiento de derecho de borrado.
+    \item \textbf{RNF-10. Tratamiento de datos personales.} El sistema procesa datos de carácter personal:
+    identificadores anónimos, preferencias del usuario y, desde la incorporación de HU-5 y HU-6, resúmenes
+    de las conversaciones y su categorización emocional. Su tratamiento se ajusta al Reglamento General de
+    Protección de Datos \citep{RGPD2016}, aplicando los principios de minimización de datos, limitación de
+    la finalidad y limitación del plazo de conservación. En concreto, la transcripción de la conversación no
+    llega a almacenarse en ningún momento y solo se procesa de forma transitoria para producir el resumen y
+    la etiqueta de sentimiento; el tratamiento está supeditado al consentimiento explícito
+    (\textit{opt-in}) del mayor, desactivado por defecto y revocable, que no puede otorgar el familiar en
+    su nombre (RF-9); y los datos derivados se conservan durante un plazo acotado y configurable, cumplido
+    el cual se eliminan.
 \end{itemize}
 
 \paragraph{Mantenibilidad}
@@ -356,23 +400,29 @@ salvo indicación contraria.
 
 \section{Casos de Uso}
 \label{sec:casos-de-uso}
-Esta sección formaliza los casos de uso del MVP estabilizado (HU-1 a HU-4). Las HU diferidas
-(HU-5 y HU-6) no se especifican aquí; quedan documentadas en el capítulo~\ref{cap:desarrollo-futuro} como líneas de trabajo
-futuro.
+Esta sección formaliza los casos de uso de las seis Historias de Usuario. Los seis primeros corresponden al
+MVP (HU-1 a HU-4) y los tres últimos a las historias que se abordaron una vez cerrado ese núcleo (HU-5 y
+HU-6). La separación no es caprichosa: los tres últimos comparten una precondición que los anteriores no
+tienen, el consentimiento del mayor, y por eso se especifican después.
 
 \subsection{Diagramas de casos de uso (UML)}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.8\textwidth]{imagenes/uml/diagrama_casos_de_uso.png}
-    \caption{Diagrama de casos de uso del MVP.}
+    \caption{Diagrama de casos de uso del MVP (CU-01 a CU-06).}
     \label{fig:casos-de-uso}
 \end{figure}
 
+El diagrama recoge los seis casos de uso del MVP, que son los que existían cuando se levantó. Los tres que
+se incorporaron después con HU-5 y HU-6, esto es, CU-07 a CU-09, se especifican textualmente más adelante en
+este mismo apartado y quedan pendientes de incorporarse a la representación gráfica.
+
 \subsection{Especificación detallada}
 
-Cada caso de uso se documenta según la plantilla: identificador, nombre, actor primario,
-precondiciones, flujo principal, flujos alternativos y postcondiciones.
+Cada caso de uso se documenta según la plantilla habitual en ingeniería de requisitos
+\citep{Sommerville2016}: identificador, nombre, actor primario, precondiciones, flujo principal, flujos
+alternativos y postcondiciones.
 
 \paragraph{CU-01. Seleccionar modo de uso}
 
@@ -546,11 +596,111 @@ internet y de permisos de micrófono concedidos.
 \noindent\textbf{Postcondiciones:} Las preferencias del mayor están actualizadas y aplicadas en su
 dispositivo.
 
+\bigskip
+
+\paragraph{CU-07. Otorgar o retirar el consentimiento sobre las conversaciones}
+
+\noindent\textbf{Actor primario:} Mayor (Independiente o Vinculado).
+
+\noindent\textbf{Precondiciones:} El mayor tiene un perfil creado y el consentimiento está desactivado por
+omisión.
+
+\noindent\textbf{Flujo principal:}
+\begin{enumerate}[nosep]
+    \item Antes de acceder por primera vez a la conversación, el sistema presenta al mayor una pantalla que
+    explica en lenguaje llano qué se guarda, qué no se guarda y quién puede verlo.
+    \item El mayor elige de forma explícita si autoriza que sus conversaciones se analicen y se resuman.
+    \item La elección se registra mediante una función en la nube, único punto autorizado para escribir ese
+    campo del perfil.
+    \item Si la respuesta es afirmativa, el mayor indica además qué parte del resultado del análisis podrá
+    ver su familiar.
+    \item El sistema aplica la decisión a partir de la conversación siguiente.
+\end{enumerate}
+
+\noindent\textbf{Flujos alternativos:}
+\begin{itemize}[nosep]
+    \item \textbf{2a.} El mayor no autoriza el tratamiento: la aplicación conversa con normalidad, pero no
+    se analiza ni se persiste nada de lo hablado.
+    \item \textbf{5a.} El mayor retira el consentimiento más adelante: el sistema deja de analizar
+    conversaciones nuevas y programa el borrado de lo ya almacenado.
+    \item \textbf{3a.} El familiar intenta otorgar el consentimiento en nombre del mayor: la operación se
+    rechaza en el servidor, no en la interfaz.
+\end{itemize}
+
+\noindent\textbf{Postcondiciones:} El estado de consentimiento y el ámbito de compartición quedan
+persistidos y son los que rigen toda lectura posterior.
+
+\bigskip
+
+\paragraph{CU-08. Cerrar y analizar una conversación}
+
+\noindent\textbf{Actor primario:} Mayor, de forma implícita. El caso no lo dispara una acción deliberada
+sino el final de la conversación, de modo que el actor que lo inicia es el mismo que conversa.
+
+\noindent\textbf{Precondiciones:} Existe una conversación en curso y el mayor ha otorgado el consentimiento
+descrito en CU-07.
+
+\noindent\textbf{Flujo principal:}
+\begin{enumerate}[nosep]
+    \item El sistema detecta el final de la conversación, bien por un silencio prolongado, bien porque el
+    mayor sale de la aplicación.
+    \item Envía a una función en la nube la transcripción acumulada, que hasta ese momento solo ha existido
+    en memoria.
+    \item La función clasifica el sentimiento general, genera un resumen breve y extrae los datos estables
+    del mayor que alimentan su memoria (RF-7).
+    \item Persiste el registro de la conversación con su resumen y su etiqueta, y actualiza el documento de
+    memoria.
+    \item Descarta la transcripción, que en ningún momento llega a almacenarse.
+\end{enumerate}
+
+\noindent\textbf{Flujos alternativos:}
+\begin{itemize}[nosep]
+    \item \textbf{1a.} El mayor no ha otorgado el consentimiento: la conversación se cierra sin analizarse
+    ni persistirse.
+    \item \textbf{3a.} El servicio de análisis falla o no responde: la conversación se cierra igualmente,
+    el fallo queda registrado y la memoria del mayor no se altera, de modo que un error no puede
+    corromperla.
+\end{itemize}
+
+\noindent\textbf{Postcondiciones:} El registro de la conversación y la memoria del mayor quedan
+actualizados; la transcripción no persiste en ningún soporte.
+
+\bigskip
+
+\paragraph{CU-09. Consultar el seguimiento del estado de ánimo}
+
+\noindent\textbf{Actor primario:} Mayor, en su propia vista de resumen semanal, o Familiar, en el panel de
+bienestar.
+
+\noindent\textbf{Precondiciones:} Existe al menos una conversación analizada. Para el familiar se exige
+además vinculación activa y autorización expresa del mayor sobre lo que comparte.
+
+\noindent\textbf{Flujo principal:}
+\begin{enumerate}[nosep]
+    \item El actor accede a la vista que le corresponde según su rol.
+    \item El sistema agrega los registros de conversación de los últimos siete días.
+    \item Presenta el número de conversaciones mantenidas, la distribución de sentimientos y, cuando
+    procede, los resúmenes asociados.
+    \item En la vista del mayor la presentación respeta las restricciones de accesibilidad de HU-3, por lo
+    que se prescinde de gráficas densas en favor de una lectura secuencial.
+\end{enumerate}
+
+\noindent\textbf{Flujos alternativos:}
+\begin{itemize}[nosep]
+    \item \textbf{2a.} No hay conversaciones analizadas en el periodo: el sistema muestra un mensaje que
+    explica el motivo, en lugar de una vista vacía que el usuario pudiera interpretar como un error.
+    \item \textbf{3a.} El mayor ha restringido lo que comparte: el panel del familiar presenta únicamente
+    lo autorizado, restricción que aplican las reglas de seguridad del servidor y no el cliente.
+\end{itemize}
+
+\noindent\textbf{Postcondiciones:} Ninguna. Es un caso de uso de solo lectura que no altera el estado del
+sistema.
+
 \subsection{Trazabilidad}
 
 La siguiente tabla cruza Historias de Usuario, Requisitos Funcionales y Casos de Uso. Permite verificar
 que cada artefacto de análisis tiene origen en una necesidad real del usuario y, recíprocamente, que toda
-HU del MVP estabilizado se ha traducido en al menos un caso de uso especificado.
+Historia de Usuario se ha traducido en al menos un caso de uso especificado.
 
 \begin{table}[htbp]
     \centering
@@ -562,8 +712,8 @@ HU del MVP estabilizado se ha traducido en al menos un caso de uso especificado.
         HU-2 & RF-3, RF-4                & CU-04 \\
         HU-3 & No procede                & No procede \\
         HU-4 & RF-5, RF-6                & CU-05, CU-06 \\
-        HU-5 & RF-7 (diferido)           & No procede \\
-        HU-6 & RF-8 (diferido)           & No procede \\
+        HU-5 & RF-7, RF-9                & CU-07, CU-08 \\
+        HU-6 & RF-8, RF-9                & CU-07, CU-08, CU-09 \\
         \bottomrule
     \end{tabularx}
     \caption{Trazabilidad entre Historias de Usuario, Requisitos Funcionales y Casos de Uso.}
@@ -574,6 +724,10 @@ HU-3 no genera casos de uso propios porque sus criterios son restricciones trans
 que se materializan como RNF y como condiciones de diseño aplicables a todos los casos de uso. Esta
 decisión es deliberada y evita la duplicación que se produciría al crear casos de uso ficticios para una
 HU de naturaleza no funcional.
+
+La tabla muestra también que RF-9 y CU-07 aparecen en las dos últimas filas. No es una redundancia: el
+consentimiento no pertenece a ninguna de las dos historias por separado, sino que es la condición que ambas
+comparten, y por eso se ha especificado una sola vez y se referencia desde las dos.
 
 \section{Modelo conceptual de dominio}
 
@@ -586,9 +740,10 @@ de autonomía que distingue al independiente del vinculado. Las \textbf{Preferen
 parámetros de accesibilidad asociados a un usuario mayor, esto es, el volumen de la voz, la velocidad del
 habla y el multiplicador del tamaño de texto. La \textbf{Conversación}, por último, representa una
 interacción de voz entre el mayor y el asistente, con sus transcripciones, las respuestas generadas y los
-metadatos de la sesión; se incluye en el modelo porque el dominio la contiene, aunque su persistencia
-corresponde a HU-5 y no forma parte del MVP entregado.
-% **NOTE: la entidad Conversación queda en el modelo conceptual pero sin implementar (HU-5, HU-6).
+metadatos de la sesión. Conviene precisar qué se conserva de ella una vez incorporadas HU-5 y HU-6: lo que
+persiste es el resumen y la etiqueta de sentimiento junto a los metadatos, nunca la transcripción, que se
+descarta en cuanto termina el análisis. Esa distinción entre lo que el dominio contiene y lo que el sistema
+almacena es la que materializa el principio de minimización de RNF-10.
 
 La relación principal es la \textbf{vinculación} entre un mayor y un familiar. Es binaria, bidireccional y
 opcional, se establece mediante un código temporal de un solo uso y, una vez establecida, autoriza al

@@ -247,11 +247,11 @@ principal del mayor tiene \textbf{un solo control grande y centrado}, y todo lo 
 accesos secundarios en los márgenes.
 
 \begin{figure}[htbp]\centering
-  %\includegraphics[width=0.8\textwidth]{imagenes/diseno/boceto-libreta.png}
-  \caption{Bocetos iniciales a mano de la pantalla principal del mayor.}
+  \includegraphics[height=11.5cm, trim={100 160 40 140}, clip]{imagenes/bocetos/boceto_mano_generico.jpeg}
+  \caption[Bocetos a mano de los cuatro estados de la interfaz del mayor]{Bocetos iniciales a mano de los
+  cuatro estados de la interfaz del mayor: selección de autonomía, espera, escucha y conversación.}
   \label{fig:boceto-libreta}
 \end{figure}
-% **note:** añadir imagen: foto de los bocetos a mano de la HomeScreen (imagenes/diseno/boceto-libreta.png)
 
 \subsection{Wireframes en iPad}
 
@@ -263,12 +263,14 @@ alto y un cuerpo de texto de 24~sp consumen la pantalla de un teléfono de gama 
 el wireframe es lo que hace evidente que no caben seis opciones, y por tanto lo que fuerza a decidir
 cuáles son las dos que importan.
 
-\begin{figure}[htbp]\centering
-  %\includegraphics[width=0.9\textwidth]{imagenes/diseno/wireframes-ipad.png}
-  \caption{Wireframes en iPad del flujo de \emph{onboarding} y de la pantalla principal.}
-  \label{fig:wireframes-ipad}
-\end{figure}
-% **note:** añadir imagen: exportación de los wireframes de iPad (imagenes/diseno/wireframes-ipad.png)
+% **note:** pendiente la exportacion de los wireframes de iPad. Cuando este disponible, colocar el fichero
+% en imagenes/bocetos/ y descomentar el bloque siguiente (la figura no se referencia desde el texto, por eso
+% se puede mantener comentada sin romper ninguna referencia).
+%\begin{figure}[htbp]\centering
+%  \includegraphics[width=0.9\textwidth]{imagenes/bocetos/wireframes-ipad.png}
+%  \caption{Wireframes en iPad del flujo de \emph{onboarding} y de la pantalla principal.}
+%  \label{fig:wireframes-ipad}
+%\end{figure}
 
 \subsection{Mockups con Claude Design}
 
@@ -278,11 +280,20 @@ fundamento (y de hecho es donde se decidió sustituir el teal azulado inicial po
 real y no como una muestra aislada.
 
 \begin{figure}[htbp]\centering
-  %\includegraphics[width=0.9\textwidth]{imagenes/diseno/mockups-claude-design.png}
-  \caption{\emph{Mockups} de alta fidelidad generados con Claude Design.}
+  \begin{subfigure}[b]{0.46\textwidth}\centering
+    \includegraphics[height=9cm, trim={150 205 20 410}, clip]{imagenes/bocetos/boceto_mano_esp.jpeg}
+    \caption{Boceto a mano}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.46\textwidth}\centering
+    \includegraphics[height=9cm]{imagenes/bocetos/boceto_claude_design.png}
+    \caption{\emph{Mockup} de alta fidelidad}
+  \end{subfigure}
+  \caption[Del boceto al \emph{mockup}: el estado de espera]{Del boceto al \emph{mockup}. La misma pantalla,
+  el estado de espera, en la primera y en la tercera etapa de fidelidad. Se conservan la posición y el peso
+  relativo de todos los elementos; lo que añade el \emph{mockup} es el color, la tipografía y la proporción
+  real.}
   \label{fig:mockups}
 \end{figure}
-% **note:** añadir imagen: capturas de los mockups de Claude Design (imagenes/diseno/mockups-claude-design.png)
 
 \subsection{Del mockup a Flutter: por qué se acortó la distancia diseño-código}
 
