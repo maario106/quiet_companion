@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/config/settings_rows.dart';
+import 'package:quiet_companion/core/providers/conversation_providers.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
+import 'package:quiet_companion/core/widgets/elder_button.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_state.dart';
 
@@ -57,6 +59,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final showSettings =
         currentUser != null && visibleSettingsRows(currentUser).isNotEmpty;
     final textScale = currentUser?.preferences.textSizeMultiplier ?? 1.0;
+    // "Mi semana" solo aparece cuando hay algo que enseñar: consentimiento y
+    // al menos una conversación analizada (ADR-0033). Sin consentimiento ni
+    // siquiera se abre la consulta.
+    final showMyWeek = currentUser != null &&
+        currentUser.hasConversationConsent &&
+        (ref
+                .watch(conversationRecordsProvider(currentUser.id))
+                .valueOrNull
+                ?.any((record) => record.isAnalyzed) ??
+            false);
 
     final padding = AppTheme.screenPadding(context);
     final maxWidth = AppTheme.contentMaxWidth(context);
@@ -193,6 +205,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
 
                   const SizedBox(height: 32),
+
+                  if (showMyWeek) ...[
+                    ElderButton(
+                      label: 'Mi semana',
+                      icon: Icons.calendar_view_week,
+                      secondary: true,
+                      textScale: textScale,
+                      onPressed: () => context.push('/my-week'),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Bottom action row: emergency | keyboard | settings
                   Row(

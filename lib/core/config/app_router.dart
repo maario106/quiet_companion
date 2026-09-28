@@ -13,6 +13,7 @@ import 'package:quiet_companion/features/dashboard/presentation/conversation_det
 import 'package:quiet_companion/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_contact_setup_screen.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_screen.dart';
+import 'package:quiet_companion/features/my_week/presentation/my_week_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/preference_stepper_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/settings_screen.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_controller.dart';
@@ -128,6 +129,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 const ConversationPrivacyScreen(manage: false),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/my-week',
+        builder: (context, state) => const MyWeekScreen(),
       ),
       GoRoute(
         path: '/emergency',
