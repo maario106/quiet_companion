@@ -19,15 +19,15 @@ de equipos. A continuación se analizan las alternativas y se justifica la escog
 
 \subsection{Metodologías tradicionales frente a ágiles}
 
-Las \textbf{metodologías tradicionales} (modelo en cascada, modelo en V) estructuran el desarrollo en fases
+Las \textit{metodologías tradicionales} (modelo en cascada, modelo en V) estructuran el desarrollo en fases
 secuenciales, esto es, requisitos, diseño, implementación y pruebas, en las que cada fase debe completarse
 antes de iniciar la siguiente \citep{Sommerville2016}. Exigen una especificación cerrada desde el inicio y
-penalizan los cambios tardíos, cuyo coste crece a lo largo del ciclo. Conviene señalar que la formulación
+penalizan los cambios tardíos, cuyo coste crece a lo largo del ciclo. La formulación
 canónica de la cascada procede de \textcite{Royce1970}, quien la describió precisamente para advertir de que
 aplicarla de forma estricta resultaba arriesgado y para defender que el ciclo se recorriese más de una vez,
 matiz que la práctica posterior acabó pasando por alto.
 
-Las \textbf{metodologías ágiles} sustituyen esa secuencia rígida por un desarrollo iterativo e incremental:
+Las \textit{metodologías ágiles} sustituyen esa secuencia rígida por un desarrollo iterativo e incremental:
 el producto se construye en ciclos cortos que entregan funcionalidad utilizable y permiten incorporar
 cambios de forma continua. Priorizan el software funcionando, la colaboración y la respuesta al cambio sobre
 la documentación exhaustiva y la planificación cerrada, que son los cuatro valores enunciados en el
@@ -44,18 +44,18 @@ revisión continua.
 Dentro del ámbito ágil se han considerado tres enfoques que, conviene advertirlo de entrada, no operan todos
 en el mismo plano: los dos primeros son marcos de gestión y el tercero es un cuerpo de principios.
 
-\textbf{Scrum} organiza el trabajo en \textit{sprints} de duración fija, con tres responsabilidades definidas
+\textit{Scrum} organiza el trabajo en \textit{sprints} de duración fija, con tres responsabilidades definidas
 (Product Owner, Scrum Master y desarrolladores) y varios eventos periódicos, a saber, la planificación del
 sprint, el scrum diario, la revisión y la retrospectiva \citep{ScrumGuide2020}. Está pensado para equipos y su
 valor reside en la coordinación, de modo que esas responsabilidades y esos eventos resultan redundantes en un
 desarrollo individual.
 
-\textbf{Kanban} gestiona el trabajo mediante un flujo continuo visualizado en un tablero de columnas (por
+\textit{Kanban} gestiona el trabajo mediante un flujo continuo visualizado en un tablero de columnas (por
 ejemplo, \textit{Por hacer}, \textit{En curso} y \textit{Hecho}), limitando el trabajo en curso (WIP) para
 evitar la sobrecarga y los cuellos de botella \citep{Anderson2010}. No impone responsabilidades formales,
 eventos ni iteraciones de duración fija, sino que se adapta al ritmo real de trabajo.
 
-\textbf{Lean}, más que un marco de gestión, es un conjunto de principios orientados a maximizar el valor
+\textit{Lean}, más que un marco de gestión, es un conjunto de principios orientados a maximizar el valor
 eliminando el desperdicio, entendido como todo aquello que no aporta valor al producto final. Promueve
 construir solo lo necesario, validar pronto y posponer las decisiones hasta el último momento responsable
 \citep{Poppendieck2003}. Lean y Kanban no son, por tanto, alternativas rivales entre las que haya que
@@ -86,28 +86,28 @@ resume las diferencias entre los tres enfoques.
 
 \subsection{Justificación de la elección: Kanban con principios Lean}
 
-Se ha optado por un enfoque \textbf{Kanban con principios Lean}. La fórmula no mezcla dos metodologías en
+Se ha optado por un enfoque \textit{Kanban con principios Lean}. La fórmula no mezcla dos metodologías en
 competencia, sino que nombra los dos planos de la decisión: Kanban aporta el mecanismo de gestión, esto es,
 el tablero, el flujo y el límite de trabajo en curso, y Lean el criterio con el que se decide qué entra en
 ese flujo. Conviene explicar por qué, porque la decisión no es una preferencia estética sino una consecuencia
 de las condiciones del proyecto.
 
-En cuanto a la \textbf{adecuación al desarrollo individual}, Scrum se descarta porque sus roles y sus
+En cuanto a la adecuación al desarrollo individual, Scrum se descarta porque sus roles y sus
 ceremonias presuponen un equipo, y mantenerlos en solitario añade sobrecarga sin aportar coordinación
 alguna. Kanban no impone esa estructura: el desarrollador gestiona un único flujo de trabajo sin reuniones
 ni roles artificiales.
 
-Respecto al \textbf{flujo continuo frente a las iteraciones rígidas}, el alcance del MVP se ha reordenado
+Respecto al flujo continuo frente a las iteraciones rígidas, el alcance del MVP se ha reordenado
 durante el desarrollo, priorizando la estabilización de HU-1 a HU-4 frente a las funcionalidades
 posteriores. El flujo continuo de Kanban absorbe esa repriorización sin el coste de cerrar y replanificar
 \textit{sprints} de duración fija.
 
-El \textbf{límite de trabajo en curso}, mecanismo central del método \citep{Anderson2010}, obliga a completar
+El límite de trabajo en curso, mecanismo central del método \citep{Anderson2010}, obliga a completar
 una funcionalidad antes de iniciar la siguiente, lo que en un desarrollo individual previene la dispersión y
 la acumulación de tareas a medio terminar, el modo de fallo más frecuente cuando nadie más observa el
 tablero.
 
-Por último, el \textbf{principio Lean de minimizar el desperdicio} encaja de forma natural con la
+Por último, el principio Lean de minimizar el desperdicio encaja de forma natural con la
 restricción de recursos propia de un Trabajo Fin de Grado: se construye únicamente la funcionalidad que
 aporta valor al MVP y se pospone deliberadamente todo lo accesorio, como el análisis emocional o la
 persistencia conversacional, hasta que el núcleo esté validado. Acotar el alcance de este modo es una
@@ -125,13 +125,13 @@ trabajo, su desglose técnico, la estructura del tablero y el plan de iteracione
 
 \subsection{Definición de actores y roles}
 
-Conviene distinguir dos planos de actores: los del \textbf{proyecto}, que participan activamente en el
-desarrollo y en su supervisión, y los del \textbf{sistema}, que interactúan con el producto desarrollado.
+Hay dos planos de actores: los del \textit{proyecto}, que participan activamente en el
+desarrollo y en su supervisión, y los del \textit{sistema}, que interactúan con el producto desarrollado.
 
-Entre los actores del proyecto, el \textbf{desarrollador único} asume todos los roles técnicos, desde la
+Entre los actores del proyecto, el \textit{desarrollador único} asume todos los roles técnicos, desde la
 ingeniería de requisitos hasta el despliegue, pasando por el diseño, la implementación, las pruebas y la
 documentación. Esta concentración de roles es precisamente lo que justifica la elección metodológica
-anterior. Los \textbf{tutores académicos} supervisan el progreso, validan las decisiones de diseño y
+anterior. Los \textit{tutores académicos} supervisan el progreso, validan las decisiones de diseño y
 orientan el alcance, de modo que las sesiones de tutoría actúan como puntos de control externos que
 sustituyen a las ceremonias de revisión y retrospectiva de Scrum, carentes de sentido en solitario.
 
@@ -143,12 +143,12 @@ declara para no atribuirle un rigor metodológico que no tiene, pero varias deci
 ellas la sustitución de los deslizadores continuos por peldaños con nombre, nacieron de observar a una
 persona mayor intentando usar la aplicación.
 
-Los actores del sistema son tres. El \textbf{mayor independiente} es la persona mayor con autonomía
+Los actores del sistema son tres. El \textit{mayor independiente} es la persona mayor con autonomía
 cognitiva y técnica suficiente para gestionar la aplicación por sí misma, con acceso al chat por voz y a
-los ajustes de accesibilidad en su propio dispositivo. El \textbf{mayor vinculado} delega la configuración
+los ajustes de accesibilidad en su propio dispositivo. El \textit{mayor vinculado} delega la configuración
 en un familiar; su interfaz permanece restringida al chat por voz, en el llamado \textit{modo
 ultrasimple}, mientras el emparejamiento no se ha completado, si bien conserva las escalas locales de
-accesibilidad incorporadas durante la última fase del desarrollo. El \textbf{familiar}, por último, es el
+accesibilidad incorporadas durante la última fase del desarrollo. El \textit{familiar}, por último, es el
 adulto que gestiona la configuración del mayor vinculado desde un panel remoto en su propio dispositivo y
 que, en versiones futuras, accederá a indicadores de bienestar emocional.
 
@@ -229,7 +229,7 @@ La aplicación efectiva del principio Lean de construir solo lo necesario, y del
 que lo hace operativo, se manifiesta en la decisión deliberada de posponer HU-5 y HU-6 hasta cerrar el MVP.
 Una vez constatado durante el desarrollo que la estabilización de HU-1 a HU-4 requería más esfuerzo del
 estimado inicialmente, se priorizó la entrega de un núcleo robusto sobre la cobertura amplia pero superficial
-de las seis historias. Conviene precisar el alcance de esa decisión, porque no fue una renuncia: ambas
+de las seis historias. El alcance de esa decisión merece una precisión, porque no fue una renuncia: ambas
 historias se retomaron una vez estabilizado ese núcleo y se completaron dentro del plazo del proyecto, tal
 y como recoge el plan de hitos de la tabla~\ref{tab:plan-hitos}. Lo que se decidió no fue prescindir de ellas, sino no tenerlas
 abiertas al mismo tiempo que las otras cuatro, que es precisamente lo que prescribe el límite de trabajo en
@@ -305,10 +305,63 @@ proyecto. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
     {\footnotesize Fuente: Elaboración propia.}
 \end{table}
 
-Conviene matizar qué significa aquí «completado». Los cinco primeros hitos están completados y verificados
+«Completado» no significa lo mismo en todas las filas. Los cinco primeros hitos están completados y verificados
 sobre dispositivo real; M6 y M7 están implementados y cubiertos por pruebas automáticas de su lógica pura,
 pero su verificación en dispositivo quedó pendiente en el momento de redactar esta memoria. La distinción se
 hace explícita porque afecta a lo que puede afirmarse en el capítulo de conclusiones.
+
+El reparto de esos hitos en el tiempo se recoge en el cronograma de la figura~\ref{fig:cronograma}, que no
+es una planificación previa sino la duración efectiva de cada uno, fechada a partir del historial de
+versiones del repositorio. Se ha optado por representar lo ocurrido y no lo previsto porque la desviación
+entre ambos es, en sí misma, uno de los resultados del proyecto.
+
+\begin{figure}[htbp]\centering
+\begingroup\languageshorthands{none}%
+\footnotesize
+\begin{ganttchart}[
+    hgrid, vgrid,
+    x unit             = 0.30cm,
+    y unit title       = 0.52cm,
+    y unit chart       = 0.52cm,
+    title height       = 1,
+    bar height         = 0.55,
+    bar/.append style  = {fill = vizAzul, draw = none},
+    bar label font     = \footnotesize,
+    title label font   = \footnotesize,
+    group label font   = \footnotesize,
+    canvas/.append style = {fill = none, draw = black!35, line width = 0.4pt}
+  ]{1}{31}
+  \gantttitle{2026}{31} \\
+  \gantttitle{Mar}{4} \gantttitle{Abr}{4} \gantttitle{May}{5}
+  \gantttitle{Jun}{4} \gantttitle{Jul}{5} \gantttitle{Ago}{4}
+  \gantttitle{Sep}{5} \\
+  \ganttbar{M1. Cimientos}{1}{9} \\
+  \ganttbar{M2. Pipeline conversacional}{2}{3} \\
+  \ganttbar{M3. Panel remoto y ajustes}{7}{11} \\
+  \ganttbar{M4. Estabilización}{11}{20} \\
+  \ganttbar{M5. Voz en la nube y seguridad}{20}{28} \\
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M6. Memoria conversacional}{30}{31} \\
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M7. Análisis emocional}{30}{31} \\
+  \ganttbar[bar/.append style={fill=vizVioleta, draw=none}]{Redacción de la memoria}{28}{31}
+\end{ganttchart}
+\endgroup
+
+  \caption[Cronograma real del proyecto]{Cronograma del proyecto, fechado a partir del historial de
+  versiones. En azul los hitos del MVP, en naranja los posteriores al MVP y en violeta la redacción de esta
+  memoria.}
+  \label{fig:cronograma}
+
+  \vspace{2pt}
+  {\footnotesize Fuente: Elaboración propia.}
+\end{figure}
+
+El cronograma deja ver dos rasgos que la tabla anterior no muestra. El primero es el solapamiento de los
+tres primeros hitos durante marzo y abril, consecuencia directa de trabajar con un límite de una tarjeta en
+curso pero sobre historias que compartían código: cerrar el pipeline conversacional obligaba a tocar el
+modelo de datos que M1 estaba fijando. El segundo son las dos interrupciones, en junio y en agosto, en las
+que no hay actividad registrada, y que corresponden a los periodos de exámenes y al verano. Su efecto no es
+el retraso que sugiere su longitud, porque el trabajo se recuperó concentrando esfuerzo en septiembre, pero
+sí explican que M6 y M7 acabaran resolviéndose en pocos días al final del calendario en lugar de repartirse.
 
 La ejecución real de estos hitos, reconstruida a partir del historial de versiones y con las desviaciones
 que se produjeron, se documenta en el apartado~\ref{sec:cronologia}, dentro del capítulo de diseño y
@@ -319,12 +372,12 @@ desarrollo. Se ha preferido situarla allí, junto al código que la explica, ant
 
 La redacción de esta memoria sigue las recomendaciones de la guía que el profesorado del Grado en
 Ingeniería Informática de la Universidad de Granada ha elaborado para este fin \citep{GuillenPerales2025}.
-En cuanto al código, todo el proyecto se ha gestionado con \textbf{Git} y alojado en
+En cuanto al código, todo el proyecto se ha gestionado con Git y alojado en
 GitHub\footnote{\url{https://github.com/maario106/quiet_companion}}, y cada decisión de arquitectura
 (apartado~\ref{sec:adr}) cita los \emph{commits} que la materializan, lo que mantiene la trazabilidad entre
 lo decidido y lo construido.
 
-Por transparencia académica, conviene distinguir la inteligencia artificial que forma parte del producto,
+Por transparencia académica hay que distinguir la inteligencia artificial que forma parte del producto,
 esto es, el modelo Gemini que conversa con la persona mayor, de la que se ha empleado como herramienta de
 apoyo: asistentes basados en LLM, concretamente Claude (apartado~\ref{sec:costes}), utilizados para:
 
@@ -350,24 +403,24 @@ presentar únicamente el desembolso real ofrecería una imagen engañosa del esf
 
 \subsection{Criterios de imputación}
 
-Antes de presentar las cifras conviene declarar los criterios empleados, ya que de ellos depende por
+Antes de las cifras van los criterios empleados, porque de ellos depende por
 completo el resultado.
 
-El \textbf{coste de personal} se calcula aplicando las tablas salariales del XIX Convenio colectivo estatal
+El coste de personal se calcula aplicando las tablas salariales del XIX Convenio colectivo estatal
 de empresas de consultoría, tecnologías de la información y estudios de mercado, vigente para el periodo
 2025-2027 \citep{ConvenioTIC2025}. Las horas imputadas son las que la normativa
 académica asigna al Trabajo Fin de Grado, esto es, 12~créditos ECTS a razón de 25~horas por crédito, lo que
 arroja 300~horas de dedicación \citep{GuiaTFG}. Se ha preferido esta base normativa a una estimación propia
 porque no depende del criterio del autor y es verificable por el tribunal.
 
-La \textbf{amortización de los equipos} sigue el criterio lineal de las tablas oficialmente establecidas
+La amortización de los equipos sigue el criterio lineal de las tablas oficialmente establecidas
 para el impuesto sobre sociedades, que asignan a los equipos para procesos de información un coeficiente
 lineal máximo del 25\% y un periodo máximo de ocho años \citep{LIS2014}. Los equipos empleados en el
 proyecto son de titularidad personal y anteriores a su inicio, por lo que se calcula la parte proporcional
 correspondiente a los seis meses de desarrollo y se señala expresamente cuándo un equipo está ya
 completamente amortizado.
 
-Los \textbf{servicios en la nube} se imputan por su consumo real. Cuando ese consumo ha permanecido dentro
+Los servicios en la nube se imputan por su consumo real. Cuando ese consumo ha permanecido dentro
 de las capas gratuitas de los proveedores, se indica el coste nulo resultante y, a continuación, el precio
 que tendría ese mismo consumo una vez agotada la capa gratuita, porque es esa segunda cifra y no la primera
 la que determina la viabilidad económica del producto fuera del ámbito académico.
@@ -416,7 +469,7 @@ del proyecto a 4.704~euros, según recoge la tabla~\ref{tab:coste-personal}.
 
 El desarrollo se ha realizado sobre un ordenador portátil Acer Aspire de titularidad personal, adquirido
 ocho años antes del inicio del proyecto por unos 900~euros. Aplicado el periodo máximo de ocho años que
-admite la tabla de amortización, el equipo se encuentra \textbf{completamente amortizado}, por lo que su
+admite la tabla de amortización, el equipo se encuentra completamente amortizado, por lo que su
 imputación al proyecto es nula. Lo mismo ocurre con los dos terminales Android empleados para las pruebas
 en dispositivo, uno por cada perfil de usuario, que son igualmente equipos personales previos al proyecto.
 
@@ -451,23 +504,23 @@ como la parte proporcional a seis meses de la amortización a ocho años de un e
 El proyecto se apoya en cuatro servicios de pago por uso o suscripción, y solo uno de ellos ha generado
 desembolso efectivo.
 
-\textbf{Firebase} se contrató en el plan Blaze, de pago por uso, requisito para poder desplegar Cloud
+Firebase se contrató en el plan Blaze, de pago por uso, requisito para poder desplegar Cloud
 Functions. Su consumo se ha mantenido holgadamente dentro de la capa gratuita permanente, que cubre 50.000
 lecturas y 20.000 escrituras diarias en Firestore, dos millones de invocaciones mensuales de funciones y
 50.000 usuarios activos mensuales de autenticación \citep{FirebasePricing}. El desembolso ha sido, por
 tanto, nulo, si bien el plan exige una cuenta de facturación activa.
 
-La \textbf{API de Gemini} se ha consumido a través de la capa gratuita de Google AI Studio durante todo el
+La API de Gemini se ha consumido a través de la capa gratuita de Google AI Studio durante todo el
 desarrollo. Fuera de ella, el modelo \code{gemini-2.5-flash} factura 0,30~dólares por millón de \textit{tokens}
 de entrada y 2,50~dólares por millón de \textit{tokens} de salida \citep{GeminiPricing}.
 
-La \textbf{API de Cloud Text-to-Speech}, empleada para la voz Chirp~3:~HD desde la migración documentada en
+La API de Cloud Text-to-Speech, empleada para la voz Chirp~3:~HD desde la migración documentada en
 el capítulo~\ref{cap:diseno-desarrollo}, dispone de una capa gratuita mensual de un millón de caracteres,
 suficiente para el desarrollo y las pruebas. Superado ese umbral, el precio es de 30~dólares por millón de
 caracteres \citep{TTSPricing}, cifra determinante para el análisis de coste marginal que cierra este
 apartado.
 
-La única partida con desembolso real es la \textbf{suscripción a Claude Pro}, empleada como asistente de
+La única partida con desembolso real es la suscripción a Claude Pro, empleada como asistente de
 programación, en la revisión de código y en la elaboración de la documentación técnica del proyecto. Su
 precio es de 20~dólares mensuales, impuestos aparte \citep{ClaudePricing}, lo que supone en torno a
 22~euros al mes con el IVA español aplicado, y se ha mantenido durante los seis meses de desarrollo.
