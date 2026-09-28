@@ -9,6 +9,7 @@ import 'package:quiet_companion/core/providers/consent_prompt_deferred_provider.
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/features/conversation/presentation/home_screen.dart';
+import 'package:quiet_companion/features/dashboard/presentation/conversation_detail_screen.dart';
 import 'package:quiet_companion/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_contact_setup_screen.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_screen.dart';
@@ -216,6 +217,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           data: AppTheme.companionTheme,
           child: const DashboardScreen(),
         ),
+        routes: [
+          // Subpantallas del familiar: el enrutador le deja pasar por prefijo
+          // (`startsWith('/dashboard')`, ADR-0033).
+          GoRoute(
+            path: 'conversation/:id',
+            builder: (context, state) => Theme(
+              data: AppTheme.companionTheme,
+              child: ConversationDetailScreen(
+                conversationId: state.pathParameters['id'] ?? '',
+              ),
+            ),
+          ),
+        ],
       ),
     ],
   );

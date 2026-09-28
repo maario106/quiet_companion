@@ -9,6 +9,7 @@ import 'package:quiet_companion/features/dashboard/domain/dashboard_controller.d
 import 'package:quiet_companion/features/dashboard/domain/dashboard_state.dart';
 import 'package:quiet_companion/features/dashboard/presentation/conversation_settings_card.dart';
 import 'package:quiet_companion/features/dashboard/presentation/conversation_status_card.dart';
+import 'package:quiet_companion/features/dashboard/presentation/wellbeing_section.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -92,6 +93,7 @@ class _DashboardContent extends ConsumerWidget {
             children: [
               _ElderNameCard(elder: elder),
               ConversationStatusCard(elder: elder),
+              WellbeingSection(elder: elder),
               ConversationSettingsCard(elder: elder),
               const SizedBox(height: 8),
               const Text(
