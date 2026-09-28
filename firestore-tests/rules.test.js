@@ -355,3 +355,50 @@ describe('el consentimiento solo lo escribe el servidor', () => {
     }));
   });
 });
+
+// ─── HU-5/HU-6: conversaciones analizadas (ADR-0029) ──────────────────────
+
+describe('las conversaciones analizadas las escribe solo el servidor', () => {
+  const analizada = {
+    endedAt: new Date('2026-09-26'), status: 'analyzed', sentiment: 'neutral',
+    signals: [],
+  };
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const raw = ctx.firestore();
+      await setDoc(doc(raw, 'users', ELDER_VINCULADO, 'conversations', 'c1'), analizada);
+      await setDoc(doc(raw, 'users', ELDER_VINCULADO, 'conversationContents', 'c1'), {
+        endedAt: new Date('2026-09-26'), topics: ['familia'], summary: 'Habló de su nieto.',
+      });
+      await setDoc(doc(raw, 'users', ELDER_VINCULADO, 'memory', 'profile'), {
+        facts: { ciudad: 'Sevilla' },
+      });
+    });
+  });
+
+  const sub = (uid, name, id) => doc(db(uid), 'users', ELDER_VINCULADO, name, id);
+
+  it('el mayor lee sus conversaciones, contenidos y memoria', async () => {
+    await assertSucceeds(getDoc(sub(ELDER_VINCULADO, 'conversations', 'c1')));
+    await assertSucceeds(getDoc(sub(ELDER_VINCULADO, 'conversationContents', 'c1')));
+    await assertSucceeds(getDoc(sub(ELDER_VINCULADO, 'memory', 'profile')));
+    await assertSucceeds(getDocs(
+      collection(db(ELDER_VINCULADO), 'users', ELDER_VINCULADO, 'conversations'),
+    ));
+  });
+
+  it('el mayor NO puede escribir ni borrar un análisis', async () => {
+    await assertFails(setDoc(sub(ELDER_VINCULADO, 'conversations', 'c2'), analizada));
+    await assertFails(updateDoc(sub(ELDER_VINCULADO, 'conversations', 'c1'), {
+      sentiment: 'positive',
+    }));
+    await assertFails(deleteDoc(sub(ELDER_VINCULADO, 'conversationContents', 'c1')));
+  });
+
+  it('un autenticado cualquiera no lee nada', async () => {
+    await assertFails(getDoc(sub(INTRUSO, 'conversations', 'c1')));
+    await assertFails(getDoc(sub(INTRUSO, 'conversationContents', 'c1')));
+    await assertFails(getDoc(sub(INTRUSO, 'memory', 'profile')));
+  });
+});

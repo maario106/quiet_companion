@@ -5,14 +5,16 @@
  * estaba solo diseñado (ADR-0014, "Propuesta").
  *
  * Contiene la síntesis de voz (`synthesizeSpeech`), la vinculación
- * (`validateAndLink`) y el consentimiento sobre las conversaciones
- * (`setConversationConsent`). La clave de Gemini del chat en vivo sigue en el
- * cliente y su migración es trabajo aparte (ADR-0014).
+ * (`validateAndLink`), el consentimiento sobre las conversaciones
+ * (`setConversationConsent`) y su análisis al cierre (`closeConversation`).
+ * El análisis es la primera llamada a Gemini que no usa la clave del cliente;
+ * la del chat en vivo sigue allí y su migración es trabajo aparte (ADR-0014).
  */
 
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const textToSpeech = require("@google-cloud/text-to-speech");
+const {GoogleGenAI} = require("@google/genai");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue, Timestamp} =
   require("firebase-admin/firestore");
@@ -25,6 +27,13 @@ const {
   graceDeadlineMs,
   frozenExpireAtMs,
   parseConsentRequest,
+  ANALYSIS_PROMPT_VERSION,
+  ANALYSIS_SYSTEM_PROMPT,
+  ANALYSIS_RESPONSE_SCHEMA,
+  parseCloseRequest,
+  buildTranscript,
+  normalizeAnalysis,
+  retentionCutoffMs,
 } = require("./conversation");
 
 initializeApp();
@@ -414,5 +423,197 @@ exports.setConversationConsent = onCall(
       }
 
       return {granted: input.granted};
+    },
+);
+
+// ─── Análisis de la conversación al cerrarse (ADR-0029) ──────────────────
+
+/** Modelo del análisis. Se guarda en cada conversación junto al prompt. */
+const ANALYSIS_MODEL = "gemini-2.5-flash";
+
+/**
+ * Región de Vertex AI para el análisis. Europa, como el resto del backend.
+ * Si el modelo no estuviera disponible aquí, la llamada falla con un 404 del
+ * modelo en el registro: cambiar a otra región europea (o a "global") es
+ * cambiar esta constante.
+ */
+const GEMINI_LOCATION = "europe-west1";
+
+let genai;
+
+/**
+ * Cliente de Gemini sobre Vertex AI con las credenciales del entorno (ADC),
+ * igual que Cloud TTS: no hay clave que guardar ni que filtrar (RNF-8).
+ *
+ * @return {GoogleGenAI} cliente reutilizable entre invocaciones calientes.
+ */
+function geminiClient() {
+  if (!genai) {
+    const project = process.env.GCLOUD_PROJECT ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      JSON.parse(process.env.FIREBASE_CONFIG || "{}").projectId;
+    genai = new GoogleGenAI({vertexai: true, project, location: GEMINI_LOCATION});
+  }
+  return genai;
+}
+
+/**
+ * Una sola llamada estructurada: resumen, ánimo, señales y temas a la vez.
+ *
+ * @param {{role: string, text: string}[]} turns turnos validados.
+ * @return {Promise<object|null>} análisis saneado, o null si no es usable.
+ */
+async function analyzeConversation(turns) {
+  const response = await geminiClient().models.generateContent({
+    model: ANALYSIS_MODEL,
+    contents: [{
+      role: "user",
+      parts: [{text: buildTranscript(turns)}],
+    }],
+    config: {
+      systemInstruction: ANALYSIS_SYSTEM_PROMPT,
+      temperature: 0.2,
+      responseMimeType: "application/json",
+      responseSchema: ANALYSIS_RESPONSE_SCHEMA,
+    },
+  });
+
+  try {
+    return normalizeAnalysis(JSON.parse(response.text ?? ""));
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Borra lo que haya quedado fuera del plazo de conservación vigente. El TTL de
+ * Firestore ya caduca cada documento con el plazo que había al escribirlo;
+ * esto cubre el caso de que alguien lo acorte después (ADR-0034).
+ *
+ * @param {FirebaseFirestore.DocumentReference} userRef documento del mayor.
+ * @param {number} cutoffMs lo que terminó antes de esto se borra.
+ */
+async function deleteOutsideRetention(userRef, cutoffMs) {
+  const cutoff = Timestamp.fromMillis(cutoffMs);
+  for (const name of [
+    COLLECTIONS.conversations,
+    COLLECTIONS.conversationContents,
+  ]) {
+    const old = await userRef.collection(name)
+        .where("endedAt", "<", cutoff)
+        .get();
+    for (let i = 0; i < old.docs.length; i += BATCH_SIZE) {
+      const batch = userRef.firestore.batch();
+      old.docs.slice(i, i + BATCH_SIZE).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+}
+
+/**
+ * Recibe una conversación terminada, la analiza y guarda **solo el
+ * resultado**. La transcripción no se escribe en ningún sitio, tampoco en los
+ * registros: se descarta al terminar la invocación (ADR-0029).
+ *
+ * Entrada: `{ startedAt, endedAt, endReason, elderTurns, turns? }`, con las
+ * horas en milisegundos. Sin `turns` (conversación bajo el umbral) solo se
+ * registra la actividad.
+ *
+ * Escribe dos documentos con el mismo id para que las reglas puedan decidir
+ * por separado qué ve el familiar (ADR-0031):
+ * - `conversations/{id}`: actividad, ánimo y señales;
+ * - `conversationContents/{id}`: temas y resumen.
+ */
+exports.closeConversation = onCall(
+    {
+      region: REGION,
+      memory: "512MiB",
+      timeoutSeconds: 60,
+      maxInstances: 10,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Se requiere sesión iniciada.");
+      }
+
+      const nowMs = Date.now();
+      const input = parseCloseRequest(request.data, nowMs);
+      if (!input) {
+        throw new HttpsError("invalid-argument", "Conversación no válida.");
+      }
+
+      const uid = request.auth.uid;
+      const userRef = getFirestore().collection(COLLECTIONS.users).doc(uid);
+      const snap = await userRef.get();
+      if (!snap.exists || snap.get("role") !== "elder") {
+        throw new HttpsError("permission-denied", "Solo para personas mayores.");
+      }
+      // El cliente ya no envía nada sin consentimiento, pero la garantía es
+      // esta: el servidor no analiza ni guarda nada si no lo hay (ADR-0030).
+      if (snap.get("conversationConsent.granted") !== true) {
+        throw new HttpsError(
+            "failed-precondition",
+            "No hay consentimiento para guardar conversaciones.",
+        );
+      }
+
+      const retentionDays =
+        effectiveRetentionDays(snap.get("conversationSettings"));
+      const conversationRef =
+        userRef.collection(COLLECTIONS.conversations).doc();
+      const expireAt =
+        Timestamp.fromMillis(expireAtMs(input.endedAtMs, retentionDays));
+      const endedAt = Timestamp.fromMillis(input.endedAtMs);
+
+      let status = "too_short";
+      let analysis = null;
+      if (input.turns) {
+        try {
+          analysis = await analyzeConversation(input.turns);
+          status = analysis ? "analyzed" : "failed";
+        } catch (error) {
+          status = "failed";
+          // Solo metadatos: el texto de la conversación no va a los registros.
+          logger.error("Fallo del análisis", {
+            uid,
+            conversationId: conversationRef.id,
+            turns: input.turns.length,
+            chars: input.turns.reduce((n, t) => n + t.text.length, 0),
+            error: error.message,
+          });
+        }
+      }
+
+      const batch = userRef.firestore.batch();
+      batch.set(conversationRef, {
+        startedAt: Timestamp.fromMillis(input.startedAtMs),
+        endedAt,
+        elderTurns: input.elderTurns,
+        endReason: input.endReason,
+        status,
+        sentiment: analysis?.sentiment ?? null,
+        signals: analysis?.signals ?? [],
+        promptVersion: ANALYSIS_PROMPT_VERSION,
+        model: ANALYSIS_MODEL,
+        expireAt,
+      });
+      if (analysis) {
+        batch.set(
+            userRef.collection(COLLECTIONS.conversationContents)
+                .doc(conversationRef.id),
+            {
+              endedAt,
+              topics: analysis.topics,
+              summary: analysis.summary,
+              expireAt,
+            },
+        );
+      }
+      await batch.commit();
+
+      await deleteOutsideRetention(
+          userRef, retentionCutoffMs(nowMs, retentionDays));
+
+      return {conversationId: conversationRef.id, status};
     },
 );

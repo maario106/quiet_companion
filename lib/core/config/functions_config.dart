@@ -19,3 +19,7 @@ const String kValidateAndLinkCallable = 'validateAndLink';
 /// registro la pone el servidor: es la prueba del consentimiento, y las reglas
 /// no dejan que ningún cliente lo escriba.
 const String kSetConversationConsentCallable = 'setConversationConsent';
+
+/// Análisis de una conversación terminada (ADR-0029). Recibe la transcripción,
+/// guarda solo el resultado y la descarta.
+const String kCloseConversationCallable = 'closeConversation';

@@ -104,6 +104,194 @@ function parseConsentRequest(data) {
   return {granted: data.granted, textVersion: version};
 }
 
+// ─── Análisis al cierre (ADR-0029) ────────────────────────────────────────
+
+/** Espejo de `kMinElderTurnsForAnalysis` del cliente (ADR-0028). */
+const MIN_ELDER_TURNS_FOR_ANALYSIS = 3;
+
+/**
+ * Versión del prompt de análisis. Se guarda en cada conversación para poder
+ * distinguir registros producidos por versiones distintas.
+ */
+const ANALYSIS_PROMPT_VERSION = 1;
+
+const END_REASONS = ["inactivity", "background"];
+const ROLES = ["elder", "assistant"];
+const SENTIMENTS = ["positive", "neutral", "negative"];
+
+/** Lista cerrada de señales (ADR-0029). */
+const SIGNALS = [
+  "loneliness",
+  "sadness",
+  "worry",
+  "physical_discomfort",
+  "confusion",
+  "risk",
+];
+
+/** Topes de tamaño: una conversación de voz real queda muy por debajo. */
+const MAX_TURNS = 200;
+const MAX_TURN_CHARS = 2000;
+const MAX_TOPICS = 5;
+const MAX_TOPIC_CHARS = 40;
+const MAX_SUMMARY_CHARS = 400;
+
+/** Holgura para relojes de dispositivo desajustados. */
+const CLOCK_SKEW_MS = 10 * 60 * 1000;
+const MAX_CONVERSATION_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Valida y normaliza la petición de `closeConversation`.
+ *
+ * @param {*} data `request.data`.
+ * @param {number} nowMs hora del servidor.
+ * @return {object|null} petición normalizada, o null si no es válida.
+ */
+function parseCloseRequest(data, nowMs) {
+  const startedAtMs = data?.startedAt;
+  const endedAtMs = data?.endedAt;
+  if (!Number.isInteger(startedAtMs) || !Number.isInteger(endedAtMs)) {
+    return null;
+  }
+  if (endedAtMs < startedAtMs) return null;
+  if (endedAtMs > nowMs + CLOCK_SKEW_MS) return null;
+  if (endedAtMs - startedAtMs > MAX_CONVERSATION_MS) return null;
+  if (!END_REASONS.includes(data?.endReason)) return null;
+  if (!Number.isInteger(data?.elderTurns) || data.elderTurns < 0) return null;
+
+  let turns = null;
+  if (data.turns != null) {
+    if (!Array.isArray(data.turns) || data.turns.length > MAX_TURNS) {
+      return null;
+    }
+    turns = [];
+    for (const turn of data.turns) {
+      if (!ROLES.includes(turn?.role) || typeof turn?.text !== "string") {
+        return null;
+      }
+      const text = turn.text.trim().slice(0, MAX_TURN_CHARS);
+      if (text.length > 0) turns.push({role: turn.role, text});
+    }
+  }
+
+  // El número de turnos del mayor lo cuenta el servidor si tiene el texto: no
+  // se fía del que declara el cliente.
+  const elderTurns = turns ?
+    turns.filter((t) => t.role === "elder").length :
+    data.elderTurns;
+
+  return {
+    startedAtMs,
+    endedAtMs,
+    endReason: data.endReason,
+    elderTurns,
+    turns: turns && elderTurns >= MIN_ELDER_TURNS_FOR_ANALYSIS ? turns : null,
+  };
+}
+
+/**
+ * Transcripción para el modelo. "M:" es la persona mayor y "A:" el asistente.
+ *
+ * @param {{role: string, text: string}[]} turns turnos validados.
+ * @return {string} una línea por turno.
+ */
+function buildTranscript(turns) {
+  return turns
+      .map((t) => `${t.role === "elder" ? "M" : "A"}: ${t.text}`)
+      .join("\n");
+}
+
+/** Instrucción de sistema del análisis. Versionada con ANALYSIS_PROMPT_VERSION. */
+const ANALYSIS_SYSTEM_PROMPT = [
+  "Analizas conversaciones entre una persona mayor (M) y un asistente de " +
+    "compañía por voz (A). Lo que escribas lo leerá la propia persona y, si " +
+    "ella lo permite, un familiar. Devuelve solo el JSON pedido.",
+  "",
+  "Reglas:",
+  "- El texto viene de un reconocedor de voz: puede tener errores, palabras " +
+    "cortadas y falta de puntuación. Interpreta con prudencia.",
+  "- Evalúa solo lo que dice la persona mayor (M). Lo que dice el asistente " +
+    "(A) es contexto: siempre es amable y no dice nada de cómo se siente M.",
+  "- sentiment: el ánimo general que expresa M en esta conversación. Si no " +
+    "expresa nada claro, neutral.",
+  "- signals: solo las que M expresa por sí misma, nunca las que A pregunta o " +
+    "sugiere. Lista vacía si no hay ninguna.",
+  "  - loneliness: dice sentirse sola, que echa de menos compañía, que nadie " +
+    "la visita o la llama.",
+  "  - sadness: tristeza, desánimo, pena.",
+  "  - worry: preocupación, miedo o nervios por algo concreto.",
+  "  - physical_discomfort: dolor, malestar, cansancio físico, mal dormir.",
+  "  - confusion: desorientación, no saber dónde está o qué día es.",
+  "  - risk: habla de hacerse daño, de no querer vivir o de que sería mejor " +
+    "no estar.",
+  "- topics: de 0 a 5 temas de los que habló M, de una a tres palabras cada " +
+    "uno, en minúscula y en español (\"familia\", \"jardín\", \"médico\"). " +
+    "Sin nombres propios.",
+  "- summary: una o dos frases en tercera persona sobre de qué habló M y cómo " +
+    "estaba. Sin citas literales, sin diagnósticos y sin detalles médicos " +
+    "(como mucho, \"mencionó molestias\"). A otras personas, por su relación " +
+    "(\"su nieto\", \"una vecina\"), no por su nombre.",
+  "- No inventes. Si la conversación fue breve o trivial, dilo así.",
+].join("\n");
+
+/** Esquema de salida para Gemini (tipos en el formato de `@google/genai`). */
+const ANALYSIS_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    sentiment: {type: "STRING", enum: SENTIMENTS},
+    signals: {type: "ARRAY", items: {type: "STRING", enum: SIGNALS}},
+    topics: {type: "ARRAY", items: {type: "STRING"}},
+    summary: {type: "STRING"},
+  },
+  required: ["sentiment", "signals", "topics", "summary"],
+  propertyOrdering: ["sentiment", "signals", "topics", "summary"],
+};
+
+/**
+ * Sanea la respuesta del modelo. El esquema estructurado la hace casi siempre
+ * válida, pero lo que se escribe en la base de datos no depende de "casi".
+ *
+ * @param {*} raw JSON ya parseado.
+ * @return {object|null} análisis utilizable, o null si no lo es.
+ */
+function normalizeAnalysis(raw) {
+  if (raw == null || typeof raw !== "object") return null;
+
+  const summary = typeof raw.summary === "string" ?
+    raw.summary.trim().slice(0, MAX_SUMMARY_CHARS) :
+    "";
+  if (summary.length === 0) return null;
+
+  const sentiment = SENTIMENTS.includes(raw.sentiment) ? raw.sentiment : null;
+
+  const signals = Array.isArray(raw.signals) ?
+    [...new Set(raw.signals.filter((s) => SIGNALS.includes(s)))] :
+    [];
+
+  const topics = [];
+  if (Array.isArray(raw.topics)) {
+    for (const topic of raw.topics) {
+      if (typeof topic !== "string") continue;
+      const clean = topic.trim().toLowerCase().slice(0, MAX_TOPIC_CHARS);
+      if (clean.length > 0 && !topics.includes(clean)) topics.push(clean);
+      if (topics.length === MAX_TOPICS) break;
+    }
+  }
+
+  return {sentiment, signals, topics, summary};
+}
+
+/**
+ * Límite inferior de `endedAt` para lo que aún está dentro del plazo.
+ *
+ * @param {number} nowMs hora del servidor.
+ * @param {number} retentionDays plazo vigente.
+ * @return {number} milisegundos: lo que terminó antes se borra.
+ */
+function retentionCutoffMs(nowMs, retentionDays) {
+  return nowMs - retentionDays * DAY_MS;
+}
+
 module.exports = {
   DAY_MS,
   COLLECTIONS,
@@ -116,4 +304,14 @@ module.exports = {
   graceDeadlineMs,
   frozenExpireAtMs,
   parseConsentRequest,
+  MIN_ELDER_TURNS_FOR_ANALYSIS,
+  ANALYSIS_PROMPT_VERSION,
+  SENTIMENTS,
+  SIGNALS,
+  ANALYSIS_SYSTEM_PROMPT,
+  ANALYSIS_RESPONSE_SCHEMA,
+  parseCloseRequest,
+  buildTranscript,
+  normalizeAnalysis,
+  retentionCutoffMs,
 };

@@ -70,7 +70,10 @@ class GeminiService {
         '1. Respuestas MUY breves (máximo 2 o 3 frases). Van a ser leídas por voz.\n'
         '2. Termina siempre con una pregunta sencilla para mantener la conversación.\n'
         '3. Actúa como un oyente humano empático. No digas que eres una IA.\n'
-        '4. Si el usuario menciona problemas de salud, dile amablemente que lo consulte con su familia o médico.',
+        '4. Si el usuario menciona problemas de salud, dile amablemente que lo consulte con su familia o médico.\n'
+        '5. Si habla de hacerse daño, de no querer vivir o de que sería mejor no estar, responde con calma y cariño, '
+        'no le quites importancia y anímale a hablarlo ahora con alguien de confianza. Recuérdale que puede llamar '
+        'gratis al 024, a cualquier hora, y al 112 si está en peligro.',
       ),
       tools: _tools,
       safetySettings: _safetySettings,

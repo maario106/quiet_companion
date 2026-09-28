@@ -94,6 +94,23 @@ service cloud.firestore {
         //     Un cliente no puede reclamar a un mayor por su cuenta, ni
         //     siquiera a uno con código libre.
         ;
+
+      // ── Conversaciones analizadas (HU-5/HU-6) ───────────────────────────
+      // Las escribe solo `closeConversation` con el Admin SDK: ningún cliente
+      // crea, cambia ni borra un análisis (ADR-0029). La transcripción no
+      // está en ninguna de ellas.
+      match /conversations/{conversationId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+      match /conversationContents/{conversationId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+      match /memory/{docId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
     }
 
     // Todo lo demás, denegado. Cubre las colecciones que aún no existen: una
