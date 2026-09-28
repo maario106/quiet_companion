@@ -14,7 +14,11 @@ class GeminiResponse {
   final String? text;
   final String? nombreToSave;
 
-  const GeminiResponse({this.text, this.nombreToSave});
+  /// La respuesta es un mensaje de error de la app, no del modelo. No es
+  /// conversación: no entra en el búfer que se analiza al cerrar (ADR-0028).
+  final bool failed;
+
+  const GeminiResponse({this.text, this.nombreToSave, this.failed = false});
 }
 
 class GeminiService {
@@ -118,10 +122,12 @@ class GeminiService {
       return GeminiResponse(
         text: replyText ?? 'No se ha podido generar una respuesta.',
         nombreToSave: nombreToSave,
+        failed: replyText == null,
       );
     } catch (_) {
       return const GeminiResponse(
         text: 'Upss, ha habido un problema con la conexión. ¿Puedes repetir?',
+        failed: true,
       );
     }
   }
