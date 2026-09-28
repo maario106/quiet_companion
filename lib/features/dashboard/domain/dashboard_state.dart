@@ -1,27 +1,15 @@
-import 'package:quiet_companion/core/models/user_model.dart';
-
-enum DashboardStatus { loading, loaded, error }
-
+/// Estado propio del panel: solo lo que no está en Firestore.
+///
+/// Los datos del mayor no viven aquí sino en `linkedElderProvider`: guardar
+/// una copia en el controlador es lo que hacía que el panel enseñara —y
+/// reescribiera— valores viejos (ADR-0027).
 class DashboardState {
-  final DashboardStatus status;
-  final UserModel? linkedElder;
-  final String errorMessage;
+  /// Último fallo de guardado, para enseñarlo una vez. `null` = sin error.
+  final String? errorMessage;
 
-  const DashboardState({
-    this.status = DashboardStatus.loading,
-    this.linkedElder,
-    this.errorMessage = '',
-  });
+  const DashboardState({this.errorMessage});
 
-  DashboardState copyWith({
-    DashboardStatus? status,
-    UserModel? linkedElder,
-    String? errorMessage,
-  }) {
-    return DashboardState(
-      status: status ?? this.status,
-      linkedElder: linkedElder ?? this.linkedElder,
-      errorMessage: errorMessage ?? this.errorMessage,
-    );
+  DashboardState copyWith({String? errorMessage}) {
+    return DashboardState(errorMessage: errorMessage);
   }
 }

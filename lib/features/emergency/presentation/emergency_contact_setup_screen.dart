@@ -34,6 +34,23 @@ class _EmergencyContactSetupScreenState
   String? _saveError;
 
   @override
+  void initState() {
+    super.initState();
+    // Precarga el contacto vigente: quien entra a cambiarlo tiene que ver qué
+    // hay guardado, no un formulario vacío que parece decir que no hay nada.
+    final current = ref.read(currentUserProvider).valueOrNull?.emergencyContact;
+    if (current != null) {
+      // El campo solo admite los 9 dígitos nacionales; el +34 es un prefijo fijo.
+      final digits = current.phone.replaceAll(RegExp(r'\D'), '');
+      _phoneController.text =
+          digits.startsWith('34') && digits.length == 11 ? digits.substring(2) : digits;
+      if (current.name != EmergencyContact.defaultName) {
+        _nameController.text = current.name;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _phoneController.dispose();
     _nameController.dispose();

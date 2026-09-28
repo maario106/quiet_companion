@@ -1,75 +1,57 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/features/onboarding/data/auth_repository.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_state.dart';
 
+/// Escrituras del panel del familiar sobre el documento del mayor.
+///
+/// Cada una toca **un solo campo** con `update()` (ADR-0027). Ya no hay
+/// actualización optimista ni *rollback* manual (ADR-0010): el panel pinta
+/// desde `linkedElderProvider`, y la compensación de latencia de Firestore
+/// enseña el valor escrito al instante y lo revierte sola si el servidor lo
+/// rechaza. Aquí solo queda contar el error.
 class DashboardController extends StateNotifier<DashboardState> {
-  DashboardController(this._repository, this._elderId) : super(const DashboardState()) {
-    _init();
-  }
+  DashboardController(this._repository, this._elderId)
+      : super(const DashboardState());
 
   final AuthRepository _repository;
   final String? _elderId;
 
-  Future<void> _init() async {
-    if (_elderId == null) return; // stay loading until currentUserProvider emits linkedElderId
-    await refreshElderData();
-  }
-
-  Future<void> refreshElderData() async {
-    try {
-      final elder = await _repository .getUser(_elderId!);
-      state = state.copyWith(status: DashboardStatus.loaded, linkedElder: elder);
-    } catch (e) {
-      state = state.copyWith(status: DashboardStatus.error, errorMessage: e.toString());
-    }
-  }
-
   Future<void> updateElderName(String name) async {
-    if (state.linkedElder == null) return;
-
+    final elderId = _elderId;
     final trimmed = name.trim();
-    if (trimmed.isEmpty) return;
-
-    final previousElder = state.linkedElder;
-    final updatedElder = state.linkedElder!.copyWith(name: trimmed);
-    state = state.copyWith(linkedElder: updatedElder);
+    if (elderId == null || trimmed.isEmpty) return;
 
     try {
-      await _repository.updateName(updatedElder.id, trimmed);
+      await _repository.updateName(elderId, trimmed);
     } catch (e) {
-      state = state.copyWith(
-        linkedElder: previousElder,
-        errorMessage: 'Error al guardar el nombre: $e',
-      );
+      if (!mounted) return;
+      state = state.copyWith(errorMessage: 'No se ha podido guardar el nombre.');
     }
   }
 
-  Future<void> updateElderPreferences(UserPreferences newPrefs) async {
-    if (state.linkedElder == null) return;
-
-    final previousElder = state.linkedElder;
-    final updatedElder = state.linkedElder!.copyWith(preferences: newPrefs);
-
-    // Optimizamos la UI: actualizamos localmente primero
-    state = state.copyWith(linkedElder: updatedElder);
+  /// [field] es una clave de `UserPreferences` (`volumeKey`, …).
+  Future<void> updateElderPreference(String field, double value) async {
+    final elderId = _elderId;
+    if (elderId == null) return;
 
     try {
-      await _repository.saveUser(updatedElder);
+      await _repository.updatePreferenceField(elderId, field, value);
     } catch (e) {
-      // Honest rollback: revert linkedElder to its previous snapshot so the UI
-      // does not display a value that failed to persist.
-      state = state.copyWith(
-        linkedElder: previousElder,
-        errorMessage: 'Error al guardar: $e',
-      );
+      if (!mounted) return;
+      state = state.copyWith(errorMessage: 'No se ha podido guardar el ajuste.');
     }
   }
+
+  /// La pantalla lo llama tras enseñar el error, para no repetirlo.
+  void clearError() => state = const DashboardState();
 }
 
-final dashboardControllerProvider = StateNotifierProvider<DashboardController, DashboardState>((ref) {
-  final elderId = ref.watch(currentUserProvider).valueOrNull?.linkedElderId;
-  return DashboardController(ref.read(authRepositoryProvider), elderId);
+final dashboardControllerProvider =
+    StateNotifierProvider<DashboardController, DashboardState>((ref) {
+  final elderId = ref.watch(
+    currentUserProvider.select((user) => user.valueOrNull?.linkedElderId),
+  );
+  return DashboardController(ref.watch(authRepositoryProvider), elderId);
 });

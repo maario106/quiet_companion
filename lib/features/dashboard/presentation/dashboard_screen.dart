@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/models/user_preferences.dart';
+import 'package:quiet_companion/core/providers/linked_elder_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/sign_out_button.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_controller.dart';
@@ -11,29 +13,59 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(dashboardControllerProvider);
+    // Los datos del mayor, en vivo: lo que él cambie desde su móvil aparece
+    // aquí sin recargar (ADR-0027).
+    final elder = ref.watch(linkedElderProvider);
+
+    ref.listen<DashboardState>(dashboardControllerProvider, (previous, next) {
+      final message = next.errorMessage;
+      if (message == null) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+      ref.read(dashboardControllerProvider.notifier).clearError();
+    });
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel de control'),
         actions: const [SignOutButton()],
       ),
-      body: switch (state.status) {
-        DashboardStatus.loading => const Center(
-            child: CircularProgressIndicator(),
+      body: elder.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => const _CenteredMessage(
+          'No se han podido cargar los datos del mayor.',
+          isError: true,
+        ),
+        data: (linkedElder) => linkedElder == null
+            ? const _CenteredMessage('No hay ningún mayor vinculado.')
+            : _DashboardContent(elder: linkedElder),
+      ),
+    );
+  }
+}
+
+class _CenteredMessage extends StatelessWidget {
+  const _CenteredMessage(this.text, {this.isError = false});
+
+  final String text;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isError
+                ? AppTheme.companionError
+                : AppTheme.companionTextSecondary,
           ),
-        DashboardStatus.error => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                state.errorMessage,
-                style: const TextStyle(color: AppTheme.companionError),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        DashboardStatus.loaded => _DashboardContent(elder: state.linkedElder!),
-      },
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }
@@ -79,8 +111,8 @@ class _DashboardContent extends ConsumerWidget {
                         value: prefs.volume,
                         onChangeEnd: (val) => ref
                             .read(dashboardControllerProvider.notifier)
-                            .updateElderPreferences(
-                                prefs.copyWith(volume: val)),
+                            .updateElderPreference(
+                                UserPreferences.volumeKey, val),
                       ),
                       const Divider(height: 1),
                       _SettingSlider(
@@ -91,8 +123,8 @@ class _DashboardContent extends ConsumerWidget {
                         max: 1.0,
                         onChangeEnd: (val) => ref
                             .read(dashboardControllerProvider.notifier)
-                            .updateElderPreferences(
-                                prefs.copyWith(speechRate: val)),
+                            .updateElderPreference(
+                                UserPreferences.speechRateKey, val),
                       ),
                       const Divider(height: 1),
                       _SettingSlider(
@@ -103,8 +135,8 @@ class _DashboardContent extends ConsumerWidget {
                         max: 2.0,
                         onChangeEnd: (val) => ref
                             .read(dashboardControllerProvider.notifier)
-                            .updateElderPreferences(
-                                prefs.copyWith(textSizeMultiplier: val)),
+                            .updateElderPreference(
+                                UserPreferences.textSizeMultiplierKey, val),
                       ),
                     ],
                   ),

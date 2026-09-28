@@ -3,55 +3,51 @@ import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_controller.dart';
-import 'package:quiet_companion/features/dashboard/domain/dashboard_state.dart';
 import 'package:quiet_companion/features/onboarding/data/auth_repository.dart';
 
+/// Registra las escrituras por campo del panel (ADR-0027). `saveUser` lanza a
+/// propósito: el panel ya no debe reescribir el documento entero del mayor.
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({
-    this.shouldThrowOnSave = false,
-  });
+  FakeAuthRepository({this.shouldThrow = false});
 
-  bool shouldThrowOnSave;
-  final savedUsers = <UserModel>[];
-  final elderUsers = <String, UserModel>{};
+  bool shouldThrow;
+  final preferenceWrites = <(String uid, String field, double value)>[];
+  final nameWrites = <(String uid, String name)>[];
+
+  void _maybeThrow() {
+    if (shouldThrow) throw Exception('Write failed');
+  }
 
   @override
   Future<String> signInAnonymously() async => 'anon-uid';
 
   @override
-  Future<String> signInWithEmail(String email, String password) async => 'email-uid';
+  Future<String> signInWithEmail(String email, String password) async =>
+      'email-uid';
 
   @override
-  Future<String> registerWithEmail(String email, String password) async => 'register-uid';
+  Future<String> registerWithEmail(String email, String password) async =>
+      'register-uid';
 
   @override
   Future<void> signOut() async {}
 
   @override
   Future<void> saveUser(UserModel user) async {
-    if (shouldThrowOnSave) {
-      throw Exception('Save failed');
-    }
-    savedUsers.add(user);
+    throw StateError('El panel no debe reescribir el documento entero');
   }
 
   @override
-  Future<UserModel?> getUser(String uid) async {
-    return elderUsers[uid];
-  }
+  Future<UserModel?> getUser(String uid) async => null;
 
   @override
-  Stream<UserModel?> streamUser(String uid) {
-    throw UnimplementedError();
-  }
+  Stream<UserModel?> streamUser(String uid) => const Stream.empty();
 
   @override
   String? currentUid() => null;
 
   @override
-  Stream<String?> authStateUid() {
-    throw UnimplementedError();
-  }
+  Stream<String?> authStateUid() => const Stream.empty();
 
   @override
   Future<void> ensureCompanionUserDoc(
@@ -61,16 +57,24 @@ class FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> updateName(String uid, String name) async {}
+  Future<void> updateName(String uid, String name) async {
+    _maybeThrow();
+    nameWrites.add((uid, name));
+  }
 
   @override
   Future<void> updateEmergencyContact(
       String uid, EmergencyContact contact) async {}
 
-  /// Ruta del mayor sobre sus propias preferencias. El panel del familiar no
-  /// la usa (escribe por [saveUser]), pero el fake debe cubrir la interfaz.
   @override
   Future<void> updatePreferences(String uid, UserPreferences prefs) async {}
+
+  @override
+  Future<void> updatePreferenceField(
+      String uid, String field, double value) async {
+    _maybeThrow();
+    preferenceWrites.add((uid, field, value));
+  }
 
   @override
   Future<String> linkCompanionToElder(String code) async => 'elder-1';
@@ -78,191 +82,74 @@ class FakeAuthRepository implements AuthRepository {
 
 void main() {
   group('DashboardController', () {
-    group('updateElderPreferences', () {
-      test('happy path: optimistic update then persist, no error', () async {
-        final elder = UserModel(
-          id: 'elder-123',
-          role: UserRole.elder,
-          autonomy: AutonomyStatus.linked,
-          preferences: const UserPreferences(
-            volume: 1.0,
-            speechRate: 0.4,
-            textSizeMultiplier: 1.2,
-          ),
-        );
-        final fakeRepo = FakeAuthRepository();
-        fakeRepo.elderUsers['elder-123'] = elder;
+    group('updateElderPreference', () {
+      test('escribe solo el campo tocado, sobre el mayor vinculado', () async {
+        final repo = FakeAuthRepository();
+        final controller = DashboardController(repo, 'elder-1');
 
-        final controller = DashboardController(fakeRepo, null);
-        controller.state = DashboardState(
-          status: DashboardStatus.loaded,
-          linkedElder: elder,
-        );
+        await controller.updateElderPreference(UserPreferences.volumeKey, 0.5);
 
-        final newPrefs = const UserPreferences(
-          volume: 0.5,
-          speechRate: 0.7,
-          textSizeMultiplier: 1.5,
-        );
-
-        await controller.updateElderPreferences(newPrefs);
-
-        expect(controller.state.linkedElder?.preferences.volume, equals(0.5));
-        expect(controller.state.linkedElder?.preferences.speechRate, equals(0.7));
-        expect(controller.state.linkedElder?.preferences.textSizeMultiplier, equals(1.5));
-        expect(fakeRepo.savedUsers.length, equals(1));
-        expect(fakeRepo.savedUsers[0].preferences.volume, equals(0.5));
+        expect(repo.preferenceWrites, [('elder-1', 'volume', 0.5)]);
+        expect(controller.state.errorMessage, isNull);
       });
 
-      test('rollback: if saveUser throws, state reverts and errorMessage is set', () async {
-        final elder = UserModel(
-          id: 'elder-456',
-          role: UserRole.elder,
-          autonomy: AutonomyStatus.linked,
-          preferences: const UserPreferences(
-            volume: 1.0,
-            speechRate: 0.4,
-            textSizeMultiplier: 1.2,
-          ),
-        );
-        final fakeRepo = FakeAuthRepository(shouldThrowOnSave: true);
+      test('si la escritura falla, deja un mensaje de error', () async {
+        final repo = FakeAuthRepository(shouldThrow: true);
+        final controller = DashboardController(repo, 'elder-1');
 
-        final controller = DashboardController(fakeRepo, null);
-        controller.state = DashboardState(
-          status: DashboardStatus.loaded,
-          linkedElder: elder,
-        );
+        await controller.updateElderPreference(
+            UserPreferences.speechRateKey, 0.6);
 
-        final initialVolume = controller.state.linkedElder!.preferences.volume;
-        expect(initialVolume, equals(1.0));
-
-        final newPrefs = const UserPreferences(
-          volume: 0.3,
-          speechRate: 0.6,
-          textSizeMultiplier: 1.4,
-        );
-
-        await controller.updateElderPreferences(newPrefs);
-
-        expect(controller.state.linkedElder?.preferences.volume, equals(1.0));
-        expect(controller.state.linkedElder?.preferences.speechRate, equals(0.4));
-        expect(controller.state.linkedElder?.preferences.textSizeMultiplier, equals(1.2));
-        expect(controller.state.errorMessage, contains('Error'));
+        expect(controller.state.errorMessage, isNotNull);
       });
 
-      test('no-op: if linkedElder is null, updateElderPreferences does nothing', () async {
-        final fakeRepo = FakeAuthRepository();
-        final controller = DashboardController(fakeRepo, null);
+      test('sin mayor vinculado no escribe nada', () async {
+        final repo = FakeAuthRepository();
+        final controller = DashboardController(repo, null);
 
-        final newPrefs = const UserPreferences(volume: 0.5);
-        await controller.updateElderPreferences(newPrefs);
+        await controller.updateElderPreference(UserPreferences.volumeKey, 0.5);
 
-        expect(controller.state.linkedElder, isNull);
-        expect(fakeRepo.savedUsers, isEmpty);
-      });
-
-      test('optimistic update: preferences update immediately before save completes', () async {
-        final elder = UserModel(
-          id: 'elder-789',
-          role: UserRole.elder,
-          autonomy: AutonomyStatus.linked,
-          preferences: const UserPreferences(volume: 1.0),
-        );
-        final fakeRepo = FakeAuthRepository();
-        fakeRepo.elderUsers['elder-789'] = elder;
-
-        final controller = DashboardController(fakeRepo, null);
-        controller.state = DashboardState(
-          status: DashboardStatus.loaded,
-          linkedElder: elder,
-        );
-
-        final newPrefs = const UserPreferences(volume: 0.2);
-        final updateFuture = controller.updateElderPreferences(newPrefs);
-
-        expect(controller.state.linkedElder?.preferences.volume, equals(0.2));
-
-        await updateFuture;
-
-        expect(controller.state.linkedElder?.preferences.volume, equals(0.2));
+        expect(repo.preferenceWrites, isEmpty);
       });
     });
 
-    group('refreshElderData', () {
-      test('updates state with loaded elder data on success', () async {
-        final elder = UserModel(
-          id: 'elder-refresh',
-          name: 'María',
-          role: UserRole.elder,
-          autonomy: AutonomyStatus.independent,
-        );
-        final fakeRepo = FakeAuthRepository();
-        fakeRepo.elderUsers['elder-refresh'] = elder;
+    group('updateElderName', () {
+      test('escribe el nombre recortado', () async {
+        final repo = FakeAuthRepository();
+        final controller = DashboardController(repo, 'elder-1');
 
-        // El id debe coincidir con la clave del fake: es el camino que
-        // refreshElderData usa realmente (getUser(_elderId)).
-        final controller = DashboardController(fakeRepo, 'elder-refresh');
-        await controller.refreshElderData();
+        await controller.updateElderName('  María  ');
 
-        expect(controller.state.status, equals(DashboardStatus.loaded));
-        expect(controller.state.linkedElder?.name, equals('María'));
+        expect(repo.nameWrites, [('elder-1', 'María')]);
       });
 
-      // Con elderId null, getUser ni se llama: falla el `_elderId!` del
-      // controller y el catch pone error. Descripción ajustada a lo que
-      // realmente verifica.
-      test('sets error state when refreshed without a linked elderId', () async {
-        final fakeRepo = FakeAuthRepository();
-        final controller = DashboardController(fakeRepo, null);
-
-        await controller.refreshElderData();
-
-        expect(controller.state.status, equals(DashboardStatus.error));
-        expect(controller.state.errorMessage, isNotEmpty);
-      });
-    });
-
-    group('state transitions', () {
-      test('updateElderName clears name when saving succeeds', () async {
-        final elder = UserModel(
-          id: 'elder-name',
-          name: 'Old Name',
-          role: UserRole.elder,
-          autonomy: AutonomyStatus.independent,
-        );
-        final fakeRepo = FakeAuthRepository();
-
-        final controller = DashboardController(fakeRepo, null);
-        controller.state = DashboardState(
-          status: DashboardStatus.loaded,
-          linkedElder: elder,
-        );
-
-        await controller.updateElderName('New Name');
-
-        expect(controller.state.linkedElder?.name, equals('New Name'));
-        expect(controller.state.errorMessage, isEmpty);
-      });
-
-      test('updateElderName ignores empty/whitespace names', () async {
-        final elder = UserModel(
-          id: 'elder-name-empty',
-          name: 'Existing',
-          role: UserRole.elder,
-          autonomy: AutonomyStatus.independent,
-        );
-        final fakeRepo = FakeAuthRepository();
-
-        final controller = DashboardController(fakeRepo, null);
-        controller.state = DashboardState(
-          status: DashboardStatus.loaded,
-          linkedElder: elder,
-        );
+      test('ignora nombres vacíos', () async {
+        final repo = FakeAuthRepository();
+        final controller = DashboardController(repo, 'elder-1');
 
         await controller.updateElderName('   ');
 
-        expect(controller.state.linkedElder?.name, equals('Existing'));
+        expect(repo.nameWrites, isEmpty);
       });
+
+      test('si la escritura falla, deja un mensaje de error', () async {
+        final repo = FakeAuthRepository(shouldThrow: true);
+        final controller = DashboardController(repo, 'elder-1');
+
+        await controller.updateElderName('María');
+
+        expect(controller.state.errorMessage, isNotNull);
+      });
+    });
+
+    test('clearError limpia el mensaje', () async {
+      final repo = FakeAuthRepository(shouldThrow: true);
+      final controller = DashboardController(repo, 'elder-1');
+      await controller.updateElderName('María');
+
+      controller.clearError();
+
+      expect(controller.state.errorMessage, isNull);
     });
   });
 }

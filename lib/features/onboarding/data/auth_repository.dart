@@ -45,6 +45,9 @@ class AuthRepository {
     await _auth.signOut();
   }
 
+  /// Escribe el documento **entero**. Solo para crearlo (onboarding del
+  /// mayor): reescribir a partir de una copia deshace lo que otro haya
+  /// cambiado desde que se leyó (ADR-0027). Para editar, un `update` por campo.
   Future<void> saveUser(UserModel user) async {
     await _firestore.collection(FirestorePaths.usersCollection).doc(user.id).set(user.toMap());
   }
@@ -103,6 +106,18 @@ class AuthRepository {
         .collection(FirestorePaths.usersCollection)
         .doc(uid)
         .update({'preferences': prefs.toMap()});
+  }
+
+  /// Escribe **una** magnitud de preferencias del mayor con ruta de punto
+  /// (`preferences.volume`). La usa el panel del familiar: si el mayor cambió
+  /// otra magnitud entretanto, esta escritura no la pisa (ADR-0027). [field]
+  /// es una de las claves de [UserPreferences] (`volumeKey`, …).
+  Future<void> updatePreferenceField(
+      String uid, String field, double value) async {
+    await _firestore
+        .collection(FirestorePaths.usersCollection)
+        .doc(uid)
+        .update({'preferences.$field': value});
   }
 
   /// Escribe el contacto de emergencia elegido por el mayor (source: manual).
