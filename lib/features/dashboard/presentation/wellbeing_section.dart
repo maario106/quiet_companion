@@ -53,6 +53,7 @@ class WellbeingSection extends ConsumerWidget {
             _SignalsCard(week: week),
             if (full && week.topTopics.isNotEmpty) _TopicsCard(week: week),
             _ConversationList(records: list, contents: contents, now: now),
+            if (full) _MemoryCard(elderId: elder.id),
           ],
         );
       },
@@ -362,6 +363,45 @@ class _ConversationList extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push('/dashboard/conversation/${record.id}'),
             ),
+      ],
+    );
+  }
+}
+
+// ── Lo que el asistente recuerda (ADR-0032) ────────────────────────────────
+
+class _MemoryCard extends ConsumerWidget {
+  const _MemoryCard({required this.elderId});
+
+  final String elderId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final facts =
+        ref.watch(elderMemoryProvider(elderId)).valueOrNull?.facts ?? const {};
+
+    return _SectionCard(
+      title: 'Lo que el asistente recuerda',
+      children: [
+        if (facts.isEmpty)
+          const Text(
+            'Nada todavía. Lo irá aprendiendo de lo que cuente.',
+            style: _body,
+          )
+        else
+          for (final fact in facts.entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text('${_capitalize(fact.key)}: ${fact.value}', style: _body),
+            ),
+        const SizedBox(height: 8),
+        // Corregirlo desde aquí es trabajo futuro (ADR-0032); hoy, si algo está
+        // mal, se corrige hablando: "eso no es así" o "no lo recuerdes".
+        const Text(
+          'Lo extrae la IA de las conversaciones y puede equivocarse. Si algo no '
+          'es correcto, basta con que se lo diga al asistente.',
+          style: _small,
+        ),
       ],
     );
   }

@@ -17,7 +17,12 @@ const {
   parseCloseRequest,
   buildTranscript,
   normalizeAnalysis,
+  normalizeMemoryChanges,
+  applyMemoryChanges,
+  pushRecentSummary,
+  buildAnalysisInput,
   retentionCutoffMs,
+  MAX_MEMORY_FACTS,
 } = require("./conversation");
 
 describe("effectiveRetentionDays — el servidor pone el tope", () => {
@@ -212,5 +217,76 @@ describe("retentionCutoffMs", () => {
   test("lo que terminó hace más del plazo queda fuera", () => {
     const now = Date.UTC(2026, 8, 26);
     assert.equal(retentionCutoffMs(now, 90), now - 90 * DAY_MS);
+  });
+});
+
+describe("memoria del mayor (ADR-0032)", () => {
+  test("cambios saneados: claves limpias, valores recortados", () => {
+    const changes = normalizeMemoryChanges({
+      upsert: [
+        {key: "  Nieto ", value: "Pablo, 8 años"},
+        {key: "ciudad", value: "  Sevilla "},
+        {key: "clave<script>", value: "x"},
+        {key: "vacía", value: "   "},
+        {key: "", value: "sin clave"},
+      ],
+      remove: ["Perro", "perro", "!!"],
+    });
+    assert.deepEqual(changes.upsert, {nieto: "Pablo, 8 años", ciudad: "Sevilla"});
+    assert.deepEqual(changes.remove, ["perro"]);
+  });
+
+  test("sin memoria en la respuesta: ningún cambio", () => {
+    assert.deepEqual(normalizeMemoryChanges(undefined), {upsert: {}, remove: []});
+  });
+
+  test("corregir una clave: primero se borra, después se escribe", () => {
+    const {facts} = applyMemoryChanges(
+        {ciudad: "Granada"},
+        {upsert: {ciudad: "Sevilla"}, remove: ["ciudad"]},
+    );
+    assert.deepEqual(facts, {ciudad: "Sevilla"});
+  });
+
+  test("olvidar: se quita lo que el mayor pidió olvidar", () => {
+    const {facts} = applyMemoryChanges(
+        {ciudad: "Sevilla", perro: "Toby"},
+        {upsert: {}, remove: ["perro"]},
+    );
+    assert.deepEqual(facts, {ciudad: "Sevilla"});
+  });
+
+  test("memoria llena: las altas no caben, las correcciones sí", () => {
+    const full = {};
+    for (let i = 0; i < MAX_MEMORY_FACTS; i++) full[`dato${i}`] = "x";
+    const {facts, dropped} = applyMemoryChanges(
+        full,
+        {upsert: {nuevo: "y", dato0: "corregido"}, remove: []},
+    );
+    assert.equal(dropped, 1);
+    assert.equal(facts.nuevo, undefined);
+    assert.equal(facts.dato0, "corregido");
+  });
+
+  test("resúmenes recientes: los 3 últimos, del más nuevo al más viejo", () => {
+    const recent = pushRecentSummary(
+        [
+          {endedAtMs: 3, summary: "c"},
+          {endedAtMs: 2, summary: "b"},
+          {endedAtMs: 1, summary: "a"},
+        ],
+        {endedAtMs: 4, summary: "d"},
+    );
+    assert.deepEqual(recent.map((r) => r.summary), ["d", "c", "b"]);
+  });
+
+  test("el modelo recibe lo que ya se sabe antes de la conversación", () => {
+    const input = buildAnalysisInput(
+        [{role: "elder", text: "hola"}],
+        {ciudad: "Sevilla"},
+    );
+    assert.match(input, /Lo que ya sé de M:\n- ciudad: Sevilla/);
+    assert.match(input, /Conversación:\nM: hola/);
+    assert.match(buildAnalysisInput([], {}), /\(nada todavía\)/);
   });
 });

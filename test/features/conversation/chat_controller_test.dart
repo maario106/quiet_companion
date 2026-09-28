@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quiet_companion/core/models/conversation_settings.dart';
+import 'package:quiet_companion/core/models/elder_memory.dart';
 import 'package:quiet_companion/core/services/conversation_closer.dart';
 import 'package:quiet_companion/core/services/gemini_service.dart';
 import 'package:quiet_companion/core/services/speech_service.dart';
@@ -13,9 +14,19 @@ import '../../helpers/fake_tts_service.dart';
 class FakeGeminiService implements GeminiService {
   int sessionsStarted = 0;
   bool failNext = false;
+  ElderMemory? lastMemory;
+  List<ConversationTurn> lastHistory = const [];
 
   @override
-  void startSession(String? elderName) => sessionsStarted++;
+  void startSession(
+    String? elderName, {
+    ElderMemory? memory,
+    List<ConversationTurn> history = const [],
+  }) {
+    sessionsStarted++;
+    lastMemory = memory;
+    lastHistory = history;
+  }
 
   @override
   Future<GeminiResponse> sendMessage(String text) async {
@@ -222,6 +233,49 @@ void main() {
       controller.onAppPaused();
 
       expect(closer.closed, isEmpty);
+    });
+  });
+
+  group('memoria del mayor (ADR-0032)', () {
+    const memory = ElderMemory(facts: {'ciudad': 'Sevilla'});
+
+    test('con consentimiento, la sesión nueva lleva la memoria', () async {
+      final controller = build();
+      controller.updateMemory(memory);
+
+      await controller.sendMessage('hola');
+
+      expect(gemini.lastMemory, same(memory));
+    });
+
+    test('sin consentimiento, la memoria no se inyecta', () async {
+      final controller = build(consent: false);
+      controller.updateMemory(memory);
+
+      await controller.sendMessage('hola');
+
+      expect(gemini.lastMemory, isNull);
+    });
+
+    test('una memoria nueva no reinicia la conversación en curso', () async {
+      final controller = build();
+      await talk(controller, 2);
+      final sessionsBefore = gemini.sessionsStarted;
+
+      controller.updateMemory(memory);
+      await controller.sendMessage('sigo contando');
+
+      expect(gemini.sessionsStarted, sessionsBefore);
+    });
+
+    test('cambiar el nombre a mitad resiembra conservando el hilo', () async {
+      final controller = build();
+      await talk(controller, 2);
+
+      controller.updateElderName('Carmen María');
+
+      expect(gemini.lastHistory, hasLength(4));
+      expect(gemini.lastHistory.first.role, ConversationRole.elder);
     });
   });
 }

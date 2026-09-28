@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/models/companion_sharing.dart';
+import 'package:quiet_companion/core/models/conversation_record.dart';
 import 'package:quiet_companion/core/providers/conversation_providers.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/tts_service_provider.dart';
@@ -27,8 +28,9 @@ class MyWeekScreen extends ConsumerWidget {
 
     final textScale = user.preferences.textSizeMultiplier;
     final records = ref.watch(conversationRecordsProvider(user.id));
-    final contents =
-        ref.watch(conversationContentsProvider(user.id)).valueOrNull ?? const {};
+    final Map<String, ConversationContent> contents =
+        ref.watch(conversationContentsProvider(user.id)).valueOrNull ??
+            const {};
 
     final titleStyle = TextStyle(
       fontSize: AppTheme.fontMedium * textScale,

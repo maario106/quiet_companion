@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:quiet_companion/core/config/env.dart';
+import 'package:quiet_companion/core/models/elder_memory.dart';
+import 'package:quiet_companion/core/services/conversation_closer.dart';
+import 'package:quiet_companion/core/utils/spanish_date.dart';
 
 const _guardarNombreFn = 'guardarNombre';
 
@@ -49,7 +52,36 @@ class GeminiService {
     SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.high),
   ];
 
-  GenerativeModel _buildModel(String? elderName) {
+  /// Lo que el modelo sabe del mayor al empezar la conversación (ADR-0032).
+  /// Vacío si no hay memoria: el bloque se omite, no se dice que no la hay.
+  static String memoryContext(String? elderName, ElderMemory? memory,
+      {DateTime? now}) {
+    if (memory == null || memory.isEmpty) return '';
+    final who = elderName ?? 'la persona con la que hablas';
+    final buffer = StringBuffer();
+    if (memory.facts.isNotEmpty) {
+      buffer.writeln('Lo que sabes de $who:');
+      for (final fact in memory.facts.entries) {
+        buffer.writeln('- ${fact.key}: ${fact.value}');
+      }
+      buffer.writeln();
+    }
+    if (memory.recent.isNotEmpty) {
+      buffer.writeln('De vuestras últimas conversaciones:');
+      for (final item in memory.recent) {
+        final when = relativeSpanish(item.endedAt, now ?? DateTime.now());
+        buffer.writeln('- $when: ${item.summary}');
+      }
+      buffer.writeln();
+    }
+    buffer
+      ..writeln('Usa esto con naturalidad y solo cuando venga a cuento. No lo '
+          'recites, no digas que tienes notas y no preguntes lo que ya sabes.')
+      ..writeln();
+    return buffer.toString();
+  }
+
+  GenerativeModel _buildModel(String? elderName, ElderMemory? memory) {
     final nameContext = elderName != null
         ? 'Ya conoces el nombre del mayor: se llama $elderName. '
             'Salúdale por su nombre y NO vuelvas a preguntárselo.'
@@ -66,6 +98,7 @@ class GeminiService {
         'y combatir la soledad. Tu objetivo principal es hacer compañía, escuchar activamente, '
         'y ser muy respetuoso y cálido.\n\n'
         '$nameContext\n\n'
+        '${memoryContext(elderName, memory)}'
         'REGLAS:\n'
         '1. Respuestas MUY breves (máximo 2 o 3 frases). Van a ser leídas por voz.\n'
         '2. Termina siempre con una pregunta sencilla para mantener la conversación.\n'
@@ -84,8 +117,21 @@ class GeminiService {
   ///
   /// Call this once on first use and again whenever [elderName] changes (e.g.
   /// after persisting the name from a `guardarNombre` function call).
-  void startSession(String? elderName) {
-    _session = _buildModel(elderName).startChat();
+  ///
+  /// [memory] es lo que el asistente recuerda del mayor (ADR-0032).
+  /// [history] son los turnos de la conversación en curso: al resembrar a
+  /// mitad de conversación, la sesión nueva no pierde el hilo (ADR-0023).
+  void startSession(
+    String? elderName, {
+    ElderMemory? memory,
+    List<ConversationTurn> history = const [],
+  }) {
+    _session = _buildModel(elderName, memory).startChat(history: [
+      for (final turn in history)
+        turn.role == ConversationRole.elder
+            ? Content.text(turn.text)
+            : Content.model([TextPart(turn.text)]),
+    ]);
   }
 
   /// Sends a user message and returns the model's response.

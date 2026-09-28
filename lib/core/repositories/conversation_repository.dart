@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:quiet_companion/core/constants/firestore_paths.dart';
 import 'package:quiet_companion/core/models/conversation_record.dart';
+import 'package:quiet_companion/core/models/elder_memory.dart';
 
 /// Lectura de las conversaciones analizadas de un mayor. Solo lectura: las
 /// escribe `closeConversation` (ADR-0029).
@@ -34,6 +35,14 @@ class ConversationRepository {
                     case final record?)
                   record,
             ]);
+  }
+
+  /// Lo que el asistente recuerda del mayor. null si aún no hay nada.
+  Stream<ElderMemory?> watchMemory(String elderId) {
+    return _sub(elderId, FirestorePaths.memoryCollection)
+        .doc(FirestorePaths.memoryProfileDoc)
+        .snapshots()
+        .map((snap) => ElderMemory.fromMapOrNull(snap.data()));
   }
 
   /// Temas y resúmenes desde [since], por id de conversación.

@@ -31,8 +31,10 @@ const {
   ANALYSIS_SYSTEM_PROMPT,
   ANALYSIS_RESPONSE_SCHEMA,
   parseCloseRequest,
-  buildTranscript,
+  buildAnalysisInput,
   normalizeAnalysis,
+  applyMemoryChanges,
+  pushRecentSummary,
   retentionCutoffMs,
 } = require("./conversation");
 
@@ -458,17 +460,19 @@ function geminiClient() {
 }
 
 /**
- * Una sola llamada estructurada: resumen, ánimo, señales y temas a la vez.
+ * Una sola llamada estructurada: resumen, ánimo, señales, temas y cambios de
+ * memoria a la vez (ADR-0029, ADR-0032).
  *
  * @param {{role: string, text: string}[]} turns turnos validados.
+ * @param {Object<string, string>} facts lo que ya se sabe del mayor.
  * @return {Promise<object|null>} análisis saneado, o null si no es usable.
  */
-async function analyzeConversation(turns) {
+async function analyzeConversation(turns, facts) {
   const response = await geminiClient().models.generateContent({
     model: ANALYSIS_MODEL,
     contents: [{
       role: "user",
-      parts: [{text: buildTranscript(turns)}],
+      parts: [{text: buildAnalysisInput(turns, facts)}],
     }],
     config: {
       systemInstruction: ANALYSIS_SYSTEM_PROMPT,
@@ -565,11 +569,16 @@ exports.closeConversation = onCall(
         Timestamp.fromMillis(expireAtMs(input.endedAtMs, retentionDays));
       const endedAt = Timestamp.fromMillis(input.endedAtMs);
 
+      const memoryRef =
+        userRef.collection(COLLECTIONS.memory).doc(MEMORY_PROFILE_DOC);
+
       let status = "too_short";
       let analysis = null;
+      let memory = null;
       if (input.turns) {
         try {
-          analysis = await analyzeConversation(input.turns);
+          memory = (await memoryRef.get()).data() ?? {};
+          analysis = await analyzeConversation(input.turns, memory.facts);
           status = analysis ? "analyzed" : "failed";
         } catch (error) {
           status = "failed";
@@ -608,6 +617,28 @@ exports.closeConversation = onCall(
               expireAt,
             },
         );
+
+        // Memoria (ADR-0032): cambios, no un perfil reescrito, y con tope.
+        const {facts, dropped} =
+          applyMemoryChanges(memory?.facts, analysis.memory);
+        if (dropped > 0) {
+          logger.info("Memoria llena: altas descartadas", {uid, dropped});
+        }
+        const recent = pushRecentSummary(
+            (memory?.recent ?? []).map((r) => ({
+              endedAtMs: millisOf(r.endedAt) ?? 0,
+              summary: r.summary,
+            })),
+            {endedAtMs: input.endedAtMs, summary: analysis.summary},
+        );
+        batch.set(memoryRef, {
+          facts,
+          recent: recent.map((r) => ({
+            endedAt: Timestamp.fromMillis(r.endedAtMs),
+            summary: r.summary,
+          })),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
       }
       await batch.commit();
 

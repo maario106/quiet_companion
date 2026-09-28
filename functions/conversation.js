@@ -113,7 +113,7 @@ const MIN_ELDER_TURNS_FOR_ANALYSIS = 3;
  * Versión del prompt de análisis. Se guarda en cada conversación para poder
  * distinguir registros producidos por versiones distintas.
  */
-const ANALYSIS_PROMPT_VERSION = 1;
+const ANALYSIS_PROMPT_VERSION = 2; // v2: la misma llamada extrae la memoria.
 
 const END_REASONS = ["inactivity", "background"];
 const ROLES = ["elder", "assistant"];
@@ -135,6 +135,13 @@ const MAX_TURN_CHARS = 2000;
 const MAX_TOPICS = 5;
 const MAX_TOPIC_CHARS = 40;
 const MAX_SUMMARY_CHARS = 400;
+
+/** Memoria del mayor (ADR-0032). */
+const MAX_MEMORY_FACTS = 30;
+const MAX_MEMORY_CHANGES = 10;
+const MAX_MEMORY_KEY_CHARS = 30;
+const MAX_MEMORY_VALUE_CHARS = 80;
+const RECENT_SUMMARIES = 3;
 
 /** Holgura para relojes de dispositivo desajustados. */
 const CLOCK_SKEW_MS = 10 * 60 * 1000;
@@ -201,6 +208,22 @@ function buildTranscript(turns) {
       .join("\n");
 }
 
+/**
+ * Mensaje para el modelo: lo que ya se sabe de M y la conversación.
+ *
+ * @param {{role: string, text: string}[]} turns turnos validados.
+ * @param {Object<string, string>} facts memoria actual.
+ * @return {string} contenido del mensaje.
+ */
+function buildAnalysisInput(turns, facts) {
+  const known = Object.entries(facts ?? {});
+  const memory = known.length === 0 ?
+    "(nada todavía)" :
+    known.map(([key, value]) => `- ${key}: ${value}`).join("\n");
+  return `Lo que ya sé de M:\n${memory}\n\nConversación:\n` +
+    buildTranscript(turns);
+}
+
 /** Instrucción de sistema del análisis. Versionada con ANALYSIS_PROMPT_VERSION. */
 const ANALYSIS_SYSTEM_PROMPT = [
   "Analizas conversaciones entre una persona mayor (M) y un asistente de " +
@@ -231,6 +254,15 @@ const ANALYSIS_SYSTEM_PROMPT = [
     "estaba. Sin citas literales, sin diagnósticos y sin detalles médicos " +
     "(como mucho, \"mencionó molestias\"). A otras personas, por su relación " +
     "(\"su nieto\", \"una vecina\"), no por su nombre.",
+  "- memory: cambios en lo que conviene recordar de M para próximas " +
+    "conversaciones (su familia y la relación con cada uno, dónde vive, " +
+    "aficiones, rutinas, mascotas, gustos). Recibes lo que ya se sabe en " +
+    "\"Lo que ya sé de M\". Devuelve solo cambios: en upsert, datos nuevos " +
+    "o corregidos, con una clave corta en minúscula (\"nieto\", \"ciudad\") " +
+    "y un valor breve (\"Pablo, 8 años\"); en remove, las claves de datos que " +
+    "M ha corregido o ha pedido olvidar. Nunca datos de salud, medicación ni " +
+    "diagnósticos. De otras personas, solo nombre y relación. Si no hay nada " +
+    "nuevo, listas vacías.",
   "- No inventes. Si la conversación fue breve o trivial, dilo así.",
 ].join("\n");
 
@@ -242,9 +274,24 @@ const ANALYSIS_RESPONSE_SCHEMA = {
     signals: {type: "ARRAY", items: {type: "STRING", enum: SIGNALS}},
     topics: {type: "ARRAY", items: {type: "STRING"}},
     summary: {type: "STRING"},
+    memory: {
+      type: "OBJECT",
+      properties: {
+        upsert: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {key: {type: "STRING"}, value: {type: "STRING"}},
+            required: ["key", "value"],
+          },
+        },
+        remove: {type: "ARRAY", items: {type: "STRING"}},
+      },
+      required: ["upsert", "remove"],
+    },
   },
-  required: ["sentiment", "signals", "topics", "summary"],
-  propertyOrdering: ["sentiment", "signals", "topics", "summary"],
+  required: ["sentiment", "signals", "topics", "summary", "memory"],
+  propertyOrdering: ["sentiment", "signals", "topics", "summary", "memory"],
 };
 
 /**
@@ -278,7 +325,88 @@ function normalizeAnalysis(raw) {
     }
   }
 
-  return {sentiment, signals, topics, summary};
+  return {
+    sentiment,
+    signals,
+    topics,
+    summary,
+    memory: normalizeMemoryChanges(raw.memory),
+  };
+}
+
+/**
+ * Clave de memoria utilizable: minúsculas, corta, sin símbolos raros.
+ *
+ * @param {*} raw clave propuesta por el modelo.
+ * @return {string} clave limpia, o "" si no sirve.
+ */
+function cleanMemoryKey(raw) {
+  if (typeof raw !== "string") return "";
+  const key = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  if (key.length === 0 || key.length > MAX_MEMORY_KEY_CHARS) return "";
+  return /^[a-z0-9áéíóúüñ _-]+$/.test(key) ? key : "";
+}
+
+/**
+ * Sanea los cambios de memoria que propone el modelo.
+ *
+ * @param {*} raw campo `memory` de la respuesta.
+ * @return {{upsert: Object<string, string>, remove: string[]}} cambios.
+ */
+function normalizeMemoryChanges(raw) {
+  const upsert = {};
+  if (Array.isArray(raw?.upsert)) {
+    for (const item of raw.upsert) {
+      if (Object.keys(upsert).length === MAX_MEMORY_CHANGES) break;
+      const key = cleanMemoryKey(item?.key);
+      const value = typeof item?.value === "string" ?
+        item.value.trim().slice(0, MAX_MEMORY_VALUE_CHARS) :
+        "";
+      if (key && value) upsert[key] = value;
+    }
+  }
+  const remove = Array.isArray(raw?.remove) ?
+    [...new Set(raw.remove.map(cleanMemoryKey).filter(Boolean))] :
+    [];
+  return {upsert, remove};
+}
+
+/**
+ * Aplica los cambios a la memoria actual respetando el tope: las altas que no
+ * caben se descartan (y se cuentan), las correcciones de datos ya conocidos
+ * siempre entran. Primero se borra y después se añade, para que corregir una
+ * clave no la pierda.
+ *
+ * @param {Object<string, string>} facts memoria actual.
+ * @param {{upsert: Object<string, string>, remove: string[]}} changes cambios.
+ * @return {{facts: Object<string, string>, dropped: number}} resultado.
+ */
+function applyMemoryChanges(facts, changes) {
+  const next = {...(facts ?? {})};
+  for (const key of changes.remove) delete next[key];
+  let dropped = 0;
+  for (const [key, value] of Object.entries(changes.upsert)) {
+    const known = Object.prototype.hasOwnProperty.call(next, key);
+    if (!known && Object.keys(next).length >= MAX_MEMORY_FACTS) {
+      dropped++;
+      continue;
+    }
+    next[key] = value;
+  }
+  return {facts: next, dropped};
+}
+
+/**
+ * Resúmenes recientes que se inyectan al empezar la siguiente conversación.
+ *
+ * @param {{endedAtMs: number, summary: string}[]} recent los que había.
+ * @param {{endedAtMs: number, summary: string}} latest el de esta.
+ * @return {{endedAtMs: number, summary: string}[]} los 3 más recientes.
+ */
+function pushRecentSummary(recent, latest) {
+  return [latest, ...(recent ?? [])]
+      .sort((a, b) => b.endedAtMs - a.endedAtMs)
+      .slice(0, RECENT_SUMMARIES);
 }
 
 /**
@@ -312,6 +440,11 @@ module.exports = {
   ANALYSIS_RESPONSE_SCHEMA,
   parseCloseRequest,
   buildTranscript,
+  buildAnalysisInput,
   normalizeAnalysis,
+  normalizeMemoryChanges,
+  applyMemoryChanges,
+  pushRecentSummary,
   retentionCutoffMs,
+  MAX_MEMORY_FACTS,
 };

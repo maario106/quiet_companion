@@ -5,9 +5,11 @@ import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/config/conversation_config.dart';
 import 'package:quiet_companion/core/models/conversation_settings.dart';
+import 'package:quiet_companion/core/models/elder_memory.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/conversation_closer_provider.dart';
+import 'package:quiet_companion/core/providers/conversation_providers.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/intentional_background_exit_provider.dart';
 import 'package:quiet_companion/core/providers/tts_service_provider.dart';
@@ -41,24 +43,25 @@ class ChatController extends StateNotifier<ChatState> {
     ConversationCloser closer = const NoopConversationCloser(),
     bool consentGranted = false,
     ConversationSettings settings = const ConversationSettings(),
+    ElderMemory? memory,
     bool Function()? isIntentionalExit,
     DateTime Function()? now,
     TimerFactory? startTimer,
   })  : _closer = closer,
         _consentGranted = consentGranted,
         _settings = settings,
+        _memory = memory,
         _isIntentionalExit = isIntentionalExit ?? (() => false),
         _now = now ?? DateTime.now,
         _startTimer = startTimer ?? Timer.new,
         super(const ChatState()) {
     _elderName = elderName;
-    _geminiService.startSession(elderName);
+    _startSession();
   }
 
   /// Nombre con el que está sembrada la sesión del modelo. Se guarda para no
-  /// resembrarla dos veces por el mismo nombre: `startSession` borra el hilo
-  /// de la conversación, y hacerlo de más le costaría al mayor el contexto de
-  /// lo que acaba de contar.
+  /// resembrarla dos veces por el mismo nombre: cada resiembra es una sesión
+  /// nueva del modelo, y hacerlo de más es trabajo y latencia sin motivo.
   String? _elderName;
 
   // ── Conversación en curso (ADR-0028) ────────────────────────────────────
@@ -80,6 +83,18 @@ class ChatController extends StateNotifier<ChatState> {
 
   bool _consentGranted;
   ConversationSettings _settings;
+  ElderMemory? _memory;
+
+  /// Siembra la sesión del modelo con el nombre y, si hay consentimiento, lo
+  /// que recuerda del mayor (ADR-0032). Con [keepThread], la sesión nueva
+  /// recibe los turnos de la conversación en curso y no pierde el hilo.
+  void _startSession({bool keepThread = false}) {
+    _geminiService.startSession(
+      _elderName,
+      memory: _consentGranted ? _memory : null,
+      history: keepThread ? List.unmodifiable(_turns) : const [],
+    );
+  }
 
   /// Lleva un nombre nuevo al modelo sin reconstruir el controlador. Lo usan
   /// las dos vías por las que aparece: `guardarNombre` en mitad de un turno y
@@ -87,12 +102,30 @@ class ChatController extends StateNotifier<ChatState> {
   void updateElderName(String? name) {
     if (name == _elderName) return;
     _elderName = name;
-    _geminiService.startSession(name);
+    _startSession(keepThread: true);
   }
 
   /// Consentimiento vigente, entregado en vivo (ADR-0023). Sin él, una
-  /// conversación se cierra igual pero no se envía nada (ADR-0030).
-  void updateConsent(bool granted) => _consentGranted = granted;
+  /// conversación se cierra igual pero no se envía nada (ADR-0030), y la
+  /// memoria deja de inyectarse.
+  void updateConsent(bool granted) {
+    if (granted == _consentGranted) return;
+    _consentGranted = granted;
+    _refreshSessionWhenIdle();
+  }
+
+  /// Lo que el asistente recuerda, entregado en vivo. **Nunca** reinicia una
+  /// conversación en curso (ADR-0032): se usa en la siguiente.
+  void updateMemory(ElderMemory? memory) {
+    _memory = memory;
+    _refreshSessionWhenIdle();
+  }
+
+  /// Sin conversación en curso, la próxima empezará con sesión nueva; con
+  /// conversación, se espera a que termine.
+  void _refreshSessionWhenIdle() {
+    if (_startedAt == null) _sessionStale = true;
+  }
 
   /// Plazos vigentes, entregados en vivo. El nuevo plazo de inactividad se
   /// aplica en el siguiente temporizador.
@@ -104,7 +137,7 @@ class ChatController extends StateNotifier<ChatState> {
     _cancelInactivity();
     if (_sessionStale) {
       _sessionStale = false;
-      _geminiService.startSession(_elderName);
+      _startSession();
     }
 
     state = state.copyWith(
@@ -117,6 +150,17 @@ class ChatController extends StateNotifier<ChatState> {
       final geminiResponse = await _geminiService.sendMessage(message);
       if (!mounted) return;
 
+      final replyText =
+          geminiResponse.text ?? 'No se ha podido generar una respuesta.';
+
+      // Una respuesta de error de la app no es conversación: sesgaría el
+      // análisis hacia lo negativo. Se apunta antes de guardar el nombre para
+      // que, si hay que resembrar, la sesión nueva incluya este turno.
+      if (!geminiResponse.failed) {
+        _recordTurn(ConversationRole.elder, message);
+        _recordTurn(ConversationRole.assistant, replyText);
+      }
+
       // If Gemini called guardarNombre, persist the name before speaking.
       final nombreToSave = geminiResponse.nombreToSave;
       if (nombreToSave != null && _uid != null) {
@@ -126,16 +170,6 @@ class ChatController extends StateNotifier<ChatState> {
         // `updateElderName` y no por `startSession` directamente para que la
         // emisión de currentUserProvider que viene detrás no la repita.
         updateElderName(nombreToSave);
-      }
-
-      final replyText =
-          geminiResponse.text ?? 'No se ha podido generar una respuesta.';
-
-      // Una respuesta de error de la app no es conversación: sesgaría el
-      // análisis hacia lo negativo.
-      if (!geminiResponse.failed) {
-        _recordTurn(ConversationRole.elder, message);
-        _recordTurn(ConversationRole.assistant, replyText);
       }
 
       state = state.copyWith(
@@ -330,6 +364,16 @@ final chatControllerProvider =
     settings: user?.effectiveConversationSettings ?? const ConversationSettings(),
     isIntentionalExit: () => ref.read(intentionalBackgroundExitProvider),
   );
+
+  // Lo que el asistente recuerda del mayor (ADR-0032), también en vivo y sin
+  // reconstruir: una memoria nueva se usa en la siguiente conversación.
+  if (uid != null) {
+    ref.listen<AsyncValue<ElderMemory?>>(
+      elderMemoryProvider(uid),
+      (previous, next) => controller.updateMemory(next.valueOrNull),
+      fireImmediately: true,
+    );
+  }
 
   // Nada del documento reconstruye el controlador, así que se le entrega en
   // vivo (ADR-0023): el nombre, que puede cargar tarde o escribirlo el

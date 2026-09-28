@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/models/conversation_record.dart';
+import 'package:quiet_companion/core/models/elder_memory.dart';
 import 'package:quiet_companion/core/repositories/conversation_repository.dart';
 
 final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
@@ -27,4 +28,11 @@ final conversationContentsProvider = StreamProvider.autoDispose
   return ref
       .watch(conversationRepositoryProvider)
       .watchContents(elderId, since);
+});
+
+/// Lo que el asistente recuerda del mayor [elderId] (ADR-0032). Lo leen el chat
+/// (para inyectarlo al empezar cada conversación) y el panel con nivel `full`.
+final elderMemoryProvider =
+    StreamProvider.autoDispose.family<ElderMemory?, String>((ref, elderId) {
+  return ref.watch(conversationRepositoryProvider).watchMemory(elderId);
 });
