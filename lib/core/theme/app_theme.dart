@@ -129,7 +129,7 @@ class AppTheme {
         scrolledUnderElevation: 1,
         backgroundColor: companionBackground,
       ),
-      cardTheme: const CardTheme(
+      cardTheme: const CardThemeData(
         elevation: 0,
         shape: shape,
         color: companionSurface,
