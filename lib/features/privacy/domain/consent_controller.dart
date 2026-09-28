@@ -56,12 +56,19 @@ class ConsentController extends StateNotifier<ConsentState> {
     }
   }
 
-  Future<bool> setCompanionSharing(CompanionSharing level) async {
+  Future<bool> setCompanionSharing(CompanionSharing level) =>
+      _write((uid) => _repository.updateCompanionSharing(uid, level));
+
+  /// [field] es una clave de `ConversationSettings`.
+  Future<bool> setConversationSetting(String field, int value) =>
+      _write((uid) => _repository.updateConversationSetting(uid, field, value));
+
+  Future<bool> _write(Future<void> Function(String uid) write) async {
     final uid = _uid;
     if (uid == null || state.saving) return false;
     state = const ConsentState(saving: true);
     try {
-      await _repository.updateCompanionSharing(uid, level);
+      await write(uid);
       if (mounted) state = const ConsentState();
       return true;
     } catch (_) {

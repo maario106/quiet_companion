@@ -44,6 +44,20 @@ class DashboardController extends StateNotifier<DashboardState> {
     }
   }
 
+  /// Un plazo de la conversación del mayor (ADR-0034). [field] es una clave
+  /// de `ConversationSettings`.
+  Future<void> updateConversationSetting(String field, int value) async {
+    final elderId = _elderId;
+    if (elderId == null) return;
+
+    try {
+      await _repository.updateConversationSettingField(elderId, field, value);
+    } catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(errorMessage: 'No se ha podido guardar el plazo.');
+    }
+  }
+
   /// La pantalla lo llama tras enseñar el error, para no repetirlo.
   void clearError() => state = const DashboardState();
 }

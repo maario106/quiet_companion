@@ -74,6 +74,15 @@ class FakeAuthRepository implements AuthRepository {
     preferenceWrites.add((uid, field, value));
   }
 
+  final settingWrites = <(String uid, String field, int value)>[];
+
+  @override
+  Future<void> updateConversationSettingField(
+      String uid, String field, int value) async {
+    _maybeThrow();
+    settingWrites.add((uid, field, value));
+  }
+
   @override
   Future<String> linkCompanionToElder(String code) async => 'elder-1';
 }

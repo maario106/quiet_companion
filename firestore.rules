@@ -51,6 +51,19 @@ service cloud.firestore {
       return ['conversationConsent'];
     }
 
+    // El familiar vinculado puede leer el análisis de su mayor solo si el
+    // mayor lo consiente HOY y ha elegido un nivel que lo incluye (ADR-0031).
+    // Se consulta el documento del mayor: la decisión es suya y vive allí.
+    // Retirar el consentimiento cierra el acceso en el acto, aunque los datos
+    // sigan existiendo durante el periodo de gracia (ADR-0030).
+    function companionMayRead(elderId, levels) {
+      let elder = get(/databases/$(database)/documents/users/$(elderId)).data;
+      return isSignedIn()
+        && elder.get('linkedCompanionId', null) == request.auth.uid
+        && elder.get('conversationConsent', {}).get('granted', false) == true
+        && elder.get('companionSharing', 'none') in levels;
+    }
+
     match /users/{userId} {
 
       // ── Lectura ────────────────────────────────────────────────────────
@@ -84,10 +97,12 @@ service cloud.firestore {
         //    cambia pasando por la callable.
         (isOwner(userId) && !changed().hasAny(serverOnlyFields()))
 
-        // 2. El familiar vinculado solo toca las dos cosas que su panel
-        //    edita. No puede cambiar el rol del mayor, romperle el vínculo ni
-        //    reescribirle el contacto de emergencia.
-        || (isLinkedCompanion() && changed().hasOnly(['preferences', 'name']))
+        // 2. El familiar vinculado solo toca lo que su panel edita:
+        //    preferencias, nombre y plazos de la conversación (ADR-0034). No
+        //    puede cambiar el rol del mayor, romperle el vínculo, reescribirle
+        //    el contacto de emergencia, consentir por él ni decidir qué ve.
+        || (isLinkedCompanion()
+            && changed().hasOnly(['preferences', 'name', 'conversationSettings']))
 
         // 2b. La vinculación NO aparece aquí a propósito: la escribe
         //     `validateAndLink` con el Admin SDK, que se salta estas reglas.
@@ -99,16 +114,20 @@ service cloud.firestore {
       // Las escribe solo `closeConversation` con el Admin SDK: ningún cliente
       // crea, cambia ni borra un análisis (ADR-0029). La transcripción no
       // está en ninguna de ellas.
+      // "Cómo se encuentra": actividad, ánimo y señales.
       match /conversations/{conversationId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId)
+          || companionMayRead(userId, ['wellbeing', 'full']);
         allow write: if false;
       }
+      // "De qué habláis": temas y resúmenes.
       match /conversationContents/{conversationId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId) || companionMayRead(userId, ['full']);
         allow write: if false;
       }
+      // Lo que el asistente recuerda del mayor.
       match /memory/{docId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId) || companionMayRead(userId, ['full']);
         allow write: if false;
       }
     }

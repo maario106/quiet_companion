@@ -1,4 +1,5 @@
 import 'package:quiet_companion/core/config/preference_scales.dart';
+import 'package:quiet_companion/core/models/companion_sharing.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
@@ -71,7 +72,34 @@ final List<SettingsRow> settingsRows = [
     visible: (user) => true,
     route: '/settings/conversations',
   ),
+  // Lo decide solo el mayor, y solo tiene sentido si hay familiar y algo que
+  // ver (ADR-0031).
+  SettingsRow(
+    title: 'Qué ve mi familiar',
+    value: (user) => (user.companionSharing ?? CompanionSharing.none).label,
+    visible: (user) =>
+        user.linkedCompanionId != null && user.hasConversationConsent,
+    route: '/settings/companion-sharing',
+  ),
+  // Los plazos los fija el propio mayor solo en modo independiente; en modo
+  // vinculado los gestiona su familiar desde el panel (ADR-0034, ADR-0007).
+  SettingsRow(
+    title: 'Cuándo termina una conversación',
+    value: (user) =>
+        'Tras ${user.effectiveConversationSettings.inactivityLabel} en silencio',
+    visible: _independentWithConsent,
+    route: '/settings/conversation-wait',
+  ),
+  SettingsRow(
+    title: 'Cuánto tiempo se guardan',
+    value: (user) => user.effectiveConversationSettings.retentionLabel,
+    visible: _independentWithConsent,
+    route: '/settings/conversation-retention',
+  ),
 ];
+
+bool _independentWithConsent(UserModel user) =>
+    user.autonomy == AutonomyStatus.independent && user.hasConversationConsent;
 
 /// Filas visibles para [user]. La usan HomeScreen (botón visible si hay ≥ 1
 /// fila) y SettingsScreen (qué renderizar) — la misma función en ambos sitios.

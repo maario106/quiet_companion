@@ -43,6 +43,16 @@ class ConsentRepository {
         .doc(uid)
         .update({'companionSharing': level.name});
   }
+
+  /// Un plazo de la conversación, escrito por el propio mayor independiente
+  /// (ADR-0034). [field] es una clave de `ConversationSettings`.
+  Future<void> updateConversationSetting(
+      String uid, String field, int value) async {
+    await _firestore
+        .collection(FirestorePaths.usersCollection)
+        .doc(uid)
+        .update({'conversationSettings.$field': value});
+  }
 }
 
 final consentRepositoryProvider = Provider<ConsentRepository>((ref) {

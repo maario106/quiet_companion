@@ -120,6 +120,17 @@ class AuthRepository {
         .update({'preferences.$field': value});
   }
 
+  /// Un plazo de la conversación del mayor vinculado, escrito por su familiar
+  /// desde el panel (ADR-0034). [field] es una clave de `ConversationSettings`;
+  /// el servidor acota el valor por su cuenta.
+  Future<void> updateConversationSettingField(
+      String uid, String field, int value) async {
+    await _firestore
+        .collection(FirestorePaths.usersCollection)
+        .doc(uid)
+        .update({'conversationSettings.$field': value});
+  }
+
   /// Escribe el contacto de emergencia elegido por el mayor (source: manual).
   Future<void> updateEmergencyContact(
       String uid, EmergencyContact contact) async {

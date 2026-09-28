@@ -66,6 +66,16 @@ void main() {
       });
     });
 
+    test('updateConversationSetting escribe el plazo del mayor vinculado',
+        () async {
+      final repo = FakeAuthRepository();
+      final controller = DashboardController(repo, 'elder-1');
+
+      await controller.updateConversationSetting('retentionDays', 30);
+
+      expect(repo.settingWrites, [('elder-1', 'retentionDays', 30)]);
+    });
+
     test('clearError limpia el mensaje', () async {
       final repo = FakeAuthRepository(shouldThrow: true);
       final controller = DashboardController(repo, 'elder-1');

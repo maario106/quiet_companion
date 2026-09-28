@@ -24,6 +24,7 @@ import 'package:quiet_companion/features/onboarding/presentation/companion_regis
 import 'package:quiet_companion/features/onboarding/presentation/enter_pairing_code_screen.dart';
 import 'package:quiet_companion/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:quiet_companion/features/onboarding/presentation/splash_screen.dart';
+import 'package:quiet_companion/features/privacy/presentation/choice_screen.dart';
 import 'package:quiet_companion/features/privacy/presentation/consent_screen.dart';
 import 'package:quiet_companion/features/privacy/presentation/conversation_privacy_screen.dart';
 
@@ -151,6 +152,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'conversations',
             builder: (context, state) =>
                 const ConversationPrivacyScreen(manage: true),
+          ),
+          GoRoute(
+            path: 'companion-sharing',
+            builder: (context, state) => const PrivacyChoiceScreen(
+                choice: PrivacyChoice.companionSharing),
+          ),
+          GoRoute(
+            path: 'conversation-wait',
+            builder: (context, state) =>
+                const PrivacyChoiceScreen(choice: PrivacyChoice.inactivity),
+          ),
+          GoRoute(
+            path: 'conversation-retention',
+            builder: (context, state) =>
+                const PrivacyChoiceScreen(choice: PrivacyChoice.retention),
           ),
           // Una sola ruta paramétrica para las tres escalas de accesibilidad:
           // añadir un ajuste es añadir una PreferenceScale, sin tocar aquí.

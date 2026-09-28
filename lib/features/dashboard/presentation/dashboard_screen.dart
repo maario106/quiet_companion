@@ -7,6 +7,7 @@ import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/sign_out_button.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_controller.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_state.dart';
+import 'package:quiet_companion/features/dashboard/presentation/conversation_settings_card.dart';
 import 'package:quiet_companion/features/dashboard/presentation/conversation_status_card.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -91,6 +92,7 @@ class _DashboardContent extends ConsumerWidget {
             children: [
               _ElderNameCard(elder: elder),
               ConversationStatusCard(elder: elder),
+              ConversationSettingsCard(elder: elder),
               const SizedBox(height: 8),
               const Text(
                 'Preferencias de voz y texto',

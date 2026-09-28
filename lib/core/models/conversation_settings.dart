@@ -17,11 +17,15 @@ class ConversationSettings {
   static const int defaultRetentionDays = 90;
 
   static const List<int> inactivityMinutesSteps = [2, 5, 10, 15];
+
+  /// Minutos concretos y no nombres vagos ("Un rato"): a diferencia del
+  /// volumen o la velocidad (ADR-0021), aquí el número sí significa algo para
+  /// quien lo lee.
   static const List<String> inactivityMinutesLabels = [
-    'Muy poco',
-    'Normal',
-    'Un rato',
-    'Mucho rato',
+    '2 minutos',
+    '5 minutos',
+    '10 minutos',
+    '15 minutos',
   ];
 
   /// El servidor aplica el mismo tope (`closeConversation`,

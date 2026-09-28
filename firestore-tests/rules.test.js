@@ -402,3 +402,83 @@ describe('las conversaciones analizadas las escribe solo el servidor', () => {
     await assertFails(getDoc(sub(INTRUSO, 'memory', 'profile')));
   });
 });
+
+// ─── HU-6: qué ve el familiar (ADR-0031) ──────────────────────────────────
+
+describe('el familiar ve lo que el mayor elige, y solo con consentimiento', () => {
+  const setElder = (fields) => testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await updateDoc(doc(ctx.firestore(), 'users', ELDER_VINCULADO), fields);
+  });
+  const consent = { granted: true, answeredAt: new Date('2026-09-26'), textVersion: 1 };
+  const sub = (name, id) => doc(db(FAMILIAR), 'users', ELDER_VINCULADO, name, id);
+  const list = (name) =>
+    getDocs(collection(db(FAMILIAR), 'users', ELDER_VINCULADO, name));
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      const raw = ctx.firestore();
+      await setDoc(doc(raw, 'users', ELDER_VINCULADO, 'conversations', 'c1'), {
+        endedAt: new Date('2026-09-26'), sentiment: 'neutral', signals: [],
+      });
+      await setDoc(doc(raw, 'users', ELDER_VINCULADO, 'conversationContents', 'c1'), {
+        endedAt: new Date('2026-09-26'), topics: [], summary: 'Charla breve.',
+      });
+      await setDoc(doc(raw, 'users', ELDER_VINCULADO, 'memory', 'profile'), { facts: {} });
+    });
+  });
+
+  it('nivel "full": lee las tres', async () => {
+    await setElder({ conversationConsent: consent, companionSharing: 'full' });
+    await assertSucceeds(getDoc(sub('conversations', 'c1')));
+    await assertSucceeds(list('conversations'));
+    await assertSucceeds(getDoc(sub('conversationContents', 'c1')));
+    await assertSucceeds(list('conversationContents'));
+    await assertSucceeds(getDoc(sub('memory', 'profile')));
+  });
+
+  it('nivel "wellbeing": el ánimo sí, los resúmenes y la memoria no', async () => {
+    await setElder({ conversationConsent: consent, companionSharing: 'wellbeing' });
+    await assertSucceeds(list('conversations'));
+    await assertFails(getDoc(sub('conversationContents', 'c1')));
+    await assertFails(list('conversationContents'));
+    await assertFails(getDoc(sub('memory', 'profile')));
+  });
+
+  it('nivel "none": nada', async () => {
+    await setElder({ conversationConsent: consent, companionSharing: 'none' });
+    await assertFails(list('conversations'));
+    await assertFails(getDoc(sub('conversationContents', 'c1')));
+  });
+
+  it('consentimiento retirado: nada, aunque el nivel fuera "full"', async () => {
+    await setElder({
+      conversationConsent: { ...consent, granted: false },
+      companionSharing: 'full',
+    });
+    await assertFails(list('conversations'));
+    await assertFails(getDoc(sub('conversationContents', 'c1')));
+  });
+
+  it('sin consentimiento nunca dado: nada', async () => {
+    await setElder({ companionSharing: 'full' });
+    await assertFails(list('conversations'));
+  });
+
+  it('un familiar que no es el suyo: nada', async () => {
+    await setElder({ conversationConsent: consent, companionSharing: 'full' });
+    await assertFails(getDocs(
+      collection(db(INTRUSO), 'users', ELDER_VINCULADO, 'conversations'),
+    ));
+  });
+
+  it('el familiar fija los plazos de la conversación (ADR-0034)', async () => {
+    await assertSucceeds(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
+      'conversationSettings.retentionDays': 30,
+    }));
+  });
+
+  it('el familiar sigue sin poder escribir en las subcolecciones', async () => {
+    await setElder({ conversationConsent: consent, companionSharing: 'full' });
+    await assertFails(updateDoc(sub('conversations', 'c1'), { sentiment: 'positive' }));
+  });
+});
