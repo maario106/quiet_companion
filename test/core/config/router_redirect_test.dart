@@ -1,19 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
+import 'package:quiet_companion/core/config/route_redirect.dart';
+import 'package:quiet_companion/core/models/conversation_consent.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
-class MockGoRouterState extends Fake implements GoRouterState {
-  MockGoRouterState(this.matchedLocation);
+/// Ya respondió a la pregunta del consentimiento (sea cual sea la respuesta):
+/// el enrutador no vuelve a enseñársela.
+const _answered = ConversationConsent(granted: false);
 
-  @override
-  final String matchedLocation;
-}
-
-// Extracts and tests the pure redirect logic from RouterNotifier.
+/// Envuelve la función real del enrutador ([routeRedirect]). Antes este test
+/// reimplementaba las condiciones a mano y podía seguir en verde probando una
+/// versión antigua de la lógica.
 class RouterRedirectTestHelper {
-  /// Helper function to encapsulate the redirect logic without needing
-  /// RouterNotifier or complex Riverpod setup. This mirrors the conditions
-  /// in RouterNotifier.redirect() for unit testing.
   static String? computeRedirect({
     required bool elderCheckingAuth,
     required bool companionLinked,
@@ -21,50 +18,17 @@ class RouterRedirectTestHelper {
     required UserModel? elderUser,
     required bool elderAuthenticated,
     required String currentLocation,
+    bool consentPromptDeferred = false,
   }) {
-    // If the app is starting (elder anonymous login), wait.
-    if (elderCheckingAuth) return null;
-
-    // --- COMPANION LOGIC ---
-    // If companion is linked, force dashboard
-    if (companionLinked) {
-      return currentLocation == '/dashboard' ? null : '/dashboard';
-    }
-    // If companion authenticated but not linked, force pairing
-    if (companionAuthenticated) {
-      return currentLocation == '/companion/pairing' ? null : '/companion/pairing';
-    }
-
-    // --- ELDER LOGIC ---
-    // If user manually navigates to companion paths, let them through
-    const companionPaths = {
-      '/companion/choice',
-      '/companion/register',
-      '/companion/login',
-    };
-    if (companionPaths.contains(currentLocation)) return null;
-
-    // Prefer live Firestore data, fall back to controller state during stream gap
-    final elderSource = (elderUser?.role == UserRole.elder) ? elderUser : null;
-    final elderAutonomy = elderSource?.autonomy;
-    final elderLinkCode = elderSource?.linkCode;
-
-    bool isFullyOnboarded = false;
-
-    if (elderAutonomy == AutonomyStatus.independent) {
-      isFullyOnboarded = true;
-    } else if (elderAutonomy == AutonomyStatus.dependent && elderLinkCode == null) {
-      isFullyOnboarded = true;
-    }
-
-    // If elder is authenticated and fully onboarded, route to home
-    if (elderAuthenticated && isFullyOnboarded) {
-      return (currentLocation == '/splash' || currentLocation == '/onboarding') ? '/home' : null;
-    }
-
-    // Default: show onboarding
-    if (currentLocation == '/onboarding') return null;
-    return '/onboarding';
+    return routeRedirect(
+      elderCheckingAuth: elderCheckingAuth,
+      companionLinked: companionLinked,
+      companionAuthenticated: companionAuthenticated,
+      elderUser: elderUser,
+      elderAuthenticated: elderAuthenticated,
+      consentPromptDeferred: consentPromptDeferred,
+      location: currentLocation,
+    );
   }
 }
 
@@ -106,6 +70,7 @@ void main() {
       test('elder with autonomy == independent → /home', () {
         final elderUser = UserModel(
           id: 'elder-2',
+          conversationConsent: _answered,
           role: UserRole.elder,
           autonomy: AutonomyStatus.independent,
         );
@@ -125,6 +90,7 @@ void main() {
       test('elder with autonomy == independent, already at /home → null (no redirect)', () {
         final elderUser = UserModel(
           id: 'elder-3',
+          conversationConsent: _answered,
           role: UserRole.elder,
           autonomy: AutonomyStatus.independent,
         );
@@ -164,6 +130,7 @@ void main() {
       test('elder with autonomy == dependent + linkCode == null (linked) → /home', () {
         final elderUser = UserModel(
           id: 'elder-5',
+          conversationConsent: _answered,
           role: UserRole.elder,
           autonomy: AutonomyStatus.dependent,
           linkedCompanionId: 'comp-123',
@@ -184,6 +151,7 @@ void main() {
       test('elder with autonomy == dependent + linkCode == null, already at /home → null', () {
         final elderUser = UserModel(
           id: 'elder-6',
+          conversationConsent: _answered,
           role: UserRole.elder,
           autonomy: AutonomyStatus.dependent,
           linkedCompanionId: 'comp-456',
@@ -329,6 +297,7 @@ void main() {
       test('elder independent mode: splash → /home', () {
         final elderUser = UserModel(
           id: 'elder-ind',
+          conversationConsent: _answered,
           role: UserRole.elder,
           autonomy: AutonomyStatus.independent,
         );
@@ -348,6 +317,7 @@ void main() {
       test('elder dependent (linked): onboarding → /home', () {
         final elderUser = UserModel(
           id: 'elder-linked',
+          conversationConsent: _answered,
           role: UserRole.elder,
           autonomy: AutonomyStatus.dependent,
           linkedCompanionId: 'comp-123',
@@ -444,6 +414,127 @@ void main() {
         );
 
         expect(result, equals('/onboarding'));
+      });
+    });
+    group('consentimiento (ADR-0030)', () {
+      const independiente = UserModel(
+        id: 'elder-c1',
+        role: UserRole.elder,
+        autonomy: AutonomyStatus.independent,
+      );
+      const recienVinculado = UserModel(
+        id: 'elder-c2',
+        role: UserRole.elder,
+        autonomy: AutonomyStatus.dependent,
+        linkedCompanionId: 'comp-1',
+      );
+
+      test('independiente sin responder: tras elegir modo → /consent', () {
+        expect(
+          RouterRedirectTestHelper.computeRedirect(
+            elderCheckingAuth: false,
+            companionLinked: false,
+            companionAuthenticated: false,
+            elderUser: independiente,
+            elderAuthenticated: true,
+            currentLocation: '/onboarding',
+          ),
+          equals('/consent'),
+        );
+      });
+
+      test('recién vinculado sin responder → /consent, también desde /home', () {
+        expect(
+          RouterRedirectTestHelper.computeRedirect(
+            elderCheckingAuth: false,
+            companionLinked: false,
+            companionAuthenticated: false,
+            elderUser: recienVinculado,
+            elderAuthenticated: true,
+            currentLocation: '/home',
+          ),
+          equals('/consent'),
+        );
+      });
+
+      test('en la pregunta o en su detalle, se queda', () {
+        for (final location in ['/consent', '/consent/details']) {
+          expect(
+            RouterRedirectTestHelper.computeRedirect(
+              elderCheckingAuth: false,
+              companionLinked: false,
+              companionAuthenticated: false,
+              elderUser: independiente,
+              elderAuthenticated: true,
+              currentLocation: location,
+            ),
+            isNull,
+          );
+        }
+      });
+
+      test('ya respondió: de /consent a /home', () {
+        expect(
+          RouterRedirectTestHelper.computeRedirect(
+            elderCheckingAuth: false,
+            companionLinked: false,
+            companionAuthenticated: false,
+            elderUser: independiente.copyWith(conversationConsent: _answered),
+            elderAuthenticated: true,
+            currentLocation: '/consent',
+          ),
+          equals('/home'),
+        );
+      });
+
+      test('respuesta sin guardar (aplazada en esta sesión): pasa a /home', () {
+        expect(
+          RouterRedirectTestHelper.computeRedirect(
+            elderCheckingAuth: false,
+            companionLinked: false,
+            companionAuthenticated: false,
+            elderUser: independiente,
+            elderAuthenticated: true,
+            currentLocation: '/consent',
+            consentPromptDeferred: true,
+          ),
+          equals('/home'),
+        );
+      });
+
+      test('esperando al familiar (con código): no se pregunta todavía', () {
+        expect(
+          RouterRedirectTestHelper.computeRedirect(
+            elderCheckingAuth: false,
+            companionLinked: false,
+            companionAuthenticated: false,
+            elderUser: const UserModel(
+              id: 'elder-c3',
+              role: UserRole.elder,
+              autonomy: AutonomyStatus.dependent,
+              linkCode: 'AB23',
+            ),
+            elderAuthenticated: true,
+            currentLocation: '/consent',
+          ),
+          equals('/onboarding'),
+        );
+      });
+    });
+
+    group('subpantallas del panel (ADR-0033)', () {
+      test('familiar vinculado en /dashboard/conversation/x → se queda', () {
+        expect(
+          RouterRedirectTestHelper.computeRedirect(
+            elderCheckingAuth: false,
+            companionLinked: true,
+            companionAuthenticated: true,
+            elderUser: null,
+            elderAuthenticated: false,
+            currentLocation: '/dashboard/conversation/abc',
+          ),
+          isNull,
+        );
       });
     });
   });

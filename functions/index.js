@@ -4,17 +4,28 @@
  * Codebase creado para ADR-0018: hasta ahora el proxy de Cloud Functions
  * estaba solo diseñado (ADR-0014, "Propuesta").
  *
- * Contiene la síntesis de voz (`synthesizeSpeech`) y la vinculación
- * (`validateAndLink`). La clave de Gemini sigue viviendo en el cliente y su
- * migración es trabajo aparte.
+ * Contiene la síntesis de voz (`synthesizeSpeech`), la vinculación
+ * (`validateAndLink`) y el consentimiento sobre las conversaciones
+ * (`setConversationConsent`). La clave de Gemini del chat en vivo sigue en el
+ * cliente y su migración es trabajo aparte (ADR-0014).
  */
 
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const textToSpeech = require("@google-cloud/text-to-speech");
 const {initializeApp} = require("firebase-admin/app");
-const {getFirestore, FieldValue} = require("firebase-admin/firestore");
+const {getFirestore, FieldValue, Timestamp} =
+  require("firebase-admin/firestore");
 const {resolveEmergencyContact, normalizeLinkCode} = require("./pairing");
+const {
+  COLLECTIONS,
+  MEMORY_PROFILE_DOC,
+  effectiveRetentionDays,
+  expireAtMs,
+  graceDeadlineMs,
+  frozenExpireAtMs,
+  parseConsentRequest,
+} = require("./conversation");
 
 initializeApp();
 
@@ -225,5 +236,183 @@ exports.validateAndLink = onCall(
       }
 
       return {elderId: elderRef.id};
+    },
+);
+
+// ─── Consentimiento sobre las conversaciones (ADR-0030) ──────────────────
+
+/** Escrituras por lote: Firestore admite 500 por batch; se deja margen. */
+const BATCH_SIZE = 400;
+
+/**
+ * Aplica `change(doc)` a todos los documentos de una subcolección del mayor,
+ * en lotes. `change` devuelve el objeto a fusionar, o null para no tocarlo.
+ *
+ * @param {FirebaseFirestore.DocumentReference} userRef documento del mayor.
+ * @param {string} name subcolección.
+ * @param {function} change doc → cambios | null.
+ */
+async function updateEach(userRef, name, change) {
+  const db = userRef.firestore;
+  const docs = (await userRef.collection(name).get()).docs;
+  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    const batch = db.batch();
+    for (const doc of docs.slice(i, i + BATCH_SIZE)) {
+      const update = change(doc);
+      if (update) batch.update(doc.ref, update);
+    }
+    await batch.commit();
+  }
+}
+
+/**
+ * @param {*} value campo leído de un documento.
+ * @return {number|null} milisegundos si es un Timestamp, o null.
+ */
+function millisOf(value) {
+  return value instanceof Timestamp ? value.toMillis() : null;
+}
+
+/**
+ * Congela lo guardado tras una retirada: adelanta la caducidad de cada
+ * documento al fin del periodo de gracia. El borrado lo hace la política TTL
+ * de Firestore sobre `expireAt`; no hace falta ninguna tarea programada.
+ *
+ * @param {FirebaseFirestore.DocumentReference} userRef documento del mayor.
+ * @param {Timestamp} deadline fin del periodo de gracia.
+ */
+async function freezeForDeletion(userRef, deadline) {
+  const deadlineMs = deadline.toMillis();
+  const freeze = (doc) => ({
+    expireAt: Timestamp.fromMillis(
+        frozenExpireAtMs(millisOf(doc.get("expireAt")), deadlineMs)),
+  });
+  await updateEach(userRef, COLLECTIONS.conversations, freeze);
+  await updateEach(userRef, COLLECTIONS.conversationContents, freeze);
+
+  const memoryRef =
+    userRef.collection(COLLECTIONS.memory).doc(MEMORY_PROFILE_DOC);
+  if ((await memoryRef.get()).exists) {
+    await memoryRef.update({expireAt: deadline});
+  }
+}
+
+/**
+ * Deshace el congelado si el mayor vuelve a consentir dentro del periodo de
+ * gracia: cada conversación recupera su caducidad normal y la memoria deja de
+ * caducar.
+ *
+ * @param {FirebaseFirestore.DocumentReference} userRef documento del mayor.
+ * @param {number} retentionDays plazo vigente.
+ */
+async function restoreExpiry(userRef, retentionDays) {
+  const restore = (doc) => {
+    const endedAtMs = millisOf(doc.get("endedAt"));
+    if (endedAtMs === null) return null;
+    return {
+      expireAt: Timestamp.fromMillis(expireAtMs(endedAtMs, retentionDays)),
+    };
+  };
+  await updateEach(userRef, COLLECTIONS.conversations, restore);
+  await updateEach(userRef, COLLECTIONS.conversationContents, restore);
+
+  const memoryRef =
+    userRef.collection(COLLECTIONS.memory).doc(MEMORY_PROFILE_DOC);
+  if ((await memoryRef.get()).exists) {
+    await memoryRef.update({expireAt: FieldValue.delete()});
+  }
+}
+
+/**
+ * Registra la respuesta del mayor a "¿guardo un resumen de nuestras
+ * conversaciones?".
+ *
+ * Entrada: `{ granted: boolean, textVersion: number }`. Solo la puede llamar
+ * el propio mayor sobre sí mismo: el identificador sale de la sesión, así que
+ * un familiar no puede consentir por él (ADR-0030).
+ *
+ * - Conceder: guarda el registro con la hora del servidor y, si está
+ *   vinculado y aún no eligió, deja que su familiar lo vea todo (ADR-0031).
+ *   Si venía de una retirada pendiente, recupera lo congelado.
+ * - Retirar (tras haber concedido): lo guardado queda congelado y se borra
+ *   pasada la mitad del plazo de conservación, salvo que vuelva a consentir.
+ * - "Ahora no" sin haber concedido nunca: solo se registra, para no volver a
+ *   preguntar.
+ */
+exports.setConversationConsent = onCall(
+    {
+      region: REGION,
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      maxInstances: 10,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Se requiere sesión iniciada.");
+      }
+
+      const input = parseConsentRequest(request.data);
+      if (!input) {
+        throw new HttpsError("invalid-argument", "Respuesta no válida.");
+      }
+
+      const userRef =
+        getFirestore().collection(COLLECTIONS.users).doc(request.auth.uid);
+      const snap = await userRef.get();
+      if (!snap.exists || snap.get("role") !== "elder") {
+        throw new HttpsError(
+            "permission-denied",
+            "Solo la persona mayor puede decidir sobre sus conversaciones.",
+        );
+      }
+
+      const data = snap.data();
+      const previous = data.conversationConsent;
+      const wasGranted = previous?.granted === true;
+      const pendingDeletion = !wasGranted && previous?.deleteAfter != null;
+      const retentionDays = effectiveRetentionDays(data.conversationSettings);
+
+      const record = {
+        granted: input.granted,
+        answeredAt: FieldValue.serverTimestamp(),
+        textVersion: input.textVersion,
+      };
+
+      try {
+        if (input.granted) {
+          const update = {conversationConsent: record};
+          if (data.linkedCompanionId && !data.companionSharing) {
+            update.companionSharing = "full";
+          }
+          await userRef.update(update);
+          if (pendingDeletion) await restoreExpiry(userRef, retentionDays);
+        } else if (wasGranted) {
+          const deadline = Timestamp.fromMillis(
+              graceDeadlineMs(Date.now(), retentionDays));
+          record.revokedAt = FieldValue.serverTimestamp();
+          record.deleteAfter = deadline;
+          await userRef.update({conversationConsent: record});
+          await freezeForDeletion(userRef, deadline);
+        } else {
+          // Un "no" repetido no reinicia un borrado ya en marcha.
+          if (pendingDeletion) {
+            record.revokedAt = previous.revokedAt ?? null;
+            record.deleteAfter = previous.deleteAfter;
+          }
+          await userRef.update({conversationConsent: record});
+        }
+      } catch (error) {
+        logger.error("Fallo al registrar el consentimiento", {
+          uid: request.auth.uid,
+          granted: input.granted,
+          error: error.message,
+        });
+        throw new HttpsError(
+            "internal",
+            "No se ha podido guardar tu respuesta.",
+        );
+      }
+
+      return {granted: input.granted};
     },
 );

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/config/preference_scales.dart';
+import 'package:quiet_companion/core/config/route_redirect.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/providers/consent_prompt_deferred_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/features/conversation/presentation/home_screen.dart';
@@ -22,6 +24,8 @@ import 'package:quiet_companion/features/onboarding/presentation/companion_regis
 import 'package:quiet_companion/features/onboarding/presentation/enter_pairing_code_screen.dart';
 import 'package:quiet_companion/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:quiet_companion/features/onboarding/presentation/splash_screen.dart';
+import 'package:quiet_companion/features/privacy/presentation/consent_screen.dart';
+import 'package:quiet_companion/features/privacy/presentation/conversation_privacy_screen.dart';
 
 class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
@@ -47,67 +51,42 @@ class RouterNotifier extends ChangeNotifier {
       notifyListeners();
     });
 
+    _ref.listen<bool>(consentPromptDeferredProvider, (_, next) {
+      _consentDeferred = next;
+      notifyListeners();
+    });
+
     _elderState = _ref.read(elderAuthControllerProvider);
     _companionState = _ref.read(companionAuthControllerProvider);
     _elderUser = _ref.read(currentUserProvider).valueOrNull;
+    _consentDeferred = _ref.read(consentPromptDeferredProvider);
   }
 
   final Ref _ref;
   late AuthState _elderState;
   late CompanionAuthState _companionState;
   UserModel? _elderUser;
+  bool _consentDeferred = false;
 
-  static const _companionPaths = {
-    '/companion/choice',
-    '/companion/register',
-    '/companion/login',
-  };
-
+  /// La lógica vive en [routeRedirect], una función pura con sus tests; aquí
+  /// solo se reúnen sus entradas.
   String? redirect(BuildContext context, GoRouterState routerState) {
-    final elderStatus = _elderState.status;
-    final companionStatus = _companionState.status;
-    final location = routerState.matchedLocation;
+    // Se prefiere el dato en vivo de Firestore; en el hueco antes de que el
+    // stream emita, el del controlador. La guarda de rol impide usar el
+    // documento de un familiar para decidir rutas de mayor.
+    final elderSource =
+        (_elderUser?.role == UserRole.elder) ? _elderUser : _elderState.user;
 
-    // Si la app está arrancando (login anónimo del mayor), esperamos.
-    if (elderStatus == AuthStatus.checking) return null;
-
-    // --- LÓGICA DEL FAMILIAR ---
-    // Si el familiar ya está logueado y vinculado, forzamos el dashboard
-    if (companionStatus == CompanionAuthStatus.linked) {
-      return location == '/dashboard' ? null : '/dashboard';
-    }
-    // Si el familiar hizo login pero aún NO ha metido el código, lo forzamos a la pantalla del código
-    if (companionStatus == CompanionAuthStatus.authenticated) {
-      return location == '/companion/pairing' ? null : '/companion/pairing';
-    }
-
-    // --- LÓGICA DEL MAYOR ---
-    // Si el usuario navega a mano a las pantallas de login del familiar, le dejamos pasar
-    if (_companionPaths.contains(location)) return null;
-
-    // Prefer live Firestore data (currentUserProvider) for routing decisions.
-    // Fall back to controller state during the gap before the stream first emits.
-    // Role guard ensures a companion's UserModel is never used for elder routing.
-    final elderSource = (_elderUser?.role == UserRole.elder) ? _elderUser : _elderState.user;
-    final elderAutonomy = elderSource?.autonomy;
-    final elderLinkCode = elderSource?.linkCode;
-
-    bool isFullyOnboarded = false;
-
-    if (elderAutonomy == AutonomyStatus.independent) {
-      isFullyOnboarded = true;
-    } else if (elderAutonomy == AutonomyStatus.dependent && elderLinkCode == null) {
-      isFullyOnboarded = true;
-    }
-
-    // Si el mayor ha elegido "Independiente" o "Vincular", va a la HomeScreen
-    if (elderStatus == AuthStatus.authenticated && isFullyOnboarded) {
-      return (location == '/splash' || location == '/onboarding') ? '/home' : null;
-    }
-
-    // Por defecto (arranque limpio), mostramos el Onboarding
-    if (location == '/onboarding') return null;
-    return '/onboarding';
+    return routeRedirect(
+      elderCheckingAuth: _elderState.status == AuthStatus.checking,
+      companionLinked: _companionState.status == CompanionAuthStatus.linked,
+      companionAuthenticated:
+          _companionState.status == CompanionAuthStatus.authenticated,
+      elderUser: elderSource,
+      elderAuthenticated: _elderState.status == AuthStatus.authenticated,
+      consentPromptDeferred: _consentDeferred,
+      location: routerState.matchedLocation,
+    );
   }
 }
 
@@ -134,6 +113,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/home',
         builder: (context, state) => const HomeScreen(),
       ),
+      // La pregunta del consentimiento (ADR-0030). Solo se llega por el
+      // enrutador, una vez; su detalle cuelga de ella para que el paso del
+      // alta lo deje pasar (`startsWith('/consent')`).
+      GoRoute(
+        path: '/consent',
+        builder: (context, state) => const ConsentScreen(),
+        routes: [
+          GoRoute(
+            path: 'details',
+            builder: (context, state) =>
+                const ConversationPrivacyScreen(manage: false),
+          ),
+        ],
+      ),
       GoRoute(
         path: '/emergency',
         // Fullscreen dialog: ruta completa, sin barrera de diálogo que sea
@@ -153,6 +146,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'emergency-contact',
             builder: (context, state) => const EmergencyContactSetupScreen(),
+          ),
+          GoRoute(
+            path: 'conversations',
+            builder: (context, state) =>
+                const ConversationPrivacyScreen(manage: true),
           ),
           // Una sola ruta paramétrica para las tres escalas de accesibilidad:
           // añadir un ajuste es añadir una PreferenceScale, sin tocar aquí.

@@ -44,6 +44,13 @@ service cloud.firestore {
       return isSignedIn() && companionOf() == request.auth.uid;
     }
 
+    // Campos que solo escribe el servidor con el Admin SDK. Hoy, el registro
+    // del consentimiento: su hora es la del servidor porque es la prueba de
+    // que el mayor consintió (ADR-0030, `setConversationConsent`).
+    function serverOnlyFields() {
+      return ['conversationConsent'];
+    }
+
     match /users/{userId} {
 
       // ── Lectura ────────────────────────────────────────────────────────
@@ -61,18 +68,21 @@ service cloud.firestore {
       // ── Escritura ──────────────────────────────────────────────────────
       // Alta del propio documento: mayor anónimo en el onboarding
       // (`saveUser`) y familiar en el registro (`ensureCompanionUserDoc`).
-      allow create: if isOwner(userId);
+      // Nadie nace con un consentimiento que no ha dado.
+      allow create: if isOwner(userId)
+        && !request.resource.data.keys().hasAny(serverOnlyFields());
 
       // El borrado de una cuenta es una acción explícita de datos, nunca un
       // efecto de la app. Si algún día hace falta, va por Cloud Function.
       allow delete: if false;
 
       allow update: if
-        // 1. El dueño gobierna su documento: nombre, preferencias y contacto
-        //    de emergencia (`updateName`, `updatePreferences`,
-        //    `updateEmergencyContact`), y su mitad de la transacción de
-        //    vinculación (`linkedElderId`, `autonomy`).
-        isOwner(userId)
+        // 1. El dueño gobierna su documento: nombre, preferencias, contacto
+        //    de emergencia y qué ve su familiar (`updateName`,
+        //    `updatePreferences`, `updateEmergencyContact`,
+        //    `updateCompanionSharing`). Todo menos su consentimiento, que solo
+        //    cambia pasando por la callable.
+        (isOwner(userId) && !changed().hasAny(serverOnlyFields()))
 
         // 2. El familiar vinculado solo toca las dos cosas que su panel
         //    edita. No puede cambiar el rol del mayor, romperle el vínculo ni

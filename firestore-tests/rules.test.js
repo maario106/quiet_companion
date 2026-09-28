@@ -287,3 +287,71 @@ describe('`/users` no es enumerable desde un cliente (RNF-9)', () => {
     )));
   });
 });
+
+// ─── HU-5/HU-6: consentimiento (ADR-0030) ─────────────────────────────────
+
+describe('el consentimiento solo lo escribe el servidor', () => {
+  const consentido = {
+    granted: true, answeredAt: new Date('2026-09-26'), textVersion: 1,
+  };
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'users', ELDER_VINCULADO), {
+        conversationConsent: consentido,
+      });
+    });
+  });
+
+  it('el mayor NO puede escribirse el consentimiento desde el cliente', async () => {
+    await assertFails(updateDoc(userRef(ELDER_LIBRE, ELDER_LIBRE), {
+      conversationConsent: { ...consentido },
+    }));
+  });
+
+  it('el mayor NO puede retirárselo ni borrarlo desde el cliente', async () => {
+    await assertFails(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
+      'conversationConsent.granted': false,
+    }));
+    await assertFails(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
+      conversationConsent: deleteField(),
+    }));
+  });
+
+  it('nadie da de alta un documento con consentimiento de serie', async () => {
+    await assertFails(setDoc(
+      userRef('nuevo-mayor', 'nuevo-mayor'),
+      elder({ id: 'nuevo-mayor', conversationConsent: consentido }),
+    ));
+  });
+
+  it('el familiar NO puede consentir por su mayor', async () => {
+    await assertFails(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
+      'conversationConsent.granted': false,
+    }));
+  });
+
+  it('con el consentimiento puesto, el mayor sigue escribiendo sus ajustes', async () => {
+    await assertSucceeds(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
+      preferences: { volume: 0.6, speechRate: 0.4, textSizeMultiplier: 1.6 },
+    }));
+  });
+
+  it('el mayor elige qué ve su familiar (companionSharing)', async () => {
+    await assertSucceeds(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
+      companionSharing: 'wellbeing',
+    }));
+  });
+
+  it('el familiar NO puede cambiar lo que ve', async () => {
+    await assertFails(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
+      companionSharing: 'full',
+    }));
+  });
+
+  it('el panel escribe una sola magnitud (updatePreferenceField, ADR-0027)', async () => {
+    await assertSucceeds(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
+      'preferences.volume': 0.5,
+    }));
+  });
+});

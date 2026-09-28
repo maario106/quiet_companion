@@ -1,3 +1,6 @@
+import 'package:quiet_companion/core/models/companion_sharing.dart';
+import 'package:quiet_companion/core/models/conversation_consent.dart';
+import 'package:quiet_companion/core/models/conversation_settings.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 
@@ -24,6 +27,18 @@ class UserModel {
   /// feature. El camino null-safe es el mismo en ambos casos.
   final EmergencyContact? emergencyContact;
 
+  /// Respuesta del mayor a guardar sus conversaciones. null = nunca ha
+  /// respondido, y el enrutador le enseña la pregunta (ADR-0030). Lo escribe
+  /// solo el servidor: [toMap] no lo incluye nunca.
+  final ConversationConsent? conversationConsent;
+
+  /// Qué ve el familiar del análisis (ADR-0031). Lo escribe solo el mayor.
+  final CompanionSharing? companionSharing;
+
+  /// Plazos de la conversación (ADR-0034). null = valores por defecto; léase
+  /// siempre por [effectiveConversationSettings].
+  final ConversationSettings? conversationSettings;
+
   const UserModel({
     required this.id,
     this.name,
@@ -35,7 +50,16 @@ class UserModel {
     this.preferences = const UserPreferences(),
     this.phoneNumber,
     this.emergencyContact,
+    this.conversationConsent,
+    this.companionSharing,
+    this.conversationSettings,
   });
+
+  ConversationSettings get effectiveConversationSettings =>
+      conversationSettings ?? const ConversationSettings();
+
+  /// Consentimiento vigente: el análisis corre y el familiar puede mirar.
+  bool get hasConversationConsent => conversationConsent?.granted == true;
 
   static const _unset = Object();
 
@@ -50,6 +74,9 @@ class UserModel {
     UserPreferences? preferences,
     Object? phoneNumber = _unset,
     Object? emergencyContact = _unset,
+    Object? conversationConsent = _unset,
+    Object? companionSharing = _unset,
+    Object? conversationSettings = _unset,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -69,6 +96,15 @@ class UserModel {
       emergencyContact: emergencyContact == _unset
           ? this.emergencyContact
           : emergencyContact as EmergencyContact?,
+      conversationConsent: conversationConsent == _unset
+          ? this.conversationConsent
+          : conversationConsent as ConversationConsent?,
+      companionSharing: companionSharing == _unset
+          ? this.companionSharing
+          : companionSharing as CompanionSharing?,
+      conversationSettings: conversationSettings == _unset
+          ? this.conversationSettings
+          : conversationSettings as ConversationSettings?,
     );
   }
 
@@ -87,6 +123,12 @@ class UserModel {
       // documentos que no lo necesitan.
       if (emergencyContact != null)
         'emergencyContact': emergencyContact!.toMap(),
+      if (companionSharing != null) 'companionSharing': companionSharing!.name,
+      if (conversationSettings != null)
+        'conversationSettings': conversationSettings!.toMap(),
+      // `conversationConsent` no se escribe nunca desde aquí: es un registro
+      // del servidor y las reglas deniegan que un cliente lo toque. Los únicos
+      // `set()` completos que quedan (onboarding) ocurren antes de que exista.
     };
   }
 
@@ -104,6 +146,11 @@ class UserModel {
           : const UserPreferences(),
       phoneNumber: map['phoneNumber'] as String?,
       emergencyContact: EmergencyContact.fromMapOrNull(map['emergencyContact']),
+      conversationConsent:
+          ConversationConsent.fromMapOrNull(map['conversationConsent']),
+      companionSharing: CompanionSharing.fromNameOrNull(map['companionSharing']),
+      conversationSettings:
+          ConversationSettings.fromMapOrNull(map['conversationSettings']),
     );
   }
 }

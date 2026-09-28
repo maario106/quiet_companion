@@ -62,6 +62,15 @@ final List<SettingsRow> settingsRows = [
       visible: (user) => true,
       route: scale.route,
     ),
+  // El consentimiento sobre las conversaciones (ADR-0030). Visible para todo
+  // mayor, vinculado o no: es suyo, y retirarlo tiene que ser tan fácil como
+  // darlo. También sirve a quien dijo "Ahora no" y cambia de idea.
+  SettingsRow(
+    title: 'Guardar mis conversaciones',
+    value: (user) => user.hasConversationConsent ? 'Sí' : 'No',
+    visible: (user) => true,
+    route: '/settings/conversations',
+  ),
 ];
 
 /// Filas visibles para [user]. La usan HomeScreen (botón visible si hay ≥ 1
