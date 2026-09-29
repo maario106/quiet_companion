@@ -197,6 +197,17 @@ class ChatController extends StateNotifier<ChatState> {
   Future<void> startListening() async {
     // El mayor empieza a hablar: la conversación sigue viva.
     _cancelInactivity();
+    // Nunca se abre el micrófono con la voz de la app sonando: el reconocedor
+    // la oiría a ella y no al mayor. Puede venir de otra pantalla ("Escuchar"
+    // del consentimiento o de "Mi semana"), que no pasa por este controlador.
+    // Con tope y sin propagar errores: callar la voz ayuda, pero el micrófono
+    // no puede quedar a merced de una llamada a la plataforma.
+    try {
+      await _ttsService.stop().timeout(const Duration(seconds: 1));
+    } catch (_) {
+      // Si no se pudo callar a tiempo, se escucha igual.
+    }
+    if (!mounted) return;
     final available = await _speechService.initiate();
 
     if (!available) {

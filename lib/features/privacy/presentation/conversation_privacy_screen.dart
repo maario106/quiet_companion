@@ -6,6 +6,7 @@ import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/utils/spanish_date.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
+import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_controller.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_text.dart';
 import 'package:quiet_companion/features/privacy/presentation/consent_sections.dart';
@@ -46,44 +47,46 @@ class _ConversationPrivacyScreenState
     final textScale = user.preferences.textSizeMultiplier;
     final text = ConsentText.forUser(user);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.manage ? 'Guardar mis conversaciones' : 'Saber más',
-          style: TextStyle(
-            fontSize: AppTheme.fontMedium * textScale,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.elderTextPrimary,
+    return StopSpeakingOnExit(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.manage ? 'Guardar mis conversaciones' : 'Saber más',
+            style: TextStyle(
+              fontSize: AppTheme.fontMedium * textScale,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.elderTextPrimary,
+            ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints:
-                BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(AppTheme.screenPadding(context)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (widget.manage) ...[
-                    _Status(user: user, textScale: textScale),
-                    const SizedBox(height: 24),
-                    ..._actions(user, textScale, consent),
-                    const SizedBox(height: 40),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(AppTheme.screenPadding(context)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.manage) ...[
+                      _Status(user: user, textScale: textScale),
+                      const SizedBox(height: 24),
+                      ..._actions(user, textScale, consent),
+                      const SizedBox(height: 40),
+                    ],
+                    ConsentSections(sections: text.details, textScale: textScale),
+                    ElderButton(
+                      label: 'Escuchar',
+                      icon: Icons.volume_up,
+                      secondary: true,
+                      textScale: textScale,
+                      onPressed: () => ref.read(ttsServiceProvider).speak(
+                            ConsentText.spoken(text.details, withQuestion: false),
+                          ),
+                    ),
                   ],
-                  ConsentSections(sections: text.details, textScale: textScale),
-                  ElderButton(
-                    label: 'Escuchar',
-                    icon: Icons.volume_up,
-                    secondary: true,
-                    textScale: textScale,
-                    onPressed: () => ref.read(ttsServiceProvider).speak(
-                          ConsentText.spoken(text.details, withQuestion: false),
-                        ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

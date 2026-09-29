@@ -9,6 +9,7 @@ import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/utils/week_summary.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
+import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 import 'package:quiet_companion/features/my_week/domain/my_week_text.dart';
 
 /// "Mi semana": el mayor ve su propio análisis (ADR-0033). Todo mayor con el
@@ -42,79 +43,81 @@ class MyWeekScreen extends ConsumerWidget {
       color: AppTheme.elderTextPrimary,
     );
 
-    return Scaffold(
-      appBar: AppBar(title: Text('Mi semana', style: titleStyle)),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints:
-                BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
-            child: records.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Ahora no puedo enseñarte tu semana. Inténtalo más tarde.',
-                  style: bodyStyle,
-                  textAlign: TextAlign.center,
+    return StopSpeakingOnExit(
+      child: Scaffold(
+        appBar: AppBar(title: Text('Mi semana', style: titleStyle)),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints:
+                  BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
+              child: records.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (_, __) => Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Ahora no puedo enseñarte tu semana. Inténtalo más tarde.',
+                    style: bodyStyle,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-              ),
-              data: (list) {
-                final now = DateTime.now();
-                final week =
-                    summarizeWeek(records: list, contents: contents, now: now);
-                final sentences = myWeekSentences(week, now);
-                final sharing = user.linkedCompanionId == null
-                    ? null
-                    : (user.companionSharing ?? CompanionSharing.none);
+                data: (list) {
+                  final now = DateTime.now();
+                  final week =
+                      summarizeWeek(records: list, contents: contents, now: now);
+                  final sentences = myWeekSentences(week, now);
+                  final sharing = user.linkedCompanionId == null
+                      ? null
+                      : (user.companionSharing ?? CompanionSharing.none);
 
-                return SingleChildScrollView(
-                  padding: EdgeInsets.all(AppTheme.screenPadding(context)),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _DaysRow(week: week, textScale: textScale),
-                      const SizedBox(height: 32),
-                      for (final sentence in sentences) ...[
-                        Text(sentence, style: bodyStyle),
-                        const SizedBox(height: 16),
-                      ],
-                      const SizedBox(height: 8),
-                      ElderButton(
-                        label: 'Escuchar',
-                        icon: Icons.volume_up,
-                        secondary: true,
-                        textScale: textScale,
-                        onPressed: () => ref
-                            .read(ttsServiceProvider)
-                            .speak(sentences.join(' ')),
-                      ),
-                      if (sharing != null) ...[
-                        const SizedBox(height: 40),
-                        Text('Lo que ve tu familiar', style: titleStyle),
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.all(AppTheme.screenPadding(context)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _DaysRow(week: week, textScale: textScale),
+                        const SizedBox(height: 32),
+                        for (final sentence in sentences) ...[
+                          Text(sentence, style: bodyStyle),
+                          const SizedBox(height: 16),
+                        ],
                         const SizedBox(height: 8),
-                        Text(sharing.description, style: bodyStyle),
-                        const SizedBox(height: 16),
                         ElderButton(
-                          label: 'Cambiar lo que ve',
+                          label: 'Escuchar',
+                          icon: Icons.volume_up,
                           secondary: true,
                           textScale: textScale,
-                          onPressed: () =>
-                              context.push('/settings/companion-sharing'),
+                          onPressed: () => ref
+                              .read(ttsServiceProvider)
+                              .speak(sentences.join(' ')),
+                        ),
+                        if (sharing != null) ...[
+                          const SizedBox(height: 40),
+                          Text('Lo que ve tu familiar', style: titleStyle),
+                          const SizedBox(height: 8),
+                          Text(sharing.description, style: bodyStyle),
+                          const SizedBox(height: 16),
+                          ElderButton(
+                            label: 'Cambiar lo que ve',
+                            secondary: true,
+                            textScale: textScale,
+                            onPressed: () =>
+                                context.push('/settings/companion-sharing'),
+                          ),
+                        ],
+                        const SizedBox(height: 32),
+                        Text(
+                          'Esto lo resumo yo a partir de lo que hablamos, y puedo '
+                          'equivocarme.',
+                          style: bodyStyle.copyWith(
+                            color: AppTheme.elderTextSecondary,
+                          ),
                         ),
                       ],
-                      const SizedBox(height: 32),
-                      Text(
-                        'Esto lo resumo yo a partir de lo que hablamos, y puedo '
-                        'equivocarme.',
-                        style: bodyStyle.copyWith(
-                          color: AppTheme.elderTextSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),
