@@ -17,10 +17,9 @@ El problema tiene ya reconocimiento institucional. En 2024 la \textit{Revista Es
 editada por el Ministerio de Sanidad, describía la SND como \enquote{un problema silente de nuevo orden}
 \citep{JimenezRodriguez2024}, y el \textit{Barómetro de la soledad no deseada en España}, del Observatorio
 Estatal impulsado por Fundación ONCE y Fundación AXA, la sitúa en el 20\% de la población adulta
-\citep{SoledadES}. Entre los mayores de 65 años son cerca de tres millones de personas, con un coste para el
-Estado estimado en 14.141 millones de euros anuales \citep{Senara}. Lo característico de la soledad en la
-vejez, y lo que la distingue de la que se sufre a otras edades, es que suele estar ligada a pérdidas
-difícilmente reversibles y tiende por ello a cronificarse \citep{FundacionONCE}. El
+\citep{SoledadES}. Entre los mayores de 65 años son cerca de tres millones de personas los que la padecen,
+con un coste para el Estado estimado en 14.141 millones de euros anuales \citep{Senara}. Lo característico
+de la soledad en la vejez, y lo que la distingue de la que se sufre a otras edades, es que suele estar ligada a pérdidas difícilmente reversibles y tiende por ello a cronificarse \citep{FundacionONCE}. El
 capítulo~\ref{cap:marco-teorico} desarrolla la dimensión del problema y la evidencia sobre sus consecuencias.
 
 Sobre ese problema se superpone una barrera tecnológica. La digitalización de la banca, la administración y
@@ -37,8 +36,7 @@ precisamente los que más fallan en usuarios mayores \citep{Kane2019}. Las que s
 reparten entre dos extremos igual de problemáticos: por un lado el hardware dedicado, de coste elevado e
 implantación testimonial en España; por otro los compañeros conversacionales generalistas, que no se diseñaron
 para este perfil sino que se optimizan para maximizar el tiempo de uso \citep{Zhou2020}, con patrones
-documentados de dependencia emocional y expedientes regulatorios abiertos en Europa. Entre ambos no hay casi
-nada.
+documentados de dependencia emocional y expedientes regulatorios abiertos en Europa.
 
 Esa intersección entre una necesidad social contrastada y una oferta de software que no la atiende es la que
 justifica este Trabajo Fin de Grado.
@@ -46,16 +44,12 @@ justifica este Trabajo Fin de Grado.
 \section{Motivación}
 
 La motivación de este proyecto es doble. En el plano de la ingeniería, se trata de llevar a un desarrollo
-completo, de principio a fin y con decisiones justificadas una a una, las competencias adquiridas a lo largo
-del grado. Merece la pena nombrar cuáles, porque explican buena parte de lo que documenta esta memoria.
+completo, de principio a fin y con decisiones justificadas una a una; mientras se ponen en práctica las competencias adquiridas a lo largo del grado. Merece la pena nombrar cuáles, porque explican buena parte de lo que documenta esta memoria.
 
-De \textit{Desarrollo Software} procede el conocimiento de Flutter, empleado allí para construir pequeños
-aplicativos. Lo que esa asignatura dejó claro no fue el marco de trabajo en sí, sino dos propiedades suyas que
-aquí resultan decisivas: que la interfaz se describe como un árbol de \emph{widgets} componibles, lo que
-permite extraer y reutilizar componentes en lugar de duplicarlos, y que su ecosistema de paquetes resuelve sin
-esfuerzo funcionalidades que de otro modo exigirían programar contra las API nativas de cada plataforma, como
+De \textit{Desarrollo Software} procede el conocimiento de Flutter, empleado en la asignatura para construir pequeños aplicativos. Lo que este aprendizaje dejó claro no fue el marco de trabajo en sí, sino dos propiedades suyas que aquí resultan decisivas: que la interfaz se describe como un árbol de \emph{widgets} componibles,
+lo que permite extraer y reutilizar componentes en lugar de duplicarlos, y que su ecosistema de paquetes resuelve sin esfuerzo funcionalidades que de otro modo exigirían programar contra las API nativas de cada plataforma, como
 el reconocimiento de voz o la síntesis del habla. De la misma asignatura proceden los patrones de diseño, cuya
-utilidad no es la elegancia sino disponer de soluciones con nombre y consecuencias conocidas para problemas
+utilidad no es la elegancia sino el disponer de soluciones con nombre y consecuencias conocidas para problemas
 recurrentes. Varios aparecen literalmente en este proyecto: la inyección de dependencias mediante proveedores,
 el patrón repositorio para aislar el acceso a datos y el patrón observador en la suscripción de la interfaz a
 los cambios del perfil del usuario.
@@ -68,7 +62,7 @@ capítulo~\ref{cap:metodologia} es en buena medida la aplicación de ese criteri
 persona, situación que obliga a decidir qué prácticas conservan sentido sin equipo y cuáles se convierten en
 ceremonia vacía.
 
-De \textit{Programación y Desarrollo Orientado a Objetos} procede el modelado: diagramas de casos de uso, de
+De \textit{Programación y Desarrollo Orientado a Objetos} y \textit{Fundamentos de Ingeniería de Sistemas} procede el modelado: diagramas de casos de uso, de
 clases y de secuencia, y la representación de la arquitectura de un sistema. La lección que más se ha notado
 es que el tiempo invertido en modelar antes de escribir código se recupera con creces, porque un error de
 diseño detectado sobre un diagrama cuesta rehacer el diagrama, y el mismo error detectado sobre la
@@ -85,7 +79,7 @@ este perfil de usuario. El capítulo~\ref{cap:marco-teorico} sustancia ese anál
 completo.
 
 Hay que ser prudente con lo que se promete. Este trabajo no sostiene que una aplicación conversacional sea
-una intervención terapéutica frente a la soledad, ni dispone de evidencia propia para afirmarlo, porque no se
+una intervención terapéutica frente a la soledad, ni dispone de evidencia propia para afirmarlo, pues no se
 ha realizado ningún estudio clínico con usuarios reales.
 
 Lo que sí puede defenderse es la exploración de una tercera vía: una aplicación accesible, construida sobre
