@@ -1,0 +1,35 @@
+@startuml diagrama_casos_de_uso
+' Casos de uso del MVP (CU-01 a CU-06), figura fig:casos-de-uso del capítulo 4.
+' Regenerar: java -jar plantuml.jar diagrama_casos_de_uso.puml
+left to right direction
+skinparam dpi 150
+
+actor "Mayor Independiente" as MI
+actor "Mayor Vinculado" as MV
+actor "Familiar" as FA
+actor "API Gemini" as GEM <<external>>
+
+rectangle "Quiet Companion" {
+  usecase "CU-05\nAjustar preferencias\n(desde el dispositivo\ndel mayor)" as CU05
+  usecase "CU-01\nSeleccionar modo\nde uso" as CU01
+  usecase "CU-04\nConversar por voz" as CU04
+  usecase "CU-02\nGenerar código\nde vinculación" as CU02
+  usecase "CU-06\nAjustar preferencias\n(modo remoto)" as CU06
+  usecase "CU-03\nIntroducir código\nde vinculación" as CU03
+}
+
+MI --> CU05
+MI --> CU01
+MI --> CU04
+
+MV --> CU05
+MV --> CU01
+MV --> CU04
+MV --> CU02
+
+FA --> CU06
+FA --> CU03
+
+CU04 ..> GEM : <<include>>
+CU02 ..> CU03 : <<precedes>>
+@enduml

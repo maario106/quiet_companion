@@ -1,0 +1,33 @@
+@startuml diagrama_actores
+' Jerarquía de actores, figura fig:actores del capítulo 4.
+' Regenerar: java -jar plantuml.jar diagrama_actores.puml
+left to right direction
+skinparam actorStyle awesome
+skinparam dpi 150
+
+actor "Mayor" as M
+actor "Mayor Independiente" as MI
+actor "Mayor Vinculado" as MV
+actor "Familiar\n(Companion)" as FA
+actor "API Gemini" as GEM <<external>>
+
+MI --|> M
+MV --|> M
+
+rectangle "Quiet Companion" {
+  usecase "Configurar accesibilidad\n(local)" as ACC_LOCAL
+  usecase "Conversar por voz" as CHAT
+  usecase "Vincular con familiar\n(generar código)" as GEN
+  usecase "Vincular con mayor\n(introducir código)" as LINK
+  usecase "Configurar accesibilidad\n(remoto)" as ACC_REMOTE
+}
+
+' La accesibilidad local la tiene todo mayor, no solo el independiente.
+M --> ACC_LOCAL
+M --> CHAT
+MV --> GEN
+FA --> LINK
+FA --> ACC_REMOTE
+
+CHAT ..> GEM : <<include>>
+@enduml
