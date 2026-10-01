@@ -15,13 +15,18 @@ secundarios, servicios externos que no son humanos pero sin los cuales el sistem
 casos de uso principales.
 
 El \textbf{Mayor Independiente} es la persona mayor que ha optado durante el \textit{onboarding} por
-gestionar la aplicación por sí misma. Tiene acceso al chat por voz y a los ajustes de accesibilidad en su
-propio dispositivo, y se autentica de forma anónima, de modo que su identidad queda ligada al terminal. El
-\textbf{Mayor Vinculado} es aquel cuya configuración delega en un familiar: su interfaz se restringe al
-chat por voz, en el llamado \textit{modo ultrasimple}, mientras el emparejamiento no se completa, y se
-autentica igualmente de forma anónima. El \textbf{Familiar}, por último, es el adulto que asume la gestión
-de la configuración del Mayor Vinculado, accede a un panel remoto desde su propio dispositivo y se
-autentica con correo electrónico y contraseña, porque necesita una cuenta portable entre terminales.
+gestionar la aplicación por sí misma. Tiene acceso al chat por voz y a todos sus ajustes en su propio
+dispositivo, y se autentica de forma anónima, de modo que su identidad queda ligada al terminal. El
+\textbf{Mayor Vinculado} es aquel cuya configuración delega en un familiar, sin perder por ello el acceso a
+sus ajustes. Hasta que el familiar introduce el código de emparejamiento no dispone todavía del chat; desde
+ese momento comparte con el Mayor Independiente la pantalla principal y la de ajustes, salvo los plazos de
+las conversaciones, que pasan al familiar, y el contacto de emergencia cuando la vinculación lo ha fijado
+en el propio familiar. Se reserva además dos decisiones que el familiar no puede tomar por él: si se
+guardan sus conversaciones y qué parte de su análisis comparte. Se autentica igualmente de forma anónima.
+El \textbf{Familiar}, por último, es el adulto que asume la gestión de la configuración del Mayor
+Vinculado, accede a un panel remoto desde su propio dispositivo, en el que consulta también lo que el mayor
+haya decidido compartir, y se autentica con correo electrónico y contraseña, porque necesita una cuenta
+portable entre terminales.
 
 En cuanto a los actores secundarios, la \textbf{API de Gemini} es el servicio al que se delega la
 generación de las respuestas conversacionales, y la \textbf{API de Cloud Text-to-Speech} es la que
@@ -33,8 +38,8 @@ ambos condicionan la disponibilidad del caso de uso conversacional, tal y como r
 Los dos perfiles de Mayor (Independiente y Vinculado) heredan del mismo concepto de usuario \textit{Mayor};
 la diferencia entre ambos es de \textbf{configuración}, no de identidad, y se materializa en el
 atributo \code{autonomy} del modelo de datos. Esta unificación es relevante para el diseño: una misma
-jerarquía de pantallas y un mismo controlador atienden a ambos perfiles, alternando entre presentaciones
-mediante un único condicional sobre \code{autonomy}.
+jerarquía de pantallas y un mismo controlador atienden a ambos perfiles, y una vez completado el
+emparejamiento lo único que varía entre ellos es qué filas de la pantalla de ajustes se muestran.
 
 \begin{figure}[htbp]
     \centering
@@ -181,9 +186,9 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \textbf{Prioridad} & Alta \\
         \hline
         \textbf{Descripción} & El sistema debe permitir configurar volumen de voz, velocidad de habla y
-            tamaño del texto. El acceso depende del modo del mayor: si es independiente, accede desde su
-            propio dispositivo; si está vinculado, la configuración se realiza únicamente desde el
-            dispositivo del familiar. \\
+            tamaño del texto. Todo mayor, independiente o vinculado, debe poder ajustarlos desde su
+            propio dispositivo; si está vinculado, también puede hacerlo su familiar desde el panel
+            remoto. \\
         \hline
         \textbf{Entradas} & Valores de los parámetros configurables. \\
         \hline
@@ -462,8 +467,8 @@ definida.
     confundibles: O e I).
     \item El sistema persiste el código en el perfil del mayor y lo presenta en pantalla con tipografía de
     gran tamaño.
-    \item La interfaz del mayor permanece bloqueada en modo ultrasimple mientras el campo
-    \code{linkedCompanionId} sea nulo.
+    \item El mayor permanece en esa pantalla, sin acceso todavía a la conversación, mientras el código
+    siga sin consumir.
 \end{enumerate}
 
 \noindent\textbf{Flujos alternativos:} El alfabeto empleado ofrece unas 923.000 combinaciones posibles y el
@@ -491,8 +496,8 @@ posee un código de vinculación válido proporcionado por el mayor.
     \item El sistema ejecuta una operación atómica que actualiza, en una misma transacción, el campo
     \code{linkedCompanionId} del mayor y el campo \code{linkedElderId} del familiar, y consume el código
     para que no pueda reutilizarse.
-    \item El sistema notifica el emparejamiento exitoso al familiar y desbloquea automáticamente la
-    interfaz del mayor.
+    \item El sistema notifica el emparejamiento exitoso al familiar, y la aplicación del mayor abandona
+    por sí sola la pantalla del código.
 \end{enumerate}
 
 \noindent\textbf{Flujos alternativos:}
@@ -502,8 +507,9 @@ posee un código de vinculación válido proporcionado por el mayor.
 \end{itemize}
 
 \noindent\textbf{Postcondiciones:} Los perfiles de mayor y familiar están vinculados de forma
-bidireccional y el código ha quedado consumido. La interfaz del mayor sale del modo ultrasimple sin que
-éste tenga que intervenir.
+bidireccional y el código ha quedado consumido. La aplicación del mayor deja la pantalla del código sin
+que éste tenga que intervenir y le presenta la pregunta del consentimiento (CU-07) antes de la pantalla
+principal.
 
 \bigskip
 
@@ -546,11 +552,12 @@ internet y de permisos de micrófono concedidos.
 
 \bigskip
 
-\paragraph{CU-05. Ajustar preferencias (modo independiente)}
+\paragraph{CU-05. Ajustar preferencias (desde el dispositivo del mayor)}
 
-\noindent\textbf{Actor primario:} Mayor Independiente.
+\noindent\textbf{Actor primario:} Mayor (Independiente o Vinculado).
 
-\noindent\textbf{Precondiciones:} El mayor tiene un perfil con \code{autonomy = independent}.
+\noindent\textbf{Precondiciones:} El mayor tiene un perfil activo y, si es vinculado, el emparejamiento se
+ha completado.
 
 \noindent\textbf{Flujo principal:}
 \begin{enumerate}[nosep]
@@ -558,12 +565,17 @@ internet y de permisos de micrófono concedidos.
     \item El sistema muestra los controles de volumen, velocidad de voz y tamaño de texto, presentados
     como botones grandes (incremento / decremento), no como sliders deslizables.
     \item El mayor modifica uno o varios parámetros.
-    \item Cada cambio se persiste en la base de datos al soltar el control.
+    \item Cada pulsación se persiste por sí sola en la base de datos, sin botón de guardar.
     \item Los nuevos parámetros se aplican inmediatamente a las próximas interacciones de voz y al
     renderizado de la interfaz.
 \end{enumerate}
 
-\noindent\textbf{Flujos alternativos:} Ninguno relevante.
+\noindent\textbf{Flujos alternativos:}
+\begin{itemize}[nosep]
+    \item \textbf{4a.} El mayor está vinculado y su familiar cambia el mismo parámetro desde el panel
+    (CU-06): prevalece el último cambio, sin arbitraje, porque sobre la accesibilidad ninguno de los dos
+    tiene una autoridad que proteger.
+\end{itemize}
 
 \noindent\textbf{Postcondiciones:} Las preferencias del mayor están actualizadas y aplicadas.
 
@@ -747,7 +759,9 @@ almacena es la que materializa el principio de minimización de RNF-10.
 
 La relación principal es la \textbf{vinculación} entre un mayor y un familiar. Es binaria, bidireccional y
 opcional, se establece mediante un código temporal de un solo uso y, una vez establecida, autoriza al
-familiar a leer el perfil del mayor y a modificar sus preferencias, y solo esas.
+familiar a leer el perfil del mayor y a modificar sus preferencias, su nombre y los plazos de sus
+conversaciones, y nada más. Lo que pueda leer del análisis de esas conversaciones depende, además, de lo
+que el mayor haya decidido compartir.
 
 \begin{figure}[htbp]
     \centering

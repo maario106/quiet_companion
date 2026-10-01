@@ -144,13 +144,16 @@ ellas la sustitución de los deslizadores continuos por peldaños con nombre, na
 persona mayor intentando usar la aplicación.
 
 Los actores del sistema son tres. El \textit{mayor independiente} es la persona mayor con autonomía
-cognitiva y técnica suficiente para gestionar la aplicación por sí misma, con acceso al chat por voz y a
-los ajustes de accesibilidad en su propio dispositivo. El \textit{mayor vinculado} delega la configuración
-en un familiar; su interfaz permanece restringida al chat por voz, en el llamado \textit{modo
-ultrasimple}, mientras el emparejamiento no se ha completado, si bien conserva las escalas locales de
-accesibilidad incorporadas durante la última fase del desarrollo. El \textit{familiar}, por último, es el
-adulto que gestiona la configuración del mayor vinculado desde un panel remoto en su propio dispositivo y
-que, en versiones futuras, accederá a indicadores de bienestar emocional.
+cognitiva y técnica suficiente para gestionar la aplicación por sí misma: además del chat por voz,
+configura desde su propio dispositivo la accesibilidad, el contacto de emergencia y el tratamiento de sus
+conversaciones. El \textit{mayor vinculado} delega esa configuración en un familiar, pero no pierde el
+acceso a ella: una vez completado el emparejamiento ve la misma pantalla de ajustes, puede cambiar sus
+escalas de accesibilidad y es el único que decide si se guardan sus conversaciones y qué parte de su
+análisis llega al familiar. Solo quedan fuera de su alcance los plazos de las conversaciones, que gestiona
+el familiar, y el contacto de emergencia cuando la vinculación lo ha fijado en el propio familiar. El
+\textit{familiar}, por último, es el adulto que gestiona la configuración del mayor vinculado desde un
+panel remoto en su propio dispositivo, en el que consulta también los indicadores de bienestar que el
+mayor haya decidido compartir.
 
 Estos tres perfiles se materializan en el modelo de datos mediante el campo \code{role} (\code{elder} o
 \code{companion}) y, en el caso del mayor, el campo \code{autonomy} (\code{independent} o
