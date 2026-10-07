@@ -4,62 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:quiet_companion/core/models/conversation_settings.dart';
 import 'package:quiet_companion/core/models/elder_memory.dart';
 import 'package:quiet_companion/core/services/conversation_closer.dart';
-import 'package:quiet_companion/core/services/gemini_service.dart';
-import 'package:quiet_companion/core/services/speech_service.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
+import 'package:quiet_companion/features/conversation/domain/chat_state.dart';
 
 import '../../helpers/fake_auth_repository.dart';
+import '../../helpers/fake_gemini_service.dart';
+import '../../helpers/fake_speech_service.dart';
 import '../../helpers/fake_tts_service.dart';
-
-class FakeGeminiService implements GeminiService {
-  int sessionsStarted = 0;
-  bool failNext = false;
-  ElderMemory? lastMemory;
-  List<ConversationTurn> lastHistory = const [];
-
-  @override
-  void startSession(
-    String? elderName, {
-    ElderMemory? memory,
-    List<ConversationTurn> history = const [],
-  }) {
-    sessionsStarted++;
-    lastMemory = memory;
-    lastHistory = history;
-  }
-
-  @override
-  Future<GeminiResponse> sendMessage(String text) async {
-    if (failNext) {
-      failNext = false;
-      return const GeminiResponse(text: 'Upss…', failed: true);
-    }
-    return GeminiResponse(text: 'Respuesta a: $text');
-  }
-}
-
-class FakeSpeechService implements SpeechService {
-  @override
-  Future<bool> initiate() async => true;
-
-  @override
-  void beginListening({
-    required void Function(String transcript) onPartial,
-    required void Function(String transcript) onFinal,
-  }) {}
-
-  @override
-  String stopListening() => '';
-
-  @override
-  void cancelListening() {}
-
-  @override
-  String get transcript => '';
-
-  @override
-  bool get isListening => false;
-}
+import '../../helpers/manual_timer.dart';
 
 class RecordingCloser implements ConversationCloser {
   final closed = <ClosedConversation>[];
@@ -70,32 +22,13 @@ class RecordingCloser implements ConversationCloser {
   }
 }
 
-/// Temporizador controlado a mano: el test decide cuándo vence.
-class ManualTimer implements Timer {
-  ManualTimer(this.duration, this._onFire);
-
-  final Duration duration;
-  final void Function() _onFire;
-  bool _active = true;
-
-  void fire() {
-    if (!_active) return;
-    _active = false;
-    _onFire();
-  }
-
-  @override
-  void cancel() => _active = false;
-
-  @override
-  bool get isActive => _active;
-
-  @override
-  int get tick => 0;
-}
+/// Deja correr lo que esté pendiente (respuestas del modelo, voces cortadas).
+Future<void> settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
   late FakeGeminiService gemini;
+  late FakeSpeechService speech;
+  late FakeTtsService tts;
   late RecordingCloser closer;
   late List<ManualTimer> timers;
   late DateTime clock;
@@ -104,8 +37,8 @@ void main() {
   ChatController build({bool consent = true}) {
     return ChatController(
       gemini,
-      FakeSpeechService(),
-      FakeTtsService(),
+      speech,
+      tts,
       FakeAuthRepository(),
       'elder-1',
       'Carmen',
@@ -131,6 +64,8 @@ void main() {
 
   setUp(() {
     gemini = FakeGeminiService();
+    speech = FakeSpeechService();
+    tts = FakeTtsService();
     closer = RecordingCloser();
     timers = [];
     clock = DateTime(2026, 9, 26, 10);
@@ -276,6 +211,102 @@ void main() {
 
       expect(gemini.lastHistory, hasLength(4));
       expect(gemini.lastHistory.first.role, ConversationRole.elder);
+    });
+  });
+
+  group('modo teclado (ADR-0035)', () {
+    test('un turno escrito enseña la respuesta sin leerla', () async {
+      final controller = build();
+
+      final answered = await controller.sendTypedMessage('hola');
+
+      expect(answered, isTrue);
+      expect(tts.spoken, isEmpty);
+      expect(controller.state.status, ChatStatus.initial);
+      expect(controller.state.responseAI, 'Respuesta a: hola');
+    });
+
+    test('los turnos escritos cuentan para el análisis como los hablados',
+        () async {
+      final controller = build();
+      for (var i = 0; i < 3; i++) {
+        await controller.sendTypedMessage('frase $i');
+      }
+
+      controller.onAppPaused();
+
+      expect(closer.closed.single.elderTurns, 3);
+      expect(closer.closed.single.turns, hasLength(6));
+    });
+
+    test('si el modelo falla, lo dice para devolver el texto al campo',
+        () async {
+      final controller = build();
+      gemini.failNext = true;
+
+      expect(await controller.sendTypedMessage('hola'), isFalse);
+    });
+
+    test('con un turno esperando respuesta no se envía otro', () async {
+      final controller = build();
+      gemini.gate = Completer<void>();
+      final first = controller.sendTypedMessage('uno');
+
+      expect(await controller.sendTypedMessage('dos'), isFalse);
+
+      gemini.gate!.complete();
+      await first;
+      expect(gemini.sent, ['uno']);
+    });
+
+    test('escribir con la voz sonando la calla, y esa voz no pisa el turno',
+        () async {
+      final controller = build();
+      tts.blockUntilFinished = true;
+      final spoken = controller.sendMessage('hablado');
+      await settle();
+      expect(controller.state.status, ChatStatus.talking);
+
+      gemini.gate = Completer<void>();
+      final typed = controller.sendTypedMessage('escrito');
+      await settle();
+
+      expect(tts.stopCalls, 1);
+      expect(controller.state.status, ChatStatus.thinking);
+
+      gemini.gate!.complete();
+      await Future.wait([spoken, typed]);
+      expect(controller.state.status, ChatStatus.initial);
+      expect(controller.state.responseAI, 'Respuesta a: escrito');
+    });
+
+    test('"Escuchar" lee la respuesta y "Parar" la corta', () async {
+      final controller = build();
+      await controller.sendTypedMessage('hola');
+      tts.blockUntilFinished = true;
+
+      final reading = controller.readReplyAloud();
+      await settle();
+      expect(tts.spoken, ['Respuesta a: hola']);
+      expect(controller.state.status, ChatStatus.talking);
+
+      controller.stopSpeaking();
+      await reading;
+
+      expect(controller.state.status, ChatStatus.initial);
+    });
+
+    test('pasar al teclado con el micrófono abierto descarta la escucha',
+        () async {
+      final controller = build();
+      await controller.startListening();
+      expect(controller.state.status, ChatStatus.listening);
+
+      controller.setInputMode(InputMode.keyboard);
+
+      expect(speech.cancelCalls, 1);
+      expect(controller.state.status, ChatStatus.initial);
+      expect(controller.state.inputMode, InputMode.keyboard);
     });
   });
 }

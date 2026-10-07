@@ -27,6 +27,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
+  /// Envía lo escrito (ADR-0035). El campo se vacía al enviar y el teclado del
+  /// sistema se cierra para que la respuesta se lea a pantalla completa. Si el
+  /// turno falla, el texto vuelve al campo: no hay que escribirlo otra vez.
+  Future<void> _sendTyped() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty || !ref.read(chatControllerProvider).acceptsTypedTurn) {
+      return;
+    }
+    _textController.clear();
+    FocusScope.of(context).unfocus();
+
+    final answered =
+        await ref.read(chatControllerProvider.notifier).sendTypedMessage(text);
+    if (!answered && mounted && _textController.text.isEmpty) {
+      _textController.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -69,6 +90,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 .valueOrNull
                 ?.any((record) => record.isAnalyzed) ??
             false);
+
+    final typing = chatState.inputMode == InputMode.keyboard;
+    // Con el teclado del sistema abierto el mayor está escribiendo: se aparta
+    // lo que no sirve para eso y la respuesta conserva el sitio.
+    final composing = typing && MediaQuery.viewInsetsOf(context).bottom > 0;
 
     final padding = AppTheme.screenPadding(context);
     final maxWidth = AppTheme.contentMaxWidth(context);
@@ -163,50 +189,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Mic button
-                  GestureDetector(
-                    onTap: () {
-                      if (isWorking) return;
-                      if (status == ChatStatus.initial ||
-                          status == ChatStatus.error) {
-                        ref
-                            .read(chatControllerProvider.notifier)
-                            .startListening();
-                      } else if (status == ChatStatus.listening) {
-                        ref
-                            .read(chatControllerProvider.notifier)
-                            .stopListeningAndSend();
-                      }
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: micSize,
-                      height: micSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: micColor.withValues(alpha: 0.08),
-                        boxShadow: status == ChatStatus.initial
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.elderPrimary
-                                      .withValues(alpha: 0.18),
-                                  blurRadius: 24,
-                                  spreadRadius: 4,
-                                ),
-                              ]
-                            : [],
-                        border: Border.all(
-                          color: micColor,
-                          width: status == ChatStatus.listening ? 6 : 3,
-                        ),
-                      ),
-                      child: Icon(micIcon, size: micIconSz, color: micColor),
+                  if (typing && !composing) ...[
+                    _ReadAloudButton(
+                      status: status,
+                      textScale: textScale,
+                      onRead: () => ref
+                          .read(chatControllerProvider.notifier)
+                          .readReplyAloud(),
+                      onStop: () => ref
+                          .read(chatControllerProvider.notifier)
+                          .stopSpeaking(),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                  ],
 
-                  const SizedBox(height: 32),
+                  // Mic button, or the text field in keyboard mode
+                  if (typing)
+                    _TypedInput(
+                      controller: _textController,
+                      textScale: textScale,
+                      canSend: chatState.acceptsTypedTurn,
+                      onSend: _sendTyped,
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () {
+                        if (isWorking) return;
+                        if (status == ChatStatus.initial ||
+                            status == ChatStatus.error) {
+                          ref
+                              .read(chatControllerProvider.notifier)
+                              .startListening();
+                        } else if (status == ChatStatus.listening) {
+                          ref
+                              .read(chatControllerProvider.notifier)
+                              .stopListeningAndSend();
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: micSize,
+                        height: micSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: micColor.withValues(alpha: 0.08),
+                          boxShadow: status == ChatStatus.initial
+                              ? [
+                                  BoxShadow(
+                                    color: AppTheme.elderPrimary
+                                        .withValues(alpha: 0.18),
+                                    blurRadius: 24,
+                                    spreadRadius: 4,
+                                  ),
+                                ]
+                              : [],
+                          border: Border.all(
+                            color: micColor,
+                            width: status == ChatStatus.listening ? 6 : 3,
+                          ),
+                        ),
+                        child: Icon(micIcon, size: micIconSz, color: micColor),
+                      ),
+                    ),
 
-                  if (showMyWeek) ...[
+                  SizedBox(height: typing ? 20 : 32),
+
+                  if (showMyWeek && !composing) ...[
                     ElderButton(
                       label: 'Mi semana',
                       icon: Icons.calendar_view_week,
@@ -217,7 +265,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 20),
                   ],
 
-                  // Bottom action row: emergency | keyboard | settings
+                  // Bottom action row: emergency | keyboard or voice | settings
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -229,9 +277,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // emergencia nunca está vacía.
                         onPressed: () => context.push('/emergency'),
                       ),
-                      _KeyboardButton(
+                      _InputModeButton(
+                        typing: typing,
                         textScale: textScale,
-                        onPressed: () {},
+                        onPressed: () => ref
+                            .read(chatControllerProvider.notifier)
+                            .setInputMode(
+                                typing ? InputMode.voice : InputMode.keyboard),
                       ),
                       Visibility(
                         visible: showSettings,
@@ -261,22 +313,31 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onPressed,
+    this.tooltip,
   });
 
   final IconData icon;
   final Color color;
-  final VoidCallback onPressed;
+
+  /// `null` lo deshabilita: se pinta apagado y no responde.
+  final VoidCallback? onPressed;
+
+  /// Nombre del botón para el lector de pantalla.
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
+    final shade = onPressed == null
+        ? AppTheme.elderTextSecondary.withValues(alpha: 0.4)
+        : color;
     return Container(
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        border: Border.all(color: color, width: 2),
+        color: shade.withValues(alpha: 0.06),
+        border: Border.all(color: shade, width: 2),
         borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.12),
+            color: shade.withValues(alpha: 0.12),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -285,6 +346,8 @@ class _ActionButton extends StatelessWidget {
       child: IconButton(
         icon: Icon(icon),
         color: color,
+        disabledColor: shade,
+        tooltip: tooltip,
         iconSize: 40,
         padding: const EdgeInsets.all(20),
         onPressed: onPressed,
@@ -293,12 +356,17 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _KeyboardButton extends StatelessWidget {
-  const _KeyboardButton({
+/// Cambia entre hablar y escribir (ADR-0035). Enseña el modo al que lleva, no
+/// el que está activo: "¿Teclado?" mientras se habla, "¿Hablar?" mientras se
+/// escribe.
+class _InputModeButton extends StatelessWidget {
+  const _InputModeButton({
+    required this.typing,
     required this.textScale,
     required this.onPressed,
   });
 
+  final bool typing;
   final double textScale;
   final VoidCallback onPressed;
 
@@ -324,11 +392,11 @@ class _KeyboardButton extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.keyboard_outlined,
+                Icon(typing ? Icons.mic_none : Icons.keyboard_outlined,
                     size: 26, color: AppTheme.elderTextSecondary),
                 const SizedBox(height: 4),
                 Text(
-                  '¿Teclado?',
+                  typing ? '¿Hablar?' : '¿Teclado?',
                   style: TextStyle(
                     fontSize: 14 * textScale,
                     color: AppTheme.elderTextSecondary,
@@ -339,6 +407,111 @@ class _KeyboardButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "Escuchar" del modo teclado: la respuesta a un turno escrito no se lee
+/// sola, se lee si el mayor lo pide. Mientras suena, el mismo botón la para.
+class _ReadAloudButton extends StatelessWidget {
+  const _ReadAloudButton({
+    required this.status,
+    required this.textScale,
+    required this.onRead,
+    required this.onStop,
+  });
+
+  final ChatStatus status;
+  final double textScale;
+  final VoidCallback onRead;
+  final VoidCallback onStop;
+
+  @override
+  Widget build(BuildContext context) {
+    final speaking = status == ChatStatus.talking;
+    return ElderButton(
+      label: speaking ? 'Parar' : 'Escuchar',
+      icon: speaking ? Icons.stop : Icons.volume_up,
+      secondary: true,
+      textScale: textScale,
+      onPressed: switch (status) {
+        ChatStatus.talking => onStop,
+        ChatStatus.initial || ChatStatus.error => onRead,
+        ChatStatus.thinking || ChatStatus.listening => null,
+      },
+    );
+  }
+}
+
+/// Campo de texto y botón de enviar del modo teclado (ADR-0035), con la letra
+/// y los mínimos de toque del resto de la interfaz del mayor.
+class _TypedInput extends StatelessWidget {
+  const _TypedInput({
+    required this.controller,
+    required this.textScale,
+    required this.canSend,
+    required this.onSend,
+  });
+
+  final TextEditingController controller;
+  final double textScale;
+
+  /// La conversación admite ahora un turno escrito (no hay otro en vuelo).
+  final bool canSend;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final fontSize = AppTheme.fontMedium * textScale;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            // Quien pulsa "¿Teclado?" quiere escribir ya: el teclado del
+            // sistema se abre sin un toque más.
+            autofocus: true,
+            minLines: 1,
+            maxLines: 3,
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.send,
+            textCapitalization: TextCapitalization.sentences,
+            onSubmitted: (_) => onSend(),
+            style: TextStyle(
+              fontSize: fontSize,
+              color: AppTheme.elderTextPrimary,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Escribe aquí',
+              hintStyle: TextStyle(
+                fontSize: fontSize,
+                color: AppTheme.elderTextSecondary,
+              ),
+              filled: true,
+              fillColor: AppTheme.elderSurface,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 26),
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Sin texto no hay nada que enviar: el botón se apaga en vez de no
+        // responder.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, _) => _ActionButton(
+            icon: Icons.send,
+            color: AppTheme.elderPrimary,
+            tooltip: 'Enviar',
+            onPressed:
+                canSend && value.text.trim().isNotEmpty ? onSend : null,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -85,6 +85,12 @@ class ChatController extends StateNotifier<ChatState> {
   ConversationSettings _settings;
   ElderMemory? _memory;
 
+  /// Número de lo último que ha tomado la pantalla: un turno, una escucha o
+  /// una lectura en voz alta. Una voz cortada termina tarde, cuando ya ha
+  /// empezado otra cosa, y solo devuelve la pantalla a reposo si lo que la
+  /// lanzó sigue siendo lo último (ADR-0035).
+  int _epoch = 0;
+
   /// Siembra la sesión del modelo con el nombre y, si hay consentimiento, lo
   /// que recuerda del mayor (ADR-0032). Con [keepThread], la sesión nueva
   /// recibe los turnos de la conversación en curso y no pierde el hilo.
@@ -131,9 +137,13 @@ class ChatController extends StateNotifier<ChatState> {
   /// aplica en el siguiente temporizador.
   void updateSettings(ConversationSettings settings) => _settings = settings;
 
-  Future<void> sendMessage(String message) async {
-    if (message.trim().isEmpty) return;
+  /// Envía un turno del mayor y enseña la respuesta. Con [speakReply], además
+  /// la lee en voz alta; un turno escrito no la lee (ADR-0035). Devuelve si
+  /// el modelo respondió de verdad, y no con un mensaje de error de la app.
+  Future<bool> sendMessage(String message, {bool speakReply = true}) async {
+    if (message.trim().isEmpty) return false;
 
+    final epoch = ++_epoch;
     _cancelInactivity();
     if (_sessionStale) {
       _sessionStale = false;
@@ -146,17 +156,23 @@ class ChatController extends StateNotifier<ChatState> {
       userMessage: '',
     );
 
+    // La respuesta anterior aún puede estar sonando si el mayor escribe sin
+    // esperar a que acabe: ya no viene a cuento y se corta.
+    if (_ttsService.isSpeaking) await _silence();
+    if (!mounted) return false;
+
     try {
       final geminiResponse = await _geminiService.sendMessage(message);
-      if (!mounted) return;
+      if (!mounted) return false;
 
       final replyText =
           geminiResponse.text ?? 'No se ha podido generar una respuesta.';
+      final answered = !geminiResponse.failed;
 
       // Una respuesta de error de la app no es conversación: sesgaría el
       // análisis hacia lo negativo. Se apunta antes de guardar el nombre para
       // que, si hay que resembrar, la sesión nueva incluya este turno.
-      if (!geminiResponse.failed) {
+      if (answered) {
         _recordTurn(ConversationRole.elder, message);
         _recordTurn(ConversationRole.assistant, replyText);
       }
@@ -165,11 +181,20 @@ class ChatController extends StateNotifier<ChatState> {
       final nombreToSave = geminiResponse.nombreToSave;
       if (nombreToSave != null && _uid != null) {
         await _authRepository.updateName(_uid, nombreToSave);
-        if (!mounted) return;
+        if (!mounted) return answered;
         // Resiembra la sesión para que el modelo deje de preguntar. Va por
         // `updateElderName` y no por `startSession` directamente para que la
         // emisión de currentUserProvider que viene detrás no la repita.
         updateElderName(nombreToSave);
+      }
+
+      if (!speakReply) {
+        state = state.copyWith(
+          status: ChatStatus.initial,
+          responseAI: replyText,
+        );
+        _armInactivity();
+        return answered;
       }
 
       state = state.copyWith(
@@ -178,35 +203,98 @@ class ChatController extends StateNotifier<ChatState> {
       );
 
       await _ttsService.speak(replyText);
-      if (!mounted) return;
+      if (!mounted || epoch != _epoch) return answered;
 
       state = state.copyWith(status: ChatStatus.initial);
       _armInactivity();
+      return answered;
     } catch (e) {
       // Asignar `state` en un notifier ya desechado lanza, y lanzaría otra vez
       // dentro de este mismo catch: el error saldría del turno sin recoger.
-      if (!mounted) return;
+      if (!mounted) return false;
       state = state.copyWith(
         status: ChatStatus.error,
         responseAI: 'Ups, ha habido un problema de conexión. ¿Puedes repetir?',
       );
       _armInactivity();
+      return false;
+    }
+  }
+
+  // ── Modo teclado (ADR-0035) ─────────────────────────────────────────────
+
+  /// Turno escrito. Sigue el mismo camino que uno hablado, también para el
+  /// análisis al cierre, pero la respuesta se enseña sin leerla: quien escribe
+  /// puede estar donde no quiere que la app hable. Devuelve si el modelo
+  /// respondió, para que la pantalla devuelva el texto al campo si no.
+  Future<bool> sendTypedMessage(String text) async {
+    if (!state.acceptsTypedTurn) return false;
+    return sendMessage(text, speakReply: false);
+  }
+
+  /// Cambia entre hablar y escribir. Pasar al teclado con el micrófono
+  /// abierto descarta lo que se estuviera oyendo: quien pide el teclado ha
+  /// decidido no hablar, y enviarlo sería mandar algo que no ha confirmado.
+  void setInputMode(InputMode mode) {
+    if (mode == state.inputMode) return;
+    if (state.status == ChatStatus.listening) {
+      _speechService.cancelListening();
+      state = state.copyWith(
+        inputMode: mode,
+        status: ChatStatus.initial,
+        userMessage: '',
+      );
+      _armInactivity();
+      return;
+    }
+    state = state.copyWith(inputMode: mode);
+  }
+
+  /// "Escuchar": lee en voz alta lo que hay en pantalla. Con él, el modo
+  /// teclado recupera la voz cuando el mayor la quiere.
+  Future<void> readReplyAloud() async {
+    final previous = state.status;
+    if (previous != ChatStatus.initial && previous != ChatStatus.error) return;
+    final text = state.responseAI;
+    if (text.trim().isEmpty) return;
+
+    final epoch = ++_epoch;
+    _cancelInactivity();
+    state = state.copyWith(status: ChatStatus.talking);
+
+    await _ttsService.speak(text);
+    if (!mounted || epoch != _epoch) return;
+
+    state = state.copyWith(status: previous);
+    _armInactivity();
+  }
+
+  /// "Parar": corta la voz en curso. Lo que la lanzó vuelve a reposo por su
+  /// cuenta en cuanto `speak` termina.
+  void stopSpeaking() {
+    if (state.status != ChatStatus.talking) return;
+    unawaited(_silence());
+  }
+
+  /// Calla la voz de la app con tope y sin propagar errores: callarla ayuda,
+  /// pero ni el micrófono ni un turno pueden quedar a merced de una llamada a
+  /// la plataforma. Si no se pudo a tiempo, se sigue igual.
+  Future<void> _silence() async {
+    try {
+      await _ttsService.stop().timeout(const Duration(seconds: 1));
+    } catch (_) {
+      // Se sigue igual.
     }
   }
 
   Future<void> startListening() async {
     // El mayor empieza a hablar: la conversación sigue viva.
     _cancelInactivity();
+    ++_epoch;
     // Nunca se abre el micrófono con la voz de la app sonando: el reconocedor
     // la oiría a ella y no al mayor. Puede venir de otra pantalla ("Escuchar"
     // del consentimiento o de "Mi semana"), que no pasa por este controlador.
-    // Con tope y sin propagar errores: callar la voz ayuda, pero el micrófono
-    // no puede quedar a merced de una llamada a la plataforma.
-    try {
-      await _ttsService.stop().timeout(const Duration(seconds: 1));
-    } catch (_) {
-      // Si no se pudo callar a tiempo, se escucha igual.
-    }
+    await _silence();
     if (!mounted) return;
     final available = await _speechService.initiate();
 
