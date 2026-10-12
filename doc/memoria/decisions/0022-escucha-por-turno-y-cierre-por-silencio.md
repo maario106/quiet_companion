@@ -121,3 +121,15 @@ La verificación es **manual en dispositivo y está pendiente**. Guion mínimo:
 
 Diagnóstico en dispositivo: los mensajes `[STT]` en `logcat` registran cada reanudación, cada error del
 reconocedor y el cierre del turno (`adb logcat -d | grep "\[STT\]"`).
+
+## Corrección posterior (2026-10-12) — la última palabra y el plazo de 2 s
+
+La primera prueba completa en el móvil sacó dos problemas. Están en ADR-0036:
+
+- **La última palabra de cada frase se perdía.** El `_sessionOpen` de la corrección anterior cerraba la sesión
+  con el estado `notListening`, pero Android lo envía *antes* del resultado final, y solo el final trae la
+  última palabra. Ahora la sesión termina con su final (o con un tope de 1 s), y cerrar el turno también espera
+  a ese final. La lección de arriba se queda corta: además de saber qué sesión produjo cada texto, hay que
+  saber cuándo ha dicho ya todo lo que iba a decir.
+- **El plazo de 2 s era corto**, como se temía en el riesgo de este ADR. Ahora lo elige el mayor en Ajustes y
+  por defecto es de 3 s.
