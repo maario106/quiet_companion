@@ -309,4 +309,45 @@ void main() {
       expect(controller.state.inputMode, InputMode.keyboard);
     });
   });
+
+  group('escucha (ADR-0036)', () {
+    test('el turno se abre con la pausa que eligió el mayor', () async {
+      final controller = build();
+      await controller.startListening();
+      expect(speech.lastSilenceTimeout, const Duration(seconds: 3));
+
+      speech.deliverFinal('');
+      controller.updateListenPause(const Duration(seconds: 6));
+      await controller.startListening();
+
+      expect(speech.lastSilenceTimeout, const Duration(seconds: 6));
+    });
+
+    test('el botón espera a lo último que oyó el reconocedor', () async {
+      final controller = build();
+      await controller.startListening();
+
+      controller.stopListeningAndSend();
+      expect(speech.finishCalls, 1);
+      expect(controller.state.status, ChatStatus.listening);
+      expect(gemini.sent, isEmpty);
+
+      speech.deliverFinal('me llamo Carmen');
+      await settle();
+
+      expect(gemini.sent, ['me llamo Carmen']);
+    });
+
+    test('si otra pantalla canceló la escucha, el botón vuelve a reposo',
+        () async {
+      final controller = build();
+      await controller.startListening();
+      speech.cancelListening();
+
+      controller.stopListeningAndSend();
+
+      expect(controller.state.status, ChatStatus.initial);
+      expect(gemini.sent, isEmpty);
+    });
+  });
 }

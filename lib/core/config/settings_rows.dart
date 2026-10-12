@@ -44,10 +44,11 @@ final List<SettingsRow> settingsRows = [
         user.emergencyContact?.source != EmergencyContactSource.companion,
     route: '/settings/emergency-contact',
   ),
-  // Accesibilidad local del mayor (ADR-0013, CU-05/RF-5): las mismas tres
+  // Accesibilidad local del mayor (ADR-0013, CU-05/RF-5): las tres
   // magnitudes que el familiar mueve con deslizadores, aquí como escalas de
-  // peldaños con nombre. Se derivan de `preferenceScales` en vez de
-  // escribirse a mano para que añadir un ajuste siga siendo un solo sitio.
+  // peldaños con nombre, más la pausa de escucha (ADR-0036). Se derivan de
+  // `preferenceScales` en vez de escribirse a mano para que añadir un ajuste
+  // siga siendo un solo sitio.
   //
   // Visibles para TODO mayor, vinculado o independiente. La alternativa
   // (limitarlas al independiente, que es la letra de CU-05) dejaba sin

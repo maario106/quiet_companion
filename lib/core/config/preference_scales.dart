@@ -47,7 +47,7 @@ class PreferenceScale {
   final double Function(UserPreferences prefs) read;
 
   /// Devuelve unas preferencias nuevas con este parámetro puesto a [value].
-  /// Los otros dos quedan intactos: dos escalas nunca se pisan entre sí.
+  /// Los demás quedan intactos: dos escalas nunca se pisan entre sí.
   final UserPreferences Function(UserPreferences prefs, double value) apply;
 
   /// Frase que se pronuncia al pulsar "Escuchar cómo suena". `null` en las
@@ -143,12 +143,35 @@ final PreferenceScale speechRateScale = PreferenceScale(
   previewPhrase: 'Así es como voy a hablarte.',
 );
 
-/// Las tres escalas de accesibilidad, en el orden en que se ofrecen al mayor:
-/// primero lo que se ve, después lo que se oye.
+/// Cuánto silencio espera la app antes de dar por terminado lo que dice el
+/// mayor y contestarle (ADR-0036). Segundos concretos y no nombres: como en
+/// los plazos de la conversación (ADR-0034), aquí el número sí significa algo
+/// para quien lo lee. El peldaño más alto no es "nunca": quien necesita más
+/// tiene el botón del micrófono, que envía en el acto.
+final PreferenceScale listenPauseScale = PreferenceScale(
+  slug: 'listen-pause',
+  title: 'Tiempo que te espero',
+  question: '¿Te corto antes de que termines de hablar?',
+  steps: const [2, 3, 4, 6, 10],
+  labels: const [
+    '2 segundos',
+    '3 segundos',
+    '4 segundos',
+    '6 segundos',
+    '10 segundos',
+  ],
+  read: (prefs) => prefs.listenPauseSeconds,
+  apply: (prefs, value) => prefs.copyWith(listenPauseSeconds: value),
+);
+
+/// Las escalas de accesibilidad, en el orden en que se ofrecen al mayor:
+/// primero lo que se ve, después lo que se oye y, al final, cuánto se le
+/// escucha.
 final List<PreferenceScale> preferenceScales = [
   textSizeScale,
   volumeScale,
   speechRateScale,
+  listenPauseScale,
 ];
 
 /// Resuelve el segmento `:id` de la ruta. Devuelve `null` en un slug

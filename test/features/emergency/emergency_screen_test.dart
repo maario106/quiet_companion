@@ -23,7 +23,7 @@ class FakeEmergencyCallService implements EmergencyCallService {
 }
 
 class FakeSpeechService implements SpeechService {
-  int stopListeningCalls = 0;
+  int finishListeningCalls = 0;
   int cancelListeningCalls = 0;
 
   @override
@@ -33,12 +33,13 @@ class FakeSpeechService implements SpeechService {
   void beginListening({
     required void Function(String transcript) onPartial,
     required void Function(String transcript) onFinal,
+    required Duration silenceTimeout,
   }) {}
 
   @override
-  String stopListening() {
-    stopListeningCalls++;
-    return '';
+  bool finishListening() {
+    finishListeningCalls++;
+    return false;
   }
 
   @override
@@ -234,7 +235,10 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(speech.stopListeningCalls, equals(1));
+      // Cancelar, no cerrar el turno: cerrarlo enviaría lo dicho al asistente
+      // y su respuesta sonaría encima de esta pantalla.
+      expect(speech.cancelListeningCalls, equals(1));
+      expect(speech.finishListeningCalls, equals(0));
       expect(tts.stopCalls, greaterThanOrEqualTo(1));
       expect(tts.spoken, contains('Elige a quién llamar'));
     });

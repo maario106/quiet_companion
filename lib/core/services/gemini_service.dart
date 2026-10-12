@@ -29,14 +29,21 @@ class GeminiService {
 
   static final _tools = [
     Tool(functionDeclarations: [
+      // "En cuanto lo diga", no "en cuanto lo confirme": con la confirmación
+      // como condición, el modelo podía dar por bueno un "Mario" en la
+      // conversación sin llegar a guardarlo (ADR-0036).
       FunctionDeclaration(
         _guardarNombreFn,
-        'Guarda el nombre del mayor en el sistema. Llama a esta función en '
-        'cuanto el mayor confirme su nombre.',
+        'Guarda cómo se llama el mayor, o cómo quiere que le llames. Llámala '
+        'en cuanto lo diga, sea cual sea el nombre: solo el de pila, el '
+        'completo o un apodo valen igual. No esperes a que lo confirme ni le '
+        'pidas apellidos. Si más tarde lo corrige o pide que le llames de '
+        'otra forma, vuelve a llamarla con el nombre nuevo.',
         Schema.object(
           properties: {
             'nombre': Schema.string(
-              description: 'Nombre del mayor, tal como él lo ha dicho.',
+              description: 'El nombre tal como lo ha dicho, sin añadir ni '
+                  'quitar nada (por ejemplo "Mario", "Mario Rosas" o "Lola").',
             ),
           },
           requiredProperties: ['nombre'],
@@ -84,11 +91,17 @@ class GeminiService {
   GenerativeModel _buildModel(String? elderName, ElderMemory? memory) {
     final nameContext = elderName != null
         ? 'Ya conoces el nombre del mayor: se llama $elderName. '
-            'Salúdale por su nombre y NO vuelvas a preguntárselo.'
+            'Salúdale por su nombre y NO vuelvas a preguntárselo. '
+            'Si te pide que le llames de otra forma, llama a la función '
+            '`$_guardarNombreFn` con el nombre nuevo.'
         : 'Aún no sabes el nombre del mayor. '
             'Pregúntaselo de forma natural en los primeros turnos de la conversación. '
-            'En cuanto te lo diga, confirma el nombre y llama a la función '
-            '`$_guardarNombreFn` con ese nombre.';
+            'En cuanto diga cualquier nombre, aunque sea solo el de pila, llama '
+            'en ese mismo turno a la función `$_guardarNombreFn` con ese nombre, '
+            'sin pedirle que lo confirme ni que te dé los apellidos. '
+            'Le oyes a través de un reconocedor de voz que a veces se come '
+            'palabras: si su respuesta no trae ningún nombre, pídele con '
+            'naturalidad que te lo repita.';
 
     return GenerativeModel(
       model: 'gemini-2.5-flash',
@@ -149,23 +162,29 @@ class GeminiService {
       String? nombreToSave;
       String? replyText = response.text;
 
-      final calls = response.functionCalls.toList();
+      final calls = response.functionCalls
+          .where((call) => call.name == _guardarNombreFn)
+          .toList();
       if (calls.isNotEmpty) {
         for (final call in calls) {
-          if (call.name == _guardarNombreFn) {
-            nombreToSave = call.args['nombre'] as String?;
+          final nombre = call.args['nombre'];
+          if (nombre is String && nombre.trim().isNotEmpty) {
+            nombreToSave = nombre.trim();
           }
         }
 
-        if (nombreToSave != null) {
-          final followUp = await session.sendMessage(
-            Content.functionResponse(
-              _guardarNombreFn,
-              {'guardado': true, 'nombre': nombreToSave},
-            ),
-          );
-          replyText = followUp.text ?? replyText;
-        }
+        // Se contesta a la llamada SIEMPRE, también si no traía un nombre
+        // utilizable: una llamada sin su respuesta deja el historial de la
+        // sesión a medias, y la API puede rechazar los turnos siguientes.
+        final followUp = await session.sendMessage(
+          Content.functionResponse(
+            _guardarNombreFn,
+            nombreToSave != null
+                ? {'guardado': true, 'nombre': nombreToSave}
+                : {'guardado': false, 'motivo': 'No llegó ningún nombre.'},
+          ),
+        );
+        replyText = followUp.text ?? replyText;
       }
 
       return GeminiResponse(

@@ -36,7 +36,9 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
       // Obligatorio al abrir: el marcador nativo compite por el AudioSession
       // y el TTS seguiría hablando encima. La conversación deja de tener
       // sentido en cuanto se abre esta UI, así que se para aquí, no al marcar.
-      ref.read(speechServiceProvider).stopListening();
+      // Cancelar y no cerrar el turno: cerrarlo enviaría lo dicho al
+      // asistente, y su respuesta sonaría encima de esta pantalla.
+      ref.read(speechServiceProvider).cancelListening();
       _announce();
     });
   }

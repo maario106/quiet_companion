@@ -48,20 +48,20 @@ Widget _buildSubject(UserModel user) {
 
 void main() {
   group('visibleSettingsRows (función compartida con HomeScreen)', () {
-    // Contacto de emergencia + las tres escalas de accesibilidad (ADR-0021)
+    // Contacto de emergencia + las cuatro escalas (ADR-0021, ADR-0036)
     // + "Guardar mis conversaciones" (ADR-0030). Sin consentimiento, ninguna
     // de las filas que dependen de él (ADR-0031, ADR-0034).
-    test('sin contacto (null) → contacto + 3 escalas + consentimiento', () {
-      expect(visibleSettingsRows(_elderSinConfigurar), hasLength(5));
+    test('sin contacto (null) → contacto + 4 escalas + consentimiento', () {
+      expect(visibleSettingsRows(_elderSinConfigurar), hasLength(6));
     });
 
-    test('contacto manual → contacto + 3 escalas + consentimiento', () {
-      expect(visibleSettingsRows(_elderConContactoManual), hasLength(5));
+    test('contacto manual → contacto + 4 escalas + consentimiento', () {
+      expect(visibleSettingsRows(_elderConContactoManual), hasLength(6));
     });
 
     test('contacto de vinculación (companion) → oculta el contacto, deja las '
-        '3 escalas: el botón de ajustes ya no desaparece', () {
-      expect(visibleSettingsRows(_elderAcompanado), hasLength(4));
+        '4 escalas: el botón de ajustes ya no desaparece', () {
+      expect(visibleSettingsRows(_elderAcompanado), hasLength(5));
       expect(
         visibleSettingsRows(_elderAcompanado)
             .any((row) => row.title == 'Contacto de emergencia'),

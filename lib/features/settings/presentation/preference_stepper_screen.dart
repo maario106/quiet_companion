@@ -7,7 +7,7 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
-/// Subpantalla única para las tres escalas de accesibilidad del mayor. No hay
+/// Subpantalla única para todas las escalas de accesibilidad del mayor. No hay
 /// una pantalla por ajuste: la [PreferenceScale] que llega por la ruta lleva
 /// título, pregunta, peldaños y nombres, así que añadir un cuarto ajuste no
 /// añade una pantalla (ADR-0021).

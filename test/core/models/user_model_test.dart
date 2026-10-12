@@ -314,6 +314,7 @@ void main() {
           'volume': 0.6,
           'speechRate': 0.8,
           'textSizeMultiplier': 1.4,
+          'listenPauseSeconds': 6,
         };
 
         final prefs = UserPreferences.fromMap(map);
@@ -321,6 +322,8 @@ void main() {
         expect(prefs.volume, equals(0.6));
         expect(prefs.speechRate, equals(0.8));
         expect(prefs.textSizeMultiplier, equals(1.4));
+        expect(prefs.listenPauseSeconds, equals(6.0));
+        expect(prefs.listenPause, equals(const Duration(seconds: 6)));
       });
 
       test('uses defaults when fields are missing', () {
@@ -331,6 +334,8 @@ void main() {
         expect(prefs.volume, equals(1.0));
         expect(prefs.speechRate, equals(0.4));
         expect(prefs.textSizeMultiplier, equals(1.2));
+        // Documentos anteriores a ADR-0036: 3 s, ya no los 2 s de ADR-0022.
+        expect(prefs.listenPause, equals(const Duration(seconds: 3)));
       });
 
       test('uses defaults when fields are null', () {
@@ -370,6 +375,7 @@ void main() {
           volume: 0.3,
           speechRate: 0.6,
           textSizeMultiplier: 1.5,
+          listenPauseSeconds: 4,
         );
 
         final map = original.toMap();
@@ -378,6 +384,7 @@ void main() {
         expect(recovered.volume, equals(original.volume));
         expect(recovered.speechRate, equals(original.speechRate));
         expect(recovered.textSizeMultiplier, equals(original.textSizeMultiplier));
+        expect(recovered.listenPauseSeconds, equals(original.listenPauseSeconds));
       });
 
       test('round-trip with defaults', () {

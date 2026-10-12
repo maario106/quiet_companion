@@ -7,6 +7,7 @@ import 'package:quiet_companion/core/config/conversation_config.dart';
 import 'package:quiet_companion/core/models/conversation_settings.dart';
 import 'package:quiet_companion/core/models/elder_memory.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/conversation_closer_provider.dart';
 import 'package:quiet_companion/core/providers/conversation_providers.dart';
@@ -43,6 +44,7 @@ class ChatController extends StateNotifier<ChatState> {
     ConversationCloser closer = const NoopConversationCloser(),
     bool consentGranted = false,
     ConversationSettings settings = const ConversationSettings(),
+    Duration? listenPause,
     ElderMemory? memory,
     bool Function()? isIntentionalExit,
     DateTime Function()? now,
@@ -50,6 +52,7 @@ class ChatController extends StateNotifier<ChatState> {
   })  : _closer = closer,
         _consentGranted = consentGranted,
         _settings = settings,
+        _listenPause = listenPause ?? const UserPreferences().listenPause,
         _memory = memory,
         _isIntentionalExit = isIntentionalExit ?? (() => false),
         _now = now ?? DateTime.now,
@@ -83,6 +86,11 @@ class ChatController extends StateNotifier<ChatState> {
 
   bool _consentGranted;
   ConversationSettings _settings;
+
+  /// Silencio tras el que se da por terminado lo que dice el mayor. Lo elige
+  /// él en Ajustes (ADR-0036).
+  Duration _listenPause;
+
   ElderMemory? _memory;
 
   /// Número de lo último que ha tomado la pantalla: un turno, una escucha o
@@ -136,6 +144,10 @@ class ChatController extends StateNotifier<ChatState> {
   /// Plazos vigentes, entregados en vivo. El nuevo plazo de inactividad se
   /// aplica en el siguiente temporizador.
   void updateSettings(ConversationSettings settings) => _settings = settings;
+
+  /// Pausa de escucha vigente, entregada en vivo. Se aplica en el siguiente
+  /// turno: cambiarla a mitad de uno no lo acorta ni lo alarga.
+  void updateListenPause(Duration pause) => _listenPause = pause;
 
   /// Envía un turno del mayor y enseña la respuesta. Con [speakReply], además
   /// la lee en voz alta; un turno escrito no la lee (ADR-0035). Devuelve si
@@ -320,15 +332,22 @@ class ChatController extends StateNotifier<ChatState> {
         if (!mounted || state.status != ChatStatus.listening) return;
         _submit(text);
       },
+      silenceTimeout: _listenPause,
     );
   }
 
   /// Cierre manual del turno: el mayor pulsa el botón sin esperar a la pausa.
+  /// El envío llega por el mismo `onFinal` que el cierre por silencio, en
+  /// cuanto el reconocedor entrega lo último que oyó: enviar en el acto
+  /// dejaba fuera la última palabra (ADR-0036).
   void stopListeningAndSend() {
     // Si el silencio ya cerró el turno, `status` ya no es `listening` y este
     // camino no debe enviar por segunda vez.
     if (state.status != ChatStatus.listening) return;
-    _submit(_speechService.stopListening());
+    // Sin turno abierto no llegará `onFinal`: la escucha la canceló otra
+    // pantalla (emergencia) y la de aquí se quedó esperándolo. Se vuelve a
+    // reposo sin enviar nada.
+    if (!_speechService.finishListening()) _submit('');
   }
 
   /// Único punto de envío, compartido por el cierre automático y el manual.
@@ -461,6 +480,7 @@ final chatControllerProvider =
     closer: ref.watch(conversationCloserProvider),
     consentGranted: user?.hasConversationConsent ?? false,
     settings: user?.effectiveConversationSettings ?? const ConversationSettings(),
+    listenPause: user?.preferences.listenPause,
     isIntentionalExit: () => ref.read(intentionalBackgroundExitProvider),
   );
 
@@ -476,14 +496,17 @@ final chatControllerProvider =
 
   // Nada del documento reconstruye el controlador, así que se le entrega en
   // vivo (ADR-0023): el nombre, que puede cargar tarde o escribirlo el
-  // familiar; y el consentimiento y los plazos, que pueden cambiar en mitad
-  // de una conversación (ADR-0030, ADR-0034).
+  // familiar; el consentimiento y los plazos, que pueden cambiar en mitad
+  // de una conversación (ADR-0030, ADR-0034); y la pausa de escucha que el
+  // mayor elige en Ajustes (ADR-0036).
   ref.listen<AsyncValue<UserModel?>>(currentUserProvider, (previous, next) {
     final user = next.valueOrNull;
     controller.updateElderName(user?.name);
     controller.updateConsent(user?.hasConversationConsent ?? false);
     controller.updateSettings(
         user?.effectiveConversationSettings ?? const ConversationSettings());
+    controller.updateListenPause(
+        (user?.preferences ?? const UserPreferences()).listenPause);
   });
 
   // El ciclo de vida se escucha aquí y no en una pantalla: la conversación

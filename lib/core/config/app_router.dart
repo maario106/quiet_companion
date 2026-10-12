@@ -174,7 +174,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) =>
                 const PrivacyChoiceScreen(choice: PrivacyChoice.retention),
           ),
-          // Una sola ruta paramétrica para las tres escalas de accesibilidad:
+          // Una sola ruta paramétrica para todas las escalas de accesibilidad:
           // añadir un ajuste es añadir una PreferenceScale, sin tocar aquí.
           GoRoute(
             path: 'preference/:id',
