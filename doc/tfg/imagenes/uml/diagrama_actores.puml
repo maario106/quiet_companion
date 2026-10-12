@@ -5,29 +5,37 @@ left to right direction
 skinparam actorStyle awesome
 skinparam dpi 150
 
+actor "Mayor\nIndependiente" as MI
+actor "Mayor\nVinculado" as MV
 actor "Mayor" as M
-actor "Mayor Independiente" as MI
-actor "Mayor Vinculado" as MV
 actor "Familiar\n(Companion)" as FA
 actor "API Gemini" as GEM <<external>>
+actor "API Cloud\nText-to-Speech" as TTS <<external>>
 
 MI --|> M
 MV --|> M
 
 rectangle "Quiet Companion" {
   usecase "Configurar accesibilidad\n(local)" as ACC_LOCAL
-  usecase "Conversar por voz" as CHAT
-  usecase "Vincular con familiar\n(generar código)" as GEN
+  usecase "Conversar\n(por voz o por escrito)" as CHAT
+  usecase "Decidir sobre sus\nconversaciones" as CONSENT
+  usecase "Consultar el seguimiento\ndel estado de ánimo" as WELL
+  usecase "Configurar accesibilidad\ny plazos (remoto)" as ACC_REMOTE
   usecase "Vincular con mayor\n(introducir código)" as LINK
-  usecase "Configurar accesibilidad\n(remoto)" as ACC_REMOTE
+  usecase "Vincular con familiar\n(generar código)" as GEN
 }
 
 ' La accesibilidad local la tiene todo mayor, no solo el independiente.
 M --> ACC_LOCAL
 M --> CHAT
+M --> CONSENT
+M --> WELL
 MV --> GEN
-FA --> LINK
-FA --> ACC_REMOTE
 
 CHAT ..> GEM : <<include>>
+CHAT ..> TTS : <<include>>
+
+WELL <-- FA
+ACC_REMOTE <-- FA
+LINK <-- FA
 @enduml

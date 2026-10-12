@@ -144,8 +144,8 @@ ellas la sustitución de los deslizadores continuos por peldaños con nombre, na
 persona mayor intentando usar la aplicación.
 
 Los actores del sistema son tres. El \textit{mayor independiente} es la persona mayor con autonomía
-cognitiva y técnica suficiente para gestionar la aplicación por sí misma: además del chat por voz,
-configura desde su propio dispositivo la accesibilidad, el contacto de emergencia y el tratamiento de sus
+cognitiva y técnica suficiente para gestionar la aplicación por sí misma: además de conversar por voz o
+por escrito, configura desde su propio dispositivo la accesibilidad, el contacto de emergencia y el tratamiento de sus
 conversaciones. El \textit{mayor vinculado} delega esa configuración en un familiar, pero no pierde el
 acceso a ella: una vez completado el emparejamiento ve la misma pantalla de ajustes, puede cambiar sus
 escalas de accesibilidad y es el único que decide si se guardan sus conversaciones y qué parte de su
@@ -180,6 +180,8 @@ proyecto se recoge en la tabla~\ref{tab:catalogo-hu}.
         HU-4 & Configuración adaptativa            & Alta  & Completada \\
         HU-5 & Memoria conversacional básica       & Media & Completada tras el MVP \\
         HU-6 & Seguimiento del estado de ánimo     & Media & Completada tras el MVP \\
+        HU-7 & Control del mayor sobre sus conversaciones & Alta & Completada tras el MVP \\
+        HU-8 & Conversación por escrito            & Media & Completada tras el MVP \\
         \bottomrule
     \end{tabularx}
 
@@ -238,6 +240,15 @@ y como recoge el plan de hitos de la tabla~\ref{tab:plan-hitos}. Lo que se decid
 abiertas al mismo tiempo que las otras cuatro, que es precisamente lo que prescribe el límite de trabajo en
 curso del tablero.
 
+El catálogo tampoco quedó cerrado en el arranque, y su evolución es otro efecto del método. Las seis
+primeras historias proceden del planteamiento inicial; las dos últimas surgieron durante el desarrollo.
+HU-7 nació al diseñar HU-5 y HU-6, cuando se constató que el consentimiento sobre las conversaciones no
+pertenecía a ninguna de las dos, sino que respondía a una necesidad propia del mayor, la de decidir qué se
+guarda de él y quién lo ve, y que además era condición previa de ambas: ningún dato de una conversación
+podía tratarse antes de que existiera el consentimiento que lo autoriza. HU-8 recoge la posibilidad de
+conversar por escrito cuando la voz no es una opción, y convirtió en funcionalidad un botón que la pantalla
+principal mostraba desde su rediseño sin que hiciera nada.
+
 \subsection{Tarjetas técnicas y desglose de tareas}
 
 Cada Historia de Usuario se descompone en una o varias tarjetas técnicas, que son las unidades reales de
@@ -282,8 +293,8 @@ compila, pasa el análisis estático sin advertencias y queda consolidado en el 
 
 \subsection{Plan de iteraciones e hitos}
 
-El trabajo se agrupó en siete hitos. Los cinco primeros delimitan el MVP; los dos últimos, que dependen de
-HU-5 y HU-6, se abrieron solo cuando ese MVP estuvo estabilizado, y se cerraron ya en la recta final del
+El trabajo se agrupó en ocho hitos. Los cinco primeros delimitan el MVP; los tres últimos, que dependen de
+HU-5 a HU-8, se abrieron solo cuando ese MVP estuvo estabilizado, y se cerraron ya en la recta final del
 proyecto. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
 
 \begin{table}[htbp]
@@ -299,8 +310,9 @@ proyecto. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
         M3 & Panel remoto y configuración adaptativa              & HU-4        & Completado \\
         M4 & Estabilización: refactorización, DI y deuda técnica   & HU-1 a HU-4 & Completado \\
         M5 & Voz en la nube, accesibilidad local y endurecimiento  & HU-2 a HU-4 & Completado \\
-        M6 & Persistencia conversacional y memoria                & HU-5        & Completado \\
-        M7 & Análisis emocional y panel de bienestar              & HU-6        & Completado \\
+        M6 & Consentimiento informado y gobierno de los datos     & HU-7        & Completado \\
+        M7 & Análisis al cierre, memoria y seguimiento del bienestar & HU-5, HU-6 & Completado \\
+        M8 & Conversación por escrito (modo teclado)              & HU-8        & Completado \\
         \bottomrule
     \end{tabularx}
 
@@ -309,21 +321,20 @@ proyecto. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
 \end{table}
 
 «Completado» no significa lo mismo en todas las filas. Los cinco primeros hitos están completados y verificados
-sobre dispositivo real; M6 y M7 están implementados y cubiertos por pruebas automáticas de su lógica pura,
-pero su verificación en dispositivo quedó pendiente en el momento de redactar esta memoria. La distinción se
-hace explícita porque afecta a lo que puede afirmarse en el capítulo de conclusiones.
+sobre dispositivo real; M6, M7 y M8 están implementados y cubiertos por pruebas automáticas, pero su
+verificación completa en dispositivo quedaba pendiente en el momento de redactar esta memoria. La distinción
+se hace explícita porque afecta a lo que puede afirmarse en el capítulo de conclusiones.
+% **note:** actualizar este párrafo, la nota (i) de la tabla de ADR del capítulo 5 y la sección de
+% conclusiones del capítulo 6 cuando M6 a M8 se hayan verificado en dispositivo.
 
-El reparto de esos hitos en el tiempo se recoge en el cronograma de la figura~\ref{fig:cronograma}, que no
-es una planificación previa sino la duración efectiva de cada uno, fechada a partir del historial de
-versiones del repositorio. Se ha optado por representar lo ocurrido y no lo previsto porque la desviación
-entre ambos es, en sí misma, uno de los resultados del proyecto.
+El reparto de esos hitos en el tiempo se recoge en el cronograma de la figura~\ref{fig:cronograma}.
 
 \begin{figure}[htbp]\centering
 \begingroup\languageshorthands{none}%
 \footnotesize
 \begin{ganttchart}[
     hgrid, vgrid,
-    x unit             = 0.30cm,
+    x unit             = 0.265cm,
     y unit title       = 0.52cm,
     y unit chart       = 0.52cm,
     title height       = 1,
@@ -333,42 +344,45 @@ entre ambos es, en sí misma, uno de los resultados del proyecto.
     title label font   = \footnotesize,
     group label font   = \footnotesize,
     canvas/.append style = {fill = none, draw = black!35, line width = 0.4pt}
-  ]{1}{31}
-  \gantttitle{2026}{31} \\
+  ]{1}{35}
+  \gantttitle{2026}{35} \\
   \gantttitle{Mar}{4} \gantttitle{Abr}{4} \gantttitle{May}{5}
   \gantttitle{Jun}{4} \gantttitle{Jul}{5} \gantttitle{Ago}{4}
-  \gantttitle{Sep}{5} \\
+  \gantttitle{Sep}{5} \gantttitle{Oct}{4} \\
   \ganttbar{M1. Cimientos}{1}{9} \\
-  \ganttbar{M2. Pipeline conversacional}{2}{3} \\
+  \ganttbar{M2. Pipeline conversacional}{2}{4} \\
   \ganttbar{M3. Panel remoto y ajustes}{7}{11} \\
   \ganttbar{M4. Estabilización}{11}{20} \\
   \ganttbar{M5. Voz en la nube y seguridad}{20}{28} \\
-  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M6. Memoria conversacional}{30}{31} \\
-  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M7. Análisis emocional}{30}{31} \\
-  \ganttbar[bar/.append style={fill=vizVioleta, draw=none}]{Redacción de la memoria}{28}{31}
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M6. Consentimiento (RGPD)}{27}{30} \\
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M7. Análisis, memoria y bienestar}{28}{31} \\
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M8. Conversación por escrito}{32}{33} \\
+  \ganttbar[bar/.append style={fill=vizVioleta, draw=none}]{Redacción de la memoria}{25}{35}
 \end{ganttchart}
 \endgroup
 
-  \caption[Cronograma real del proyecto]{Cronograma del proyecto, fechado a partir del historial de
-  versiones. En azul los hitos del MVP, en naranja los posteriores al MVP y en violeta la redacción de esta
-  memoria.}
+  \caption[Cronograma del proyecto]{Cronograma del proyecto. En azul los hitos del MVP, en naranja los
+  posteriores al MVP y en violeta la redacción de esta memoria.}
   \label{fig:cronograma}
 
   \vspace{2pt}
   {\footnotesize Fuente: Elaboración propia.}
 \end{figure}
 
-El cronograma deja ver dos rasgos que la tabla anterior no muestra. El primero es el solapamiento de los
+El cronograma deja ver tres rasgos que la tabla anterior no muestra. El primero es el solapamiento de los
 tres primeros hitos durante marzo y abril, consecuencia directa de trabajar con un límite de una tarjeta en
 curso pero sobre historias que compartían código: cerrar el pipeline conversacional obligaba a tocar el
-modelo de datos que M1 estaba fijando. El segundo son las dos interrupciones, en junio y en agosto, en las
-que no hay actividad registrada, y que corresponden a los periodos de exámenes y al verano. Su efecto no es
-el retraso que sugiere su longitud, porque el trabajo se recuperó concentrando esfuerzo en septiembre, pero
-sí explican que M6 y M7 acabaran resolviéndose en pocos días al final del calendario en lugar de repartirse.
+modelo de datos que M1 estaba fijando. El segundo es la duración de M4, que se extiende de mayo a julio
+porque absorbió el periodo de exámenes de junio, de avance mínimo. El tercero es el encadenamiento de los
+hitos posteriores al MVP, que no
+admitían cualquier orden: M6 tenía que adelantarse a M7, porque el análisis de una conversación no podía
+construirse antes que el consentimiento que lo autoriza, y M8, de alcance más acotado, se abordó cuando los
+dos anteriores estaban cerrados. Los tres conviven además con la redacción de esta memoria, iniciada en
+agosto y extendida hasta el cierre del proyecto.
 
-La ejecución real de estos hitos, reconstruida a partir del historial de versiones y con las desviaciones
-que se produjeron, se documenta en el apartado~\ref{sec:cronologia}, dentro del capítulo de diseño y
-desarrollo. Se ha preferido situarla allí, junto al código que la explica, antes que duplicarla aquí.
+La ejecución de estos hitos, con las desviaciones que se produjeron, se documenta en el
+apartado~\ref{sec:cronologia}, dentro del capítulo de diseño y desarrollo. Se ha preferido situarla allí,
+junto al código que la explica, antes que duplicarla aquí.
 
 \section{Buenas prácticas y uso de inteligencia artificial}
 \label{sec:buenas-practicas-ia}
@@ -377,11 +391,12 @@ La redacción de esta memoria sigue las recomendaciones de la guía que el profe
 Ingeniería Informática de la Universidad de Granada ha elaborado para este fin \citep{GuillenPerales2025}.
 En cuanto al código, todo el proyecto se ha gestionado con Git y alojado en
 GitHub\footnote{\url{https://github.com/maario106/quiet_companion}}, y cada decisión de arquitectura
-(apartado~\ref{sec:adr}) cita los \emph{commits} que la materializan, lo que mantiene la trazabilidad entre
-lo decidido y lo construido.
+(apartado~\ref{sec:adr}) cita los ficheros de código que la materializan, lo que mantiene la trazabilidad
+entre lo decidido y lo construido.
 
 Por transparencia académica hay que distinguir la inteligencia artificial que forma parte del producto,
-esto es, el modelo Gemini que conversa con la persona mayor, de la que se ha empleado como herramienta de
+esto es, el modelo Gemini que conversa con la persona mayor y analiza cada conversación al cerrarse, de la
+que se ha empleado como herramienta de
 apoyo: asistentes basados en LLM, concretamente Claude (apartado~\ref{sec:costes}), utilizados para:
 
 \begin{itemize}
@@ -390,6 +405,9 @@ apoyo: asistentes basados en LLM, concretamente Claude (apartado~\ref{sec:costes
     \item \textbf{Documentación:} apoyo en la documentación técnica, revisión ortográfica y de estilo de
     esta memoria y corrección de errores en \LaTeX.
 \end{itemize}
+% **note:** si el diagrama de arquitectura (figura fig:arquitectura) se genera con una herramienta de IA
+% de imagen (p. ej. Nano Banana Pro), añadirlo a esta lista: "generación del borrador del diagrama de
+% arquitectura, revisado y corregido elemento a elemento".
 
 En ambos casos la herramienta ha actuado como apoyo, no como autora. Las decisiones de diseño y de
 arquitectura, el código integrado y el planteamiento del trabajo son obra de quien firma esta memoria, que
@@ -420,7 +438,7 @@ La amortización de los equipos sigue el criterio lineal de las tablas oficialme
 para el impuesto sobre sociedades, que asignan a los equipos para procesos de información un coeficiente
 lineal máximo del 25\% y un periodo máximo de ocho años \citep{LIS2014}. Los equipos empleados en el
 proyecto son de titularidad personal y anteriores a su inicio, por lo que se calcula la parte proporcional
-correspondiente a los seis meses de desarrollo y se señala expresamente cuándo un equipo está ya
+correspondiente a los ocho meses de desarrollo y se señala expresamente cuándo un equipo está ya
 completamente amortizado.
 
 Los servicios en la nube se imputan por su consumo real. Cuando ese consumo ha permanecido dentro
@@ -479,7 +497,7 @@ en dispositivo, uno por cada perfil de usuario, que son igualmente equipos perso
 Presentar únicamente esos ceros sería, sin embargo, poco informativo, ya que un proyecto equivalente
 acometido desde cero sí tendría que dotar ese equipamiento. La tabla~\ref{tab:coste-material} recoge por
 ello las dos columnas: la imputación real y la que correspondería a un escenario de reposición, calculada
-como la parte proporcional a seis meses de la amortización a ocho años de un equipamiento equivalente.
+como la parte proporcional a ocho meses de la amortización a ocho años de un equipamiento equivalente.
 
 \begin{table}[htbp]
     \centering
@@ -489,17 +507,17 @@ como la parte proporcional a seis meses de la amortización a ocho años de un e
         \toprule
         \textbf{Concepto} & \textbf{Valor} & \textbf{Imputado} & \textbf{Reposición} \\
         \midrule
-        Portátil de desarrollo (equipo personal, 8 años) & 900,00 € & 0,00 € & 56,25 € \\
-        Terminal Android de pruebas, perfil del mayor    & 150,00 € & 0,00 € &  9,38 € \\
-        Terminal Android de pruebas, perfil del familiar & 150,00 € & 0,00 € &  9,38 € \\
+        Portátil de desarrollo (equipo personal, 8 años) & 900,00 € & 0,00 € & 75,00 € \\
+        Terminal Android de pruebas, perfil del mayor    & 150,00 € & 0,00 € & 12,50 € \\
+        Terminal Android de pruebas, perfil del familiar & 150,00 € & 0,00 € & 12,50 € \\
         \midrule
-        \textbf{Total recursos materiales}               &          & \textbf{0,00 €} & \textbf{75,01 €} \\
+        \textbf{Total recursos materiales}               &          & \textbf{0,00 €} & \textbf{100,00 €} \\
         \bottomrule
     \end{tabularx}
 
     \vspace{2pt}
     {\footnotesize Fuente: Elaboración propia. La columna de reposición aplica amortización lineal a ocho
-    años sobre seis meses de proyecto.}
+    años sobre ocho meses de proyecto.}
 \end{table}
 
 \subsection{Servicios en la nube y licencias de software}
@@ -513,9 +531,13 @@ lecturas y 20.000 escrituras diarias en Firestore, dos millones de invocaciones 
 50.000 usuarios activos mensuales de autenticación \citep{FirebasePricing}. El desembolso ha sido, por
 tanto, nulo, si bien el plan exige una cuenta de facturación activa.
 
-La API de Gemini se ha consumido a través de la capa gratuita de Google AI Studio durante todo el
-desarrollo. Fuera de ella, el modelo \code{gemini-2.5-flash} factura 0,30~dólares por millón de \textit{tokens}
-de entrada y 2,50~dólares por millón de \textit{tokens} de salida \citep{GeminiPricing}.
+La conversación en vivo ha consumido la API de Gemini a través de la capa gratuita de Google AI Studio
+durante todo el desarrollo. El análisis de cada conversación al cerrarse llama al mismo modelo desde el
+servidor a través de Vertex AI, con cargo a la cuenta de facturación del proyecto, pero durante el
+desarrollo su uso se ha limitado a las pruebas de la función, un volumen de llamadas cuyo importe resulta
+despreciable frente al resto de partidas. Fuera de la capa gratuita, el modelo \code{gemini-2.5-flash}
+factura 0,30~dólares por millón de \textit{tokens} de entrada y 2,50~dólares por millón de \textit{tokens}
+de salida \citep{GeminiPricing}.
 
 La API de Cloud Text-to-Speech, empleada para la voz Chirp~3:~HD desde la migración documentada en
 el capítulo~\ref{cap:diseno-desarrollo}, dispone de una capa gratuita mensual de un millón de caracteres,
@@ -526,7 +548,7 @@ apartado.
 La única partida con desembolso real es la suscripción a Claude Pro, empleada como fuente de ideas y supervisor de
 código, al igual que en la elaboración de la documentación técnica del proyecto. Su
 precio es de 20~dólares mensuales, impuestos aparte \citep{ClaudePricing}, lo que supone en torno a
-22~euros al mes con el IVA español aplicado, y se ha mantenido durante los seis meses de desarrollo.
+22~euros al mes con el IVA español aplicado, y se ha mantenido durante los ocho meses de desarrollo.
 
 \begin{table}[htbp]
     \centering
@@ -537,11 +559,11 @@ precio es de 20~dólares mensuales, impuestos aparte \citep{ClaudePricing}, lo q
         \textbf{Servicio} & \textbf{Régimen durante el proyecto} & \textbf{Imputado} \\
         \midrule
         Firebase (plan Blaze)          & Dentro de la capa gratuita permanente & 0,00 € \\
-        API de Gemini                  & Capa gratuita de Google AI Studio     & 0,00 € \\
+        API de Gemini (chat y análisis) & Capa gratuita de AI Studio; análisis en Vertex AI con consumo despreciable & 0,00 € \\
         Cloud Text-to-Speech (Chirp 3: HD) & Capa gratuita de 1 M de caracteres al mes & 0,00 € \\
-        Claude Pro (6 meses $\times$ 22 €) & Suscripción mensual               & 132,00 € \\
+        Claude Pro (8 meses $\times$ 22 €) & Suscripción mensual               & 176,00 € \\
         \midrule
-        \textbf{Total servicios y licencias} &                                 & \textbf{132,00 €} \\
+        \textbf{Total servicios y licencias} &                                 & \textbf{176,00 €} \\
         \bottomrule
     \end{tabularx}
 
@@ -561,7 +583,7 @@ magnitud es, en sí mismo, un dato relevante sobre la naturaleza del proyecto.
 \subsection{Presupuesto total}
 
 La tabla~\ref{tab:presupuesto} agrega las partidas anteriores. El coste total del proyecto asciende a
-4.839,83~euros, de los cuales el 97\% corresponde a la dedicación del desarrollador.
+4.883,83~euros, de los cuales el 96\% corresponde a la dedicación del desarrollador.
 
 \begin{table}[htbp]
     \centering
@@ -571,12 +593,12 @@ La tabla~\ref{tab:presupuesto} agrega las partidas anteriores. El coste total de
         \toprule
         \textbf{Partida} & \textbf{Importe} & \textbf{Peso} \\
         \midrule
-        Personal (300 h a 15,68 €/h)      & 4.704,00 € & 97,2\% \\
-        Servicios en la nube y licencias  &   132,00 € &  2,7\% \\
+        Personal (300 h a 15,68 €/h)      & 4.704,00 € & 96,3\% \\
+        Servicios en la nube y licencias  &   176,00 € &  3,6\% \\
         Consumo eléctrico                 &     3,83 € &  0,1\% \\
         Recursos materiales (amortizados) &     0,00 € &  0,0\% \\
         \midrule
-        \textbf{Total}                    & \textbf{4.839,83 €} & \textbf{100\%} \\
+        \textbf{Total}                    & \textbf{4.883,83 €} & \textbf{100\%} \\
         \bottomrule
     \end{tabularx}
 
@@ -584,7 +606,7 @@ La tabla~\ref{tab:presupuesto} agrega las partidas anteriores. El coste total de
     {\footnotesize Fuente: Elaboración propia.}
 \end{table}
 
-El desembolso efectivamente realizado por el autor se limita a los 135,83~euros de las dos últimas partidas
+El desembolso efectivamente realizado por el autor se limita a los 179,83~euros de las dos últimas partidas
 con coste, puesto que ni el equipamiento ni los servicios en la nube han generado factura. Esa diferencia
 entre el coste económico del proyecto y su desembolso real es, en sí misma, un resultado: las capas
 gratuitas de los proveedores y la disponibilidad de hardware de uso común hacen que el único recurso
@@ -596,19 +618,22 @@ El capítulo~\ref{cap:marco-teorico} sostenía que una aplicación sobre hardwar
 despliegue marginal frente a los robots sociales, y conviene sustanciar esa afirmación con números en lugar
 de dejarla en una intuición.
 
-Bajo el supuesto de un mayor que mantenga diez intercambios conversacionales al día, con respuestas de unos
-300~caracteres y un consumo aproximado de 500~\textit{tokens} de entrada y 150~de salida por turno, el
-consumo mensual sería de unos 90.000~caracteres de síntesis de voz y alrededor de 150.000~\textit{tokens} de
-entrada y 45.000~de salida en el modelo de lenguaje. Aplicadas las tarifas anteriores, la síntesis de voz
-costaría unos 2,70~dólares mensuales por usuario y el modelo de lenguaje en torno a 0,16~dólares, mientras
-que la persistencia y la autenticación permanecerían dentro de las capas gratuitas incluso con varios
-cientos de usuarios.
+Bajo el supuesto de un mayor que mantenga diez intercambios conversacionales al día, repartidos en dos
+conversaciones, con respuestas de unos 300~caracteres y un consumo aproximado de 500~\textit{tokens} de
+entrada y 150~de salida por turno, el consumo mensual sería de unos 90.000~caracteres de síntesis de voz y
+alrededor de 150.000~\textit{tokens} de entrada y 45.000~de salida en el modelo de lenguaje. A ello se
+suman, desde la incorporación de la memoria y del análisis al cierre, el contexto de memoria que acompaña a
+cada turno y una llamada de análisis por conversación: unos 270.000~\textit{tokens} de entrada y 15.000~de
+salida más al mes. Aplicadas las tarifas anteriores, la síntesis de voz costaría unos 2,70~dólares mensuales
+por usuario y el modelo de lenguaje en torno a 0,28~dólares, mientras que la persistencia, la autenticación
+y las invocaciones de funciones permanecerían dentro de las capas gratuitas incluso con varios cientos de
+usuarios.
 
 El resultado tiene dos lecturas, y ambas importan. La primera es que el coste por usuario y mes, en torno a
 tres dólares, resulta efectivamente marginal frente a los 249~dólares de alta más 39~a~59~dólares mensuales
 de un robot de compañía comercial, o frente a los aproximadamente 6.000~dólares de un robot terapéutico, de
 modo que la afirmación del capítulo~\ref{cap:marco-teorico} se sostiene. La segunda es que ese coste está
-dominado casi por completo por la síntesis de voz de alta calidad, que supone más del 90\% del total, de
+dominado casi por completo por la síntesis de voz de alta calidad, que supone en torno al 90\% del total, de
 manera que cualquier estrategia de escalado pasaría por revisar esa partida, bien negociando volumen, bien
 reservando la voz de nube para las respuestas largas y delegando las breves en el motor del dispositivo, que
 ya existe en el sistema como mecanismo de respaldo.

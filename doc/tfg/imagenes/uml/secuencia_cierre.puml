@@ -1,0 +1,35 @@
+@startuml secuencia_cierre
+' Cierre y análisis de una conversación (ADR-0028, ADR-0029, ADR-0032),
+' figura fig:secuencia-cierre del capítulo 5.
+' Regenerar: java -jar plantuml.jar secuencia_cierre.puml
+skinparam dpi 150
+skinparam sequenceMessageAlign center
+skinparam ParticipantPadding 12
+hide footbox
+
+actor "Mayor" as M
+participant "App del mayor\n(ChatController)" as APP
+participant "closeConversation\n(Cloud Functions)" as CF
+participant "Gemini\n(Vertex AI)" as GEM
+database "Firestore" as FS
+
+M -> APP : turnos, por voz o por escrito
+note right of APP : búfer de turnos en memoria,\nnunca en disco
+... cinco minutos sin turnos, o la app pasa a segundo plano ...
+APP -> APP : cierra la conversación\ny vacía el búfer
+APP ->> CF : turnos, inicio, fin y motivo\n(el mayor no espera respuesta)
+CF -> FS : lee el perfil: rol, consentimiento y plazos
+alt sin consentimiento vigente
+  CF --> APP : rechazo; no se escribe nada
+else consentimiento vigente
+  CF -> FS : lee la memoria actual
+  CF -> GEM : transcripción y memoria\n(salida JSON con esquema)
+  GEM --> CF : ánimo, señales, temas, resumen\ny cambios de memoria
+  CF -> CF : sanea la respuesta\ny aplica los topes
+  CF -> FS : escribe conversación, contenido\ny memoria en un solo lote
+  CF -> FS : borra lo que exceda el plazo
+  note over CF : la transcripción se descarta\nal terminar la invocación
+end
+FS --> APP : la memoria actualizada llega por suscripción
+note right of APP : la próxima conversación\nse siembra con ella
+@enduml

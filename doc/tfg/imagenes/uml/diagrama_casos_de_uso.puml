@@ -1,35 +1,51 @@
 @startuml diagrama_casos_de_uso
-' Casos de uso del MVP (CU-01 a CU-06), figura fig:casos-de-uso del capítulo 4.
+' Casos de uso del sistema (CU-01 a CU-10), figura fig:casos-de-uso del capítulo 4.
 ' Regenerar: java -jar plantuml.jar diagrama_casos_de_uso.puml
+' El mayor queda a la izquierda; el familiar y Gemini, a la derecha (las
+' flechas escritas como "CU <-- actor" colocan al actor detrás del caso de
+' uso). Las relaciones <<precedes>> no influyen en la colocación ([norank]).
 left to right direction
 skinparam dpi 150
 
-actor "Mayor Independiente" as MI
-actor "Mayor Vinculado" as MV
+actor "Mayor\nIndependiente" as MI
+actor "Mayor\nVinculado" as MV
+actor "Mayor" as M
 actor "Familiar" as FA
 actor "API Gemini" as GEM <<external>>
 
+MI --|> M
+MV --|> M
+
 rectangle "Quiet Companion" {
-  usecase "CU-05\nAjustar preferencias\n(desde el dispositivo\ndel mayor)" as CU05
-  usecase "CU-01\nSeleccionar modo\nde uso" as CU01
+  usecase "CU-01\nSeleccionar modo de uso" as CU01
+  usecase "CU-05\nAjustar preferencias\n(desde el dispositivo del mayor)" as CU05
   usecase "CU-04\nConversar por voz" as CU04
-  usecase "CU-02\nGenerar código\nde vinculación" as CU02
+  usecase "CU-10\nConversar por escrito" as CU10
+  usecase "CU-08\nCerrar y analizar\nuna conversación" as CU08
+  usecase "CU-07\nOtorgar o retirar\nel consentimiento" as CU07
+  usecase "CU-09\nConsultar el seguimiento\ndel estado de ánimo" as CU09
   usecase "CU-06\nAjustar preferencias\n(modo remoto)" as CU06
   usecase "CU-03\nIntroducir código\nde vinculación" as CU03
+  usecase "CU-02\nGenerar código\nde vinculación" as CU02
 }
 
-MI --> CU05
-MI --> CU01
-MI --> CU04
-
-MV --> CU05
-MV --> CU01
-MV --> CU04
+M --> CU01
+M --> CU05
+M --> CU04
+M --> CU10
+M --> CU08
+M --> CU07
+M --> CU09
 MV --> CU02
 
-FA --> CU06
-FA --> CU03
-
 CU04 ..> GEM : <<include>>
-CU02 ..> CU03 : <<precedes>>
+CU10 ..> GEM : <<include>>
+CU08 ..> GEM : <<include>>
+
+CU09 <-- FA
+CU06 <-- FA
+CU03 <-- FA
+
+CU07 .[norank].> CU08 : <<precedes>>
+CU02 .[norank].> CU03 : <<precedes>>
 @enduml

@@ -1,0 +1,77 @@
+@startuml diagrama_conceptual
+' Modelo conceptual de dominio, figura fig:dominio del capítulo 4.
+' Regenerar: java -jar plantuml.jar diagrama_conceptual.puml
+skinparam dpi 150
+skinparam classAttributeIconSize 0
+hide circle
+hide methods
+hide empty members
+
+class Usuario {
+  id
+  rol : {Mayor, Familiar}
+}
+
+class Mayor {
+  autonomia : {Independiente, Vinculado}
+  codigoVinculacion [0..1]
+  nivelCompartido
+}
+
+class Familiar
+
+class Preferencias {
+  volumen
+  velocidadVoz
+  multiplicadorTexto
+}
+
+class "Ajustes de la\nconversación" as Ajustes {
+  minutosSinTurnos
+  diasConservacion
+}
+
+class Consentimiento {
+  concedido
+  fechaRespuesta
+  versionTexto
+  fechaRetirada [0..1]
+}
+
+class "Conversación" as Conversacion {
+  inicio
+  fin
+  motivoFin
+  turnosMayor
+  estado
+  sentimiento [0..1]
+  senales [0..6]
+}
+
+class "Contenido" as Contenido {
+  temas [0..5]
+  resumen
+}
+
+class Memoria {
+  datos [0..30]
+  resumenesRecientes [0..3]
+}
+
+Mayor -up-|> Usuario
+Familiar -up-|> Usuario
+
+Mayor "0..1" -right- "0..1" Familiar : vinculado_con >
+Preferencias "1" -right- "1" Mayor : < posee
+Mayor "1" -down- "1" Ajustes : tiene >
+Mayor "1" -down- "0..1" Consentimiento : otorga >
+Mayor "1" -down- "0..*" Conversacion : mantiene >
+Mayor "1" -down- "0..1" Memoria : tiene >
+Conversacion *-right- "0..1" Contenido
+
+note bottom of Conversacion
+  La transcripción no forma
+  parte del modelo: no se
+  almacena nunca.
+end note
+@enduml

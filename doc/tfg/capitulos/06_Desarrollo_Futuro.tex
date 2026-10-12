@@ -1,21 +1,96 @@
 \chapter{Conclusiones y trabajo futuro}
 \label{cap:desarrollo-futuro}
 
+\section{Conclusiones}
+\label{sec:conclusiones}
+
+El objetivo general del trabajo era desarrollar un prototipo funcional de aplicación móvil que acompañe por
+voz a personas mayores en situación de soledad no deseada y que resulte accesible para ese perfil de usuario.
+El prototipo existe y cumple los objetivos específicos comprometidos, con las salvedades que recoge la
+tabla~\ref{tab:cumplimiento-oe} y que se han documentado a lo largo de la memoria en lugar de reservarse para
+este capítulo.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{@{}c >{\RaggedRight\arraybackslash}p{0.17\textwidth} >{\RaggedRight\arraybackslash}X@{}}
+        \toprule
+        \textbf{Objetivo} & \textbf{Grado} & \textbf{Evidencia y salvedades} \\
+        \midrule
+        OE-1 & Cumplido & Onboarding dual con revelación progresiva y vinculación atómica ejecutada en el
+            servidor (apartado~\ref{sec:adr-identidad}). \\
+        \addlinespace
+        OE-2 & Cumplido & Ciclo completo de voz con respaldo al motor del dispositivo, y conversación por
+            escrito como vía alternativa (apartado~\ref{sec:teclado}), esta última pendiente de verificar en
+            dispositivo. \\
+        \addlinespace
+        OE-3 & Cumplido con una excepción & Pisos tipográficos, áreas táctiles de 88~px y pulsación simple en
+            toda la interfaz del mayor; el color del estado \emph{Pensando} no alcanza el contraste no textual
+            (apartado~\ref{sec:color}). \\
+        \addlinespace
+        OE-4 & Cumplido & Configuración local y remota, propagada en tiempo real en ambas direcciones
+            (apartado~\ref{sec:ssot}). \\
+        \addlinespace
+        OE-5 & Cumplido, verificación en curso & Memoria, análisis al cierre, panel de bienestar y «Mi semana»
+            bajo consentimiento del propio mayor, sin almacenar la transcripción
+            (apartados~\ref{sec:conversacion} y~\ref{sec:privacidad}); cubiertos por pruebas automáticas y
+            pendientes del recorrido completo en dispositivo. \\
+        \addlinespace
+        OE-6 & Cumplido & Arquitectura Clean Feature-Sliced sin acoplamiento horizontal, treinta y siete
+            decisiones registradas y gestión Kanban; la clave de la conversación en vivo sigue en el cliente
+            (RNF-8). \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Grado de cumplimiento de los objetivos específicos.}
+    \label{tab:cumplimiento-oe}
+\end{table}
+
+Más allá del balance por objetivos, el desarrollo deja tres conclusiones que trascienden a este proyecto
+concreto.
+
+La primera es que la accesibilidad funciona mejor como restricción de diseño que como capa de acabado.
+Las decisiones más reconocibles de la aplicación no se tomaron para cumplir una norma después de diseñar,
+sino que se derivaron de ella: un único control grande en la pantalla principal, escalas con nombre en lugar
+de deslizadores, un consentimiento recogido con dos botones del mismo tamaño y no con una casilla, y una
+semana contada con frases y no con gráficas. Centralizar esas reglas en el sistema de diseño hizo además que
+cada pantalla nueva las heredara sin esfuerzo adicional.
+
+La segunda es que la privacidad solo es una propiedad del sistema cuando la hace cumplir el servidor. Lo que
+el mayor decide que ve su familiar no depende de que la aplicación del familiar se comporte bien, sino de
+unas reglas verificadas contra el emulador y de un reparto del almacenamiento pensado para que esas reglas
+puedan aplicarse; y la transcripción no se protege prometiendo no mirarla, sino no guardándola nunca. La
+plataforma de funciones gestionadas fue la que hizo viable ese planteamiento para un único desarrollador:
+permitió tener lógica de servidor de confianza sin operar servidor alguno.
+
+La tercera es metodológica: los defectos más instructivos del proyecto no los encontró la implementación
+sino la verificación. Las reglas de seguridad, escritas antes que la solución, revelaron que la vinculación
+desde el cliente exponía el directorio de usuarios; el diseño de HU-5 y HU-6 reveló que el panel revertía
+en silencio los cambios del mayor; y la primera prueba completa en dispositivo reveló la palabra perdida de
+la escucha. Documentar esos tropiezos con la misma atención que los aciertos es lo que permite defender el
+resto de afirmaciones de esta memoria.
+
+Queda, por último, la premisa con la que se planteó el trabajo: la tecnología debe complementar el vínculo
+humano y no sustituirlo. El resultado la respeta en su diseño, porque el familiar forma parte del circuito
+y es el mayor quien decide qué sabe de él, pero no puede afirmar todavía que la herramienta reduzca la
+soledad de nadie. Esa pregunta, que es la que de verdad importa, es la primera de las líneas que siguen.
+
 \section{Líneas de trabajo futuro}
 \label{sec:lineas-futuras}
 
-Las seis Historias de Usuario planificadas se han implementado, de modo que las líneas que siguen no son
-funcionalidades pendientes del plan original sino las que ese plan ha ido dejando al descubierto. Se ordenan
-de mayor a menor alcance, que no coincide con el orden de dificultad técnica.
+Las ocho Historias de Usuario del catálogo se han implementado, de modo que las líneas que siguen no son
+funcionalidades pendientes del plan sino las que ese plan ha ido dejando al descubierto. Se ordenan de mayor
+a menor alcance, que no coincide con el orden de dificultad técnica.
 
 La limitación más relevante del trabajo, señalada ya en el capítulo~\ref{cap:marco-teorico}, es la
 \textbf{ausencia de validación con usuarios reales}. Un estudio de campo con personas mayores, con
 instrumentos validados como la Escala de Soledad de De Jong Gierveld \citep{DeJongGierveld2010}, permitiría
 contrastar si la herramienta produce algún efecto medible sobre la dimensión social de la soledad, que es la
-única que la propuesta aspira a abordar. Esa validación tiene además un requisito previo más modesto pero
-igual de necesario: la \textbf{verificación sobre dispositivo real} de las funcionalidades incorporadas en
-último lugar, cuya lógica está cubierta por pruebas automáticas pero cuyo comportamiento en un terminal de
-gama media con una persona mayor delante no se ha comprobado todavía.
+única que la propuesta aspira a abordar. Ese estudio permitiría además contrastar las etiquetas del análisis
+emocional con la percepción del propio mayor y de su familiar, hoy presentadas solo como orientación. Y tiene
+un requisito previo más modesto pero igual de necesario: la \textbf{verificación sobre dispositivo real} de
+las funcionalidades incorporadas en último lugar, cuya lógica está cubierta por pruebas automáticas pero cuyo
+comportamiento en un terminal de gama media con una persona mayor delante no se ha comprobado todavía por
+completo.
 
 La segunda línea es de seguridad y está identificada con precisión: la \textbf{llamada conversacional en
 vivo sigue partiendo del cliente} con la clave del proveedor gestionada en el dispositivo, de modo que RNF-8
@@ -24,18 +99,27 @@ que resolvió el emparejamiento y el análisis al cierre, esto es, una función 
 intermediaria, y su coste es de integración y de latencia antes que de diseño. Es el único incumplimiento de
 seguridad que le queda al proyecto y por eso encabeza la lista de deuda.
 
-En el terreno funcional quedan tres extensiones de alcance acotado. La primera son las
+La tercera es de protección de datos, y es condición para cualquier despliegue fuera del ámbito académico:
+una \textbf{evaluación de impacto relativa a la protección de datos} (art.~35 del RGPD), obligada en un
+tratamiento de datos de salud de personas vulnerables. Junto a ella, tres mejoras ya identificadas en el
+diseño del consentimiento: una opción «Borrarlo ya» que suprima de inmediato lo guardado al retirarlo, y
+resuelva así la tensión con el artículo~17; la posibilidad de que el familiar \emph{solicite} el
+consentimiento a distancia para que el mayor lo confirme en su propio dispositivo; y la corrección de la
+memoria, porque un dato mal transcrito («Paulo» por «Pablo») hoy solo se corrige si el mayor lo aclara en
+una conversación posterior.
+
+En el terreno funcional quedan dos extensiones de alcance acotado. La primera son las
 \textbf{notificaciones al familiar}, que hoy debe abrir el panel para enterarse de cualquier cambio, cuando
-el valor de un seguimiento reside justamente en no tener que consultarlo. La segunda es el \textbf{modo de
-entrada por teclado}, anunciado en la interfaz del mayor pero inerte, y que importa más de lo que su tamaño
-sugiere porque es la única alternativa para quien tiene dificultades de habla o se encuentra en un entorno
-ruidoso. La tercera es admitir \textbf{varios familiares por mayor}, ampliando a $0..n$ la cardinalidad que
-el modelo conceptual del capítulo~\ref{cap:analisis} fijó deliberadamente en $0..1$, decisión razonable para
-un MVP pero que no resiste el caso frecuente de varios hijos repartiéndose el cuidado.
+el valor de un seguimiento reside justamente en no tener que consultarlo; su diseño tendría que conciliarse
+con la decisión de que la aplicación no sea un sistema de alertas. La segunda es admitir \textbf{varios
+familiares por mayor}, ampliando a $0..n$ la cardinalidad que el modelo conceptual del
+capítulo~\ref{cap:analisis} fijó deliberadamente en $0..1$, decisión razonable para un MVP pero que no resiste
+el caso frecuente de varios hijos repartiéndose el cuidado, y que obligaría a decidir si cada uno ve lo mismo.
 
 Por último, dos líneas de naturaleza técnica. La evolución hacia una \textbf{conversación de audio nativa},
 sustituyendo la cadena de transcripción, generación y síntesis por un modelo multimodal que reciba y devuelva
 voz, atacaría directamente la latencia percibida que fija RNF-7 y eliminaría la pérdida de matiz que supone
-convertir el habla en texto antes de interpretarla. Y la \textbf{integración continua}, hoy inexistente, que
+convertir el habla en texto antes de interpretarla, aunque obligaría a revisar el modelo de privacidad,
+porque el análisis dejaría de trabajar sobre texto. Y la \textbf{integración continua}, hoy inexistente, que
 ejecute de forma automática las tres suites de pruebas del proyecto, sin la cual la cobertura conseguida se
 degrada con el tiempo sin que nadie se entere.

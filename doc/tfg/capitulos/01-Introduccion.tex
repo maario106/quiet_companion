@@ -101,7 +101,7 @@ desarrollan en el capítulo~\ref{cap:diseno-desarrollo}.
 El objetivo general del trabajo es \textbf{desarrollar un prototipo funcional de aplicación móvil que
 acompañe por voz a personas mayores en situación de soledad no deseada, accesible para ese perfil de
 usuario}. Se descompone en los objetivos específicos de la tabla~\ref{tab:objetivos}, que constituyen el
-alcance comprometido: los cuatro primeros se refieren al producto y el último al proceso de ingeniería con el
+alcance comprometido: los cinco primeros se refieren al producto y el último al proceso de ingeniería con el
 que se construye.
 
 \begin{table}[H]
@@ -118,7 +118,8 @@ que se construye.
         \addlinespace
         OE-2 & Desarrollar una interfaz conversacional por voz que integre el ciclo completo de reconocimiento
         de voz, generación de respuesta mediante un modelo de lenguaje y síntesis de voz, comunicando
-        visualmente sus estados. \\
+        visualmente sus estados, y ofrecer la escritura como vía alternativa para quien no pueda o no quiera
+        hablar. \\
         \addlinespace
         OE-3 & Garantizar el cumplimiento de los criterios de accesibilidad de la norma WCAG 2.2
         \citep{wcag} en la interfaz dirigida a la persona mayor, mediante tipografías de gran tamaño, áreas
@@ -128,7 +129,12 @@ que se construye.
         accesibilidad y que propague en tiempo real los cambios realizados por el familiar al dispositivo del
         mayor. \\
         \addlinespace
-        OE-5 & Diseñar e implementar la solución sobre una arquitectura escalable y mantenible, aplicando los
+        OE-5 & Incorporar el seguimiento del bienestar del mayor, mediante una memoria conversacional y el
+        análisis del estado de ánimo de cada conversación, supeditado al consentimiento informado del propio
+        mayor conforme al RGPD \citep{RGPD2016} y sin almacenar en ningún momento la transcripción de lo
+        hablado. \\
+        \addlinespace
+        OE-6 & Diseñar e implementar la solución sobre una arquitectura escalable y mantenible, aplicando los
         principios de Clean Architecture y Feature-Sliced Design, y gestionar el ciclo de vida del proyecto
         mediante una metodología ágil basada en tableros Kanban. \\
         \bottomrule

@@ -247,6 +247,9 @@ pdfproducer = {pdflatex}
 }
 \makeatother
 \usepackage{pdfpages}
+% Rótulo de los listados en español, también en las referencias con \autoref
+\renewcommand{\lstlistingname}{Listado}
+\AtBeginDocument{\def\lstlistingautorefname{Listado}}
 \begin{document}
 \input{portada/portada}
 \input{portada/portada_2}

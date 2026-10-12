@@ -15,8 +15,9 @@ secundarios, servicios externos que no son humanos pero sin los cuales el sistem
 casos de uso principales.
 
 El \textbf{Mayor Independiente} es la persona mayor que ha optado durante el \textit{onboarding} por
-gestionar la aplicación por sí misma. Tiene acceso al chat por voz y a todos sus ajustes en su propio
-dispositivo, y se autentica de forma anónima, de modo que su identidad queda ligada al terminal. El
+gestionar la aplicación por sí misma. Tiene acceso a la conversación, por voz o por escrito, y a todos sus
+ajustes en su propio dispositivo, y se autentica de forma anónima, de modo que su identidad queda ligada al
+terminal. El
 \textbf{Mayor Vinculado} es aquel cuya configuración delega en un familiar, sin perder por ello el acceso a
 sus ajustes. Hasta que el familiar introduce el código de emparejamiento no dispone todavía del chat; desde
 ese momento comparte con el Mayor Independiente la pantalla principal y la de ajustes, salvo los plazos de
@@ -29,8 +30,8 @@ haya decidido compartir, y se autentica con correo electrónico y contraseña, p
 portable entre terminales.
 
 En cuanto a los actores secundarios, la \textbf{API de Gemini} es el servicio al que se delega la
-generación de las respuestas conversacionales, y la \textbf{API de Cloud Text-to-Speech} es la que
-sintetiza la voz con la que esas respuestas se pronuncian. Aunque ninguno de los dos es un actor humano, su
+generación de las respuestas conversacionales y el análisis de cada conversación al cerrarse, y la
+\textbf{API de Cloud Text-to-Speech} es la que sintetiza la voz con la que esas respuestas se pronuncian. Aunque ninguno de los dos es un actor humano, su
 consideración como actores del sistema es coherente con la práctica habitual en UML cuando un agente
 externo dispara o atiende eventos del sistema. Ambos se consumen mediante llamadas a través de la red y
 ambos condicionan la disponibilidad del caso de uso conversacional, tal y como recoge RNF-14.
@@ -52,10 +53,57 @@ Este diagrama refleja la jerarquía de actores y sus relaciones primarias con lo
 especificación detallada de cada uno se desarrolla en la Sección~\ref{sec:casos-de-uso}.
 
 \section{Catálogo de requisitos}
-Los requisitos se han derivado a partir de las Historias de Usuario (HU-1 a HU-6), las restricciones técnicas
+Los requisitos se han derivado a partir de las Historias de Usuario (HU-1 a HU-8), las restricciones técnicas
 declaradas por el análisis previo y los principios de diseño establecidos en el capítulo~\ref{cap:introduccion}. Se distinguen
 \textbf{requisitos funcionales} (RF), que describen las capacidades del sistema, y \textbf{requisitos no
 funcionales} (RNF), que describen las restricciones bajo las cuales esas capacidades deben cumplirse.
+
+\subsection{Historias de Usuario}
+
+La tabla~\ref{tab:enunciado-hu} recoge el enunciado de las ocho Historias de Usuario en el formato habitual
+de rol, necesidad y beneficio. La tarjeta completa de HU-1, con su estimación y sus criterios de aceptación,
+se mostró como ejemplo en el capítulo~\ref{cap:metodologia}; los criterios de las demás se formalizan en este
+capítulo como requisitos y casos de uso. HU-4 y HU-6 nombran dos roles porque sirven a ambos: la
+configuración puede ajustarla el propio mayor o su familiar, y el seguimiento del ánimo lo consultan los dos.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{@{}c >{\RaggedRight\arraybackslash}X@{}}
+        \toprule
+        \textbf{ID} & \textbf{Enunciado} \\
+        \midrule
+        HU-1 & Como mayor, quiero elegir al abrir la aplicación por primera vez si la gestionaré yo mismo o si
+        me ayudará un familiar, para que el sistema me ofrezca la experiencia adecuada a mis capacidades
+        tecnológicas. \\
+        \addlinespace
+        HU-2 & Como mayor, quiero conversar con el asistente pulsando un único botón y hablando con
+        naturalidad, para tener compañía sin necesidad de aprender a usar la aplicación. \\
+        \addlinespace
+        HU-3 & Como mayor con la vista o la destreza mermadas, quiero textos grandes, botones amplios y una
+        única forma de tocar la pantalla, para usar la aplicación sin ayuda. \\
+        \addlinespace
+        HU-4 & Como familiar, quiero ajustar desde mi móvil el volumen, la velocidad de la voz y el tamaño del
+        texto del mayor, y que los cambios le lleguen al momento, para adaptarle la aplicación sin estar a su
+        lado; y como mayor, quiero poder ajustarlos yo mismo. \\
+        \addlinespace
+        HU-5 & Como mayor, quiero que el asistente recuerde lo que le he contado en conversaciones
+        anteriores, para no tener que repetirlo y sentir que me conoce. \\
+        \addlinespace
+        HU-6 & Como familiar, quiero saber cómo se ha encontrado el mayor durante la semana, para acompañarle
+        mejor; y como mayor, quiero ver ese mismo resumen, para darme cuenta de cómo me siento y de lo que me
+        preocupa. \\
+        \addlinespace
+        HU-7 & Como mayor, quiero decidir si se guardan mis conversaciones y qué parte ve mi familiar, y
+        poder cambiarlo cuando quiera, para que nadie sepa de mí más de lo que yo autorice. \\
+        \addlinespace
+        HU-8 & Como mayor, quiero poder escribir en lugar de hablar cuando no pueda o no quiera usar la voz,
+        para seguir conversando en silencio o cuando el reconocimiento de voz me falle. \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Enunciado de las Historias de Usuario.}
+    \label{tab:enunciado-hu}
+\end{table}
 
 \subsection{Requisitos Funcionales}
 Los requisitos funcionales se formalizan según una plantilla común: identificador, nombre, descripción,
@@ -240,11 +288,13 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \textbf{Prioridad} & Media \\
         \hline
         \textbf{Descripción} & Al cerrar cada conversación, el sistema debe extraer de ella los datos
-            estables del mayor (su nombre, las personas de su entorno, sus aficiones y sus preocupaciones
-            recurrentes) junto a un resumen breve, mantenerlos en un documento de memoria independiente
-            del registro de conversaciones, e inyectar ese documento en el contexto del modelo de lenguaje
-            al iniciar la conversación siguiente, de forma que las respuestas resulten personalizadas y
-            coherentes con lo hablado en interacciones anteriores. \\
+            estables del mayor (las personas de su entorno y su relación con ellas, dónde vive, sus
+            aficiones o sus rutinas, con exclusión de cualquier dato de salud) junto a un resumen breve,
+            mantenerlos en un documento de memoria independiente del registro de conversaciones, e inyectar
+            ese documento en el contexto del modelo de lenguaje al iniciar la conversación siguiente, de forma
+            que las respuestas resulten personalizadas y coherentes con lo hablado en interacciones
+            anteriores. El nombre del mayor, que hace falta en la misma conversación, se aprende en el
+            momento en que lo dice. \\
         \hline
         \textbf{Entradas} & Transcripción de la conversación que se cierra y documento de memoria vigente
             del mayor. \\
@@ -270,17 +320,20 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \hline
         \textbf{Prioridad} & Media \\
         \hline
-        \textbf{Descripción} & Al finalizar una conversación, el sistema debe clasificar su sentimiento
-            general (Positivo, Neutro o Negativo) y generar un resumen, ambos producidos en un entorno
-            servidor y sin que la transcripción llegue a almacenarse, y presentar el agregado tanto en una
-            vista accesible al propio mayor como en el panel del familiar, en este último caso solo en la
-            medida en que el mayor lo haya autorizado. \\
+        \textbf{Descripción} & Al finalizar una conversación, el sistema debe clasificar el sentimiento
+            general que expresa el mayor (Positivo, Neutro o Negativo), detectar las señales de una lista
+            cerrada que él mismo manifieste (soledad, tristeza, preocupación, malestar físico, desorientación
+            y riesgo), identificar los temas tratados y generar un resumen, todo ello en un entorno servidor
+            y sin que la transcripción llegue a almacenarse. El agregado semanal debe presentarse tanto en
+            una vista accesible al propio mayor («Mi semana») como en el panel del familiar, en este último
+            caso solo en la medida en que el mayor lo haya autorizado. \\
         \hline
         \textbf{Entradas} & Transcripción de la conversación finalizada, retenida únicamente en memoria
             durante el análisis. \\
         \hline
-        \textbf{Salidas} & Etiqueta de sentimiento y resumen almacenados en el registro de la conversación,
-            y agregado semanal visible en la vista del mayor y en el panel de bienestar del familiar. \\
+        \textbf{Salidas} & Sentimiento, señales, temas y resumen almacenados en el registro de la
+            conversación, y agregado semanal visible en la vista del mayor y en el panel de bienestar del
+            familiar. \\
         \hline
     \end{tabular}
     \caption{Requisito Funcional RF-8: Catalogación Emocional de las Conversaciones.}
@@ -292,17 +345,18 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
     \renewcommand{\arraystretch}{1.3}
     \begin{tabular}{|l|>{\raggedright\arraybackslash}p{0.72\textwidth}|}
         \hline
-        \multicolumn{2}{|c|}{\textbf{Requisito Funcional: Consentimiento sobre las Conversaciones}} \\
+        \multicolumn{2}{|c|}{\textbf{Requisito Funcional: Consentimiento y Control del Tratamiento}} \\
         \hline
         \textbf{ID} & RF-9 \\
         \hline
-        \textbf{Origen} & HU-5, HU-6 (deriva de RNF-10) \\
+        \textbf{Origen} & HU-7 (deriva de RNF-10) \\
         \hline
         \textbf{Prioridad} & Alta \\
         \hline
         \textbf{Descripción} & El tratamiento de las conversaciones debe quedar supeditado a un
             consentimiento explícito otorgado por el propio mayor, desactivado por omisión y revocable en
-            cualquier momento, sin que el familiar pueda otorgarlo en su nombre. El mayor debe poder decidir
+            cualquier momento con la misma facilidad con que se otorgó, sin que el familiar pueda otorgarlo
+            en su nombre. El mayor debe poder decidir
             además qué parte del resultado del análisis es visible para su familiar, y esa decisión debe
             hacerse cumplir en el servidor y no únicamente en la interfaz. Los plazos de cierre por
             inactividad y de conservación de los datos derivados deben ser configurables dentro de los
@@ -317,6 +371,34 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
     \end{tabular}
     \caption{Requisito Funcional RF-9: Consentimiento y Control del Tratamiento Conversacional.}
     \label{tab:rf9}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{|l|>{\raggedright\arraybackslash}p{0.72\textwidth}|}
+        \hline
+        \multicolumn{2}{|c|}{\textbf{Requisito Funcional: Conversación por Escrito}} \\
+        \hline
+        \textbf{ID} & RF-10 \\
+        \hline
+        \textbf{Origen} & HU-8 \\
+        \hline
+        \textbf{Prioridad} & Media \\
+        \hline
+        \textbf{Descripción} & El sistema debe permitir al mayor alternar entre la voz y la escritura
+            con un único botón de la pantalla principal. Un turno escrito debe seguir el mismo camino que
+            uno hablado, también a efectos del análisis al cierre de la conversación, y su respuesta debe
+            mostrarse en pantalla sin leerse en voz alta, salvo que el mayor lo pida. \\
+        \hline
+        \textbf{Entradas} & Texto introducido en el campo de escritura y pulsación de «Enviar». \\
+        \hline
+        \textbf{Salidas} & Respuesta del asistente en pantalla con tipografía de gran tamaño, y su locución
+            cuando el mayor pulsa «Escuchar». \\
+        \hline
+    \end{tabular}
+    \caption{Requisito Funcional RF-10: Conversación por Escrito.}
+    \label{tab:rf10}
 \end{table}
 
 \subsection{Requisitos No Funcionales (RNF)}
@@ -372,14 +454,16 @@ salvo indicación contraria.
 \begin{itemize}
     \item \textbf{RNF-10. Tratamiento de datos personales.} El sistema procesa datos de carácter personal:
     identificadores anónimos, preferencias del usuario y, desde la incorporación de HU-5 y HU-6, resúmenes
-    de las conversaciones y su categorización emocional. Su tratamiento se ajusta al Reglamento General de
+    de las conversaciones, su categorización emocional y lo que el asistente recuerda del mayor. Su tratamiento se ajusta al Reglamento General de
     Protección de Datos \citep{RGPD2016}, aplicando los principios de minimización de datos, limitación de
     la finalidad y limitación del plazo de conservación. En concreto, la transcripción de la conversación no
     llega a almacenarse en ningún momento y solo se procesa de forma transitoria para producir el resumen y
     la etiqueta de sentimiento; el tratamiento está supeditado al consentimiento explícito
     (\textit{opt-in}) del mayor, desactivado por defecto y revocable, que no puede otorgar el familiar en
-    su nombre (RF-9); y los datos derivados se conservan durante un plazo acotado y configurable, cumplido
-    el cual se eliminan.
+    su nombre (RF-9); y los datos derivados se conservan durante un plazo acotado y configurable, de
+    noventa días por omisión y nunca superior a ciento ochenta, cumplido el cual se eliminan. Las
+    conversaciones en las que el mayor interviene menos de tres veces ni siquiera se analizan: de ellas solo
+    sale del dispositivo la constancia de que existieron.
 \end{itemize}
 
 \paragraph{Mantenibilidad}
@@ -405,23 +489,24 @@ salvo indicación contraria.
 
 \section{Casos de Uso}
 \label{sec:casos-de-uso}
-Esta sección formaliza los casos de uso de las seis Historias de Usuario. Los seis primeros corresponden al
-MVP (HU-1 a HU-4) y los tres últimos a las historias que se abordaron una vez cerrado ese núcleo (HU-5 y
-HU-6). La separación no es caprichosa: los tres últimos comparten una precondición que los anteriores no
-tienen, el consentimiento del mayor, y por eso se especifican después.
+Esta sección formaliza los casos de uso de las ocho Historias de Usuario. Los seis primeros corresponden al
+MVP (HU-1 a HU-4) y los cuatro últimos a las historias que se abordaron una vez cerrado ese núcleo (HU-5 a
+HU-8). La separación no es caprichosa: CU-07 establece el consentimiento del mayor, CU-08 y CU-09 lo exigen
+como precondición, y CU-10 amplía la conversación de CU-04 a un segundo canal de entrada.
 
 \subsection{Diagramas de casos de uso (UML)}
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{imagenes/uml/diagrama_casos_de_uso.png}
-    \caption{Diagrama de casos de uso del MVP (CU-01 a CU-06).}
+    \includegraphics[width=0.75\textwidth]{imagenes/uml/diagrama_casos_de_uso.png}
+    \caption{Diagrama de casos de uso del sistema (CU-01 a CU-10).}
     \label{fig:casos-de-uso}
 \end{figure}
 
-El diagrama recoge los seis casos de uso del MVP, que son los que existían cuando se levantó. Los tres que
-se incorporaron después con HU-5 y HU-6, esto es, CU-07 a CU-09, se especifican textualmente más adelante en
-este mismo apartado y quedan pendientes de incorporarse a la representación gráfica.
+El diagrama agrupa a los dos perfiles de mayor bajo un actor común, del que ambos heredan, para no
+duplicar las asociaciones que comparten; solo la generación del código de vinculación es exclusiva del
+mayor vinculado. CU-08 no lo inicia un gesto deliberado sino el final de la conversación, y por eso se
+asocia al mayor de forma implícita, como se detalla en su especificación.
 
 \subsection{Especificación detallada}
 
@@ -541,6 +626,7 @@ internet y de permisos de micrófono concedidos.
 
 \noindent\textbf{Flujos alternativos:}
 \begin{itemize}[nosep]
+    \item \textbf{1a.} El mayor prefiere escribir: pulsa «¿Teclado?» y continúa en CU-10.
     \item \textbf{2a.} Permiso de micrófono denegado: el sistema informa al usuario de la imposibilidad
     de proceder y cancela la operación.
     \item \textbf{4a.} Error de red o error en la respuesta de la API: el sistema vuelve al estado de
@@ -623,7 +709,7 @@ omisión.
     explica en lenguaje llano qué se guarda, qué no se guarda y quién puede verlo.
     \item El mayor elige de forma explícita si autoriza que sus conversaciones se analicen y se resuman.
     \item La elección se registra mediante una función en la nube, único punto autorizado para escribir ese
-    campo del perfil.
+    campo del perfil, junto con la hora del servidor y la versión del texto que el mayor ha leído.
     \item Si la respuesta es afirmativa, el mayor indica además qué parte del resultado del análisis podrá
     ver su familiar.
     \item El sistema aplica la decisión a partir de la conversación siguiente.
@@ -633,8 +719,10 @@ omisión.
 \begin{itemize}[nosep]
     \item \textbf{2a.} El mayor no autoriza el tratamiento: la aplicación conversa con normalidad, pero no
     se analiza ni se persiste nada de lo hablado.
-    \item \textbf{5a.} El mayor retira el consentimiento más adelante: el sistema deja de analizar
-    conversaciones nuevas y programa el borrado de lo ya almacenado.
+    \item \textbf{5a.} El mayor retira el consentimiento más adelante desde Ajustes: el sistema deja de
+    analizar conversaciones nuevas, el familiar pierde al instante el acceso a lo ya almacenado y eso se
+    borra cuando transcurre la mitad del plazo de conservación, salvo que el mayor vuelva a consentir
+    antes.
     \item \textbf{3a.} El familiar intenta otorgar el consentimiento en nombre del mayor: la operación se
     rechaza en el servidor, no en la interfaz.
 \end{itemize}
@@ -654,8 +742,8 @@ descrito en CU-07.
 
 \noindent\textbf{Flujo principal:}
 \begin{enumerate}[nosep]
-    \item El sistema detecta el final de la conversación, bien por un silencio prolongado, bien porque el
-    mayor sale de la aplicación.
+    \item El sistema detecta el final de la conversación, bien porque pasa un tiempo sin turnos (cinco
+    minutos por omisión), bien porque el mayor sale de la aplicación.
     \item Envía a una función en la nube la transcripción acumulada, que hasta ese momento solo ha existido
     en memoria.
     \item La función clasifica el sentimiento general, genera un resumen breve y extrae los datos estables
@@ -669,6 +757,10 @@ descrito en CU-07.
 \begin{itemize}[nosep]
     \item \textbf{1a.} El mayor no ha otorgado el consentimiento: la conversación se cierra sin analizarse
     ni persistirse.
+    \item \textbf{1b.} El mayor sale al marcador de emergencia: la conversación no se cierra y continúa a
+    su vuelta.
+    \item \textbf{2a.} El mayor ha intervenido menos de tres veces: solo se envía la constancia de la
+    conversación (inicio, fin y número de turnos), sin texto.
     \item \textbf{3a.} El servicio de análisis falla o no responde: la conversación se cierra igualmente,
     el fallo queda registrado y la memoria del mayor no se altera, de modo que un error no puede
     corromperla.
@@ -681,8 +773,8 @@ actualizados; la transcripción no persiste en ningún soporte.
 
 \paragraph{CU-09. Consultar el seguimiento del estado de ánimo}
 
-\noindent\textbf{Actor primario:} Mayor, en su propia vista de resumen semanal, o Familiar, en el panel de
-bienestar.
+\noindent\textbf{Actor primario:} Mayor, en su propia vista de resumen semanal («Mi semana»), o Familiar, en
+el panel de bienestar.
 
 \noindent\textbf{Precondiciones:} Existe al menos una conversación analizada. Para el familiar se exige
 además vinculación activa y autorización expresa del mayor sobre lo que comparte.
@@ -694,7 +786,8 @@ además vinculación activa y autorización expresa del mayor sobre lo que compa
     \item Presenta el número de conversaciones mantenidas, la distribución de sentimientos y, cuando
     procede, los resúmenes asociados.
     \item En la vista del mayor la presentación respeta las restricciones de accesibilidad de HU-3, por lo
-    que se prescinde de gráficas densas en favor de una lectura secuencial.
+    que se prescinde de gráficas en favor de frases que puede además escuchar, y se le indica qué parte de
+    su análisis ve su familiar.
 \end{enumerate}
 
 \noindent\textbf{Flujos alternativos:}
@@ -707,6 +800,41 @@ además vinculación activa y autorización expresa del mayor sobre lo que compa
 
 \noindent\textbf{Postcondiciones:} Ninguna. Es un caso de uso de solo lectura que no altera el estado del
 sistema.
+
+\bigskip
+
+\paragraph{CU-10. Conversar por escrito}
+
+\noindent\textbf{Actor primario:} Mayor (cualquier modalidad).
+
+\noindent\textbf{Actor secundario:} API de Gemini.
+
+\noindent\textbf{Precondiciones:} El mayor tiene un perfil activo y el dispositivo dispone de conexión a
+internet.
+
+\noindent\textbf{Flujo principal:}
+\begin{enumerate}[nosep]
+    \item El mayor pulsa «¿Teclado?» en la pantalla principal.
+    \item El sistema sustituye el botón del micrófono por un campo de texto y un botón «Enviar», y abre el
+    teclado del dispositivo sin necesidad de otro toque.
+    \item El mayor escribe su mensaje y pulsa «Enviar».
+    \item El sistema cierra el teclado, muestra el estado «Pensando» y envía el texto al modelo de lenguaje
+    como un turno más de la conversación en curso.
+    \item El sistema muestra la respuesta en pantalla con tipografía de gran tamaño, sin leerla en voz alta.
+    \item Si el mayor pulsa «Escuchar», el sistema lee la respuesta, y el botón pasa a «Parar» mientras
+    suena.
+\end{enumerate}
+
+\noindent\textbf{Flujos alternativos:}
+\begin{itemize}[nosep]
+    \item \textbf{1a.} El micrófono estaba escuchando: lo oído se descarta sin enviarse.
+    \item \textbf{4a.} Error de red o de la API: el sistema muestra un mensaje accesible y devuelve el texto
+    al campo, para no obligar a escribirlo de nuevo.
+    \item \textbf{6a.} El mayor pulsa «¿Hablar?»: el sistema vuelve al modo de voz (CU-04).
+\end{itemize}
+
+\noindent\textbf{Postcondiciones:} El turno escrito forma parte de la conversación en curso y cuenta para su
+análisis al cierre (CU-08) exactamente igual que uno hablado.
 
 \subsection{Trazabilidad}
 
@@ -724,8 +852,10 @@ Historia de Usuario se ha traducido en al menos un caso de uso especificado.
         HU-2 & RF-3, RF-4                & CU-04 \\
         HU-3 & No procede                & No procede \\
         HU-4 & RF-5, RF-6                & CU-05, CU-06 \\
-        HU-5 & RF-7, RF-9                & CU-07, CU-08 \\
-        HU-6 & RF-8, RF-9                & CU-07, CU-08, CU-09 \\
+        HU-5 & RF-7                      & CU-08 \\
+        HU-6 & RF-8                      & CU-08, CU-09 \\
+        HU-7 & RF-9                      & CU-07 \\
+        HU-8 & RF-10                     & CU-10 \\
         \bottomrule
     \end{tabularx}
     \caption{Trazabilidad entre Historias de Usuario, Requisitos Funcionales y Casos de Uso.}
@@ -737,25 +867,37 @@ que se materializan como RNF y como condiciones de diseño aplicables a todos lo
 decisión es deliberada y evita la duplicación que se produciría al crear casos de uso ficticios para una
 HU de naturaleza no funcional.
 
-La tabla muestra también que RF-9 y CU-07 aparecen en las dos últimas filas. No es una redundancia: el
-consentimiento no pertenece a ninguna de las dos historias por separado, sino que es la condición que ambas
-comparten, y por eso se ha especificado una sola vez y se referencia desde las dos.
+RF-9 y CU-07 se asignan a HU-7 y no a las historias que los necesitan, porque el consentimiento responde a
+una necesidad propia del mayor, la de decidir qué se guarda de él y quién lo ve, y no a la de ser recordado
+ni a la de que se siga su ánimo. HU-5 y HU-6 dependen de ella a través de las precondiciones: CU-08 y CU-09
+exigen el consentimiento que establece CU-07, y RNF-10 recoge las garantías que lo rodean.
 
 \section{Modelo conceptual de dominio}
 
 El modelo conceptual identifica las entidades principales que el sistema manipula y las relaciones entre
 ellas, con independencia de las decisiones tecnológicas de implementación.
 
-El sistema manipula tres entidades. El \textbf{Usuario} representa a una persona que interactúa con el
+El sistema manipula siete entidades. El \textbf{Usuario} representa a una persona que interactúa con el
 sistema; tiene un rol, que puede ser \textit{Mayor} o \textit{Familiar}, y, en el caso del mayor, un grado
-de autonomía que distingue al independiente del vinculado. Las \textbf{Preferencias} son el conjunto de
-parámetros de accesibilidad asociados a un usuario mayor, esto es, el volumen de la voz, la velocidad del
-habla y el multiplicador del tamaño de texto. La \textbf{Conversación}, por último, representa una
-interacción de voz entre el mayor y el asistente, con sus transcripciones, las respuestas generadas y los
-metadatos de la sesión. Conviene precisar qué se conserva de ella una vez incorporadas HU-5 y HU-6: lo que
-persiste es el resumen y la etiqueta de sentimiento junto a los metadatos, nunca la transcripción, que se
-descarta en cuanto termina el análisis. Esa distinción entre lo que el dominio contiene y lo que el sistema
-almacena es la que materializa el principio de minimización de RNF-10.
+de autonomía que distingue al independiente del vinculado y un nivel de compartición que fija qué parte de
+su análisis ve el familiar. Las \textbf{Preferencias} son el conjunto de parámetros de accesibilidad
+asociados a un usuario mayor, esto es, el volumen de la voz, la velocidad del habla y el multiplicador del
+tamaño de texto. Los \textbf{Ajustes de la conversación} recogen los dos plazos que gobiernan sus datos: el
+tiempo sin turnos tras el que una conversación se da por terminada y el plazo durante el que se conserva lo
+analizado. El \textbf{Consentimiento} es la respuesta del mayor a la pregunta de si se guardan sus
+conversaciones, con la fecha en que la dio, la versión del texto que leyó y, si lo retiró, la fecha de
+retirada. La \textbf{Conversación} representa un intercambio entre el mayor y el asistente, delimitado por
+un periodo sin turnos o por la salida de la aplicación, con sus metadatos de actividad y el sentimiento y
+las señales detectados; su \textbf{Contenido}, esto es, los temas y el resumen, se modela como una entidad
+aparte. La \textbf{Memoria}, por último, reúne lo que el asistente recuerda del mayor: un conjunto acotado de
+datos estables y los resúmenes de las últimas conversaciones.
+
+Conviene precisar qué no forma parte del modelo: la transcripción. Existe mientras dura la conversación y
+mientras se analiza, pero no se conserva en ningún soporte, de modo que lo que el sistema almacena es un
+subconjunto deliberado de lo que manipula. Esa distinción es la que materializa el principio de
+minimización de RNF-10. La separación entre la conversación y su contenido tampoco es casual: corresponde a
+los dos niveles de lo que el mayor puede compartir con su familiar, y es la que permite hacerlo cumplir en
+el servidor, como se explica en el capítulo~\ref{cap:diseno-desarrollo}.
 
 La relación principal es la \textbf{vinculación} entre un mayor y un familiar. Es binaria, bidireccional y
 opcional, se establece mediante un código temporal de un solo uso y, una vez establecida, autoriza al
@@ -765,7 +907,7 @@ que el mayor haya decidido compartir.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.8\textwidth]{imagenes/uml/diagrama_conceptual.png}
+    \includegraphics[width=\textwidth]{imagenes/uml/diagrama_conceptual.png}
     \caption{Modelo conceptual de dominio del sistema.}
     \label{fig:dominio}
 \end{figure}
