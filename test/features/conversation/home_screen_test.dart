@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:quiet_companion/core/models/conversation_consent.dart';
+import 'package:quiet_companion/core/models/conversation_record.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/providers/conversation_providers.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
 import 'package:quiet_companion/features/conversation/presentation/home_screen.dart';
@@ -19,6 +22,20 @@ const _elder = UserModel(
   role: UserRole.elder,
   autonomy: AutonomyStatus.independent,
 );
+
+// Con consentimiento y una conversación analizada: Inicio enseña "Mi semana",
+// que se aparta mientras el teclado del sistema está abierto.
+final _elderWithMyWeek = _elder.copyWith(
+  conversationConsent: const ConversationConsent(granted: true),
+);
+final _analyzed = ConversationRecord(
+  id: 'c1',
+  startedAt: DateTime(2026, 10, 1, 10),
+  endedAt: DateTime(2026, 10, 1, 10, 5),
+);
+
+/// Alto que el teclado del sistema le quita a la pantalla, en píxeles lógicos.
+const _keyboardHeight = 300.0;
 
 void main() {
   late FakeGeminiService gemini;
@@ -40,18 +57,23 @@ void main() {
     );
   });
 
-  Widget buildSubject() {
+  Widget buildSubject({UserModel user = _elder}) {
     return ProviderScope(
       overrides: [
-        currentUserProvider.overrideWith((ref) => Stream.value(_elder)),
+        currentUserProvider.overrideWith((ref) => Stream.value(user)),
         chatControllerProvider.overrideWith((ref) => controller),
+        conversationRecordsProvider
+            .overrideWith((ref, elderId) => Stream.value([_analyzed])),
       ],
       child: const MaterialApp(home: HomeScreen()),
     );
   }
 
-  Future<void> openKeyboardMode(WidgetTester tester) async {
-    await tester.pumpWidget(buildSubject());
+  Future<void> openKeyboardMode(
+    WidgetTester tester, {
+    UserModel user = _elder,
+  }) async {
+    await tester.pumpWidget(buildSubject(user: user));
     await tester.pump();
     await tester.tap(find.text('¿Teclado?'));
     await tester.pump();
@@ -59,6 +81,29 @@ void main() {
 
   IconButton sendButton(WidgetTester tester) =>
       tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.send));
+
+  /// Pantalla de móvil: con la de los tests (800 × 600) Inicio se ve como en
+  /// una tableta y el teclado no dejaría sitio.
+  void usePhoneScreen(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+  }
+
+  /// Lo que hace la plataforma cuando el teclado del sistema aparece o se va:
+  /// le quita o le devuelve el sitio a la pantalla.
+  Future<void> setKeyboardInset(WidgetTester tester, {required bool open}) async {
+    tester.view.viewInsets = open
+        ? FakeViewPadding(bottom: _keyboardHeight * tester.view.devicePixelRatio)
+        : FakeViewPadding.zero;
+    await tester.pump();
+  }
+
+  bool fieldHasFocus(WidgetTester tester) => tester
+      .state<EditableTextState>(find.byType(EditableText))
+      .widget
+      .focusNode
+      .hasFocus;
 
   group('modo teclado (ADR-0035)', () {
     testWidgets('"¿Teclado?" cambia el micrófono por el campo, y "¿Hablar?" '
@@ -123,6 +168,97 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tts.spoken, ['Hola! ¿De qué quieres que hablemos hoy?']);
+    });
+
+    testWidgets('tocar fuera del campo cierra el teclado y vuelve "Escuchar"',
+        (tester) async {
+      usePhoneScreen(tester);
+      await openKeyboardMode(tester, user: _elderWithMyWeek);
+      await setKeyboardInset(tester, open: true);
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(find.text('Escuchar'), findsNothing);
+
+      await tester.tap(find.text('Hola! ¿De qué quieres que hablemos hoy?'));
+      await tester.pump();
+      expect(fieldHasFocus(tester), isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+
+      await setKeyboardInset(tester, open: false);
+      expect(find.text('Escuchar'), findsOneWidget);
+      expect(find.text('Mi semana'), findsOneWidget);
+    });
+
+    testWidgets('"Cerrar teclado" cierra el teclado del sistema',
+        (tester) async {
+      usePhoneScreen(tester);
+      await openKeyboardMode(tester, user: _elderWithMyWeek);
+      await setKeyboardInset(tester, open: true);
+
+      await tester.tap(find.byTooltip('Cerrar teclado'));
+      await tester.pump();
+      expect(fieldHasFocus(tester), isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+
+      // Sin teclado no hay nada que cerrar: el botón se va.
+      await setKeyboardInset(tester, open: false);
+      expect(find.byTooltip('Cerrar teclado'), findsNothing);
+    });
+
+    testWidgets('abrir y cerrar el teclado no rehace el campo: no pierde el '
+        'foco ni lo escrito', (tester) async {
+      usePhoneScreen(tester);
+      await openKeyboardMode(tester, user: _elderWithMyWeek);
+      final field = tester.state(find.byType(EditableText));
+      await tester.enterText(find.byType(TextField), 'Hola');
+
+      await setKeyboardInset(tester, open: true);
+      expect(tester.state(find.byType(EditableText)), same(field));
+      expect(fieldHasFocus(tester), isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      await setKeyboardInset(tester, open: false);
+      expect(tester.state(find.byType(EditableText)), same(field));
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+        'Hola',
+      );
+    });
+
+    testWidgets('si el sistema cierra el teclado, tocar el campo lo vuelve a '
+        'abrir', (tester) async {
+      usePhoneScreen(tester);
+      await openKeyboardMode(tester, user: _elderWithMyWeek);
+      await setKeyboardInset(tester, open: true);
+
+      // Atrás del móvil, cambiar de app...: el teclado se va sin que la app
+      // lo pida.
+      tester.testTextInput.hide();
+      await setKeyboardInset(tester, open: false);
+      expect(tester.testTextInput.isVisible, isFalse);
+
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      await setKeyboardInset(tester, open: true);
+      expect(fieldHasFocus(tester), isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+    });
+
+    testWidgets('tras cerrar el teclado, tocar el campo lo vuelve a abrir',
+        (tester) async {
+      usePhoneScreen(tester);
+      await openKeyboardMode(tester, user: _elderWithMyWeek);
+      await setKeyboardInset(tester, open: true);
+      await tester.tap(find.text('Hola! ¿De qué quieres que hablemos hoy?'));
+      await tester.pump();
+      await setKeyboardInset(tester, open: false);
+
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await setKeyboardInset(tester, open: true);
+      expect(fieldHasFocus(tester), isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
     });
   });
 }
