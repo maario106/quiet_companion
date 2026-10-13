@@ -20,12 +20,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  /// Foco del campo del modo teclado: tenerlo es tener el teclado del sistema.
+  final FocusNode _inputFocus = FocusNode(debugLabel: 'Campo del modo teclado');
+
   @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();
+    _inputFocus.dispose();
     super.dispose();
   }
+
+  void _closeKeyboard() => _inputFocus.unfocus();
 
   /// Envía lo escrito (ADR-0035). El campo se vacía al enviar y el teclado del
   /// sistema se cierra para que la respuesta se lea a pantalla completa. Si el
@@ -36,7 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       return;
     }
     _textController.clear();
-    FocusScope.of(context).unfocus();
+    _closeKeyboard();
 
     final answered =
         await ref.read(chatControllerProvider.notifier).sendTypedMessage(text);
@@ -206,7 +212,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // Mic button, or the text field in keyboard mode
                   if (typing)
                     _TypedInput(
+                      // Con clave porque al abrirse y cerrarse el teclado se
+                      // quitan y se ponen botones a su alrededor: sin ella,
+                      // Flutter rehace el campo cada vez, que pierde el foco
+                      // y la conexión con el teclado del sistema.
+                      key: const ValueKey('typed-input'),
                       controller: _textController,
+                      focusNode: _inputFocus,
                       textScale: textScale,
                       canSend: chatState.acceptsTypedTurn,
                       onSend: _sendTyped,
@@ -285,17 +297,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             .setInputMode(
                                 typing ? InputMode.voice : InputMode.keyboard),
                       ),
-                      Visibility(
-                        visible: showSettings,
-                        maintainSize: true,
-                        maintainAnimation: true,
-                        maintainState: true,
-                        child: _ActionButton(
-                          icon: Icons.settings_outlined,
+                      // Mientras se escribe, Ajustes no hace falta y su sitio,
+                      // justo encima del teclado, es para cerrarlo. Mismo
+                      // tamaño: la fila no se ensancha con la letra grande.
+                      if (composing)
+                        _ActionButton(
+                          icon: Icons.keyboard_hide_outlined,
                           color: AppTheme.elderPrimary,
-                          onPressed: () => context.push('/settings'),
+                          tooltip: 'Cerrar teclado',
+                          onPressed: _closeKeyboard,
+                        )
+                      else
+                        Visibility(
+                          visible: showSettings,
+                          maintainSize: true,
+                          maintainAnimation: true,
+                          maintainState: true,
+                          child: _ActionButton(
+                            icon: Icons.settings_outlined,
+                            color: AppTheme.elderPrimary,
+                            onPressed: () => context.push('/settings'),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ],
@@ -447,13 +470,16 @@ class _ReadAloudButton extends StatelessWidget {
 /// y los mínimos de toque del resto de la interfaz del mayor.
 class _TypedInput extends StatelessWidget {
   const _TypedInput({
+    super.key,
     required this.controller,
+    required this.focusNode,
     required this.textScale,
     required this.canSend,
     required this.onSend,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final double textScale;
 
   /// La conversación admite ahora un turno escrito (no hay otro en vuelo).
@@ -469,9 +495,13 @@ class _TypedInput extends StatelessWidget {
         Expanded(
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
             // Quien pulsa "¿Teclado?" quiere escribir ya: el teclado del
             // sistema se abre sin un toque más.
             autofocus: true,
+            // Tocar fuera del campo cierra el teclado, también al arrastrar
+            // para leer la respuesta. En el móvil Flutter no lo hace solo.
+            onTapOutside: (_) => focusNode.unfocus(),
             minLines: 1,
             maxLines: 3,
             keyboardType: TextInputType.text,
@@ -500,15 +530,18 @@ class _TypedInput extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         // Sin texto no hay nada que enviar: el botón se apaga en vez de no
-        // responder.
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: controller,
-          builder: (context, value, _) => _ActionButton(
-            icon: Icons.send,
-            color: AppTheme.elderPrimary,
-            tooltip: 'Enviar',
-            onPressed:
-                canSend && value.text.trim().isNotEmpty ? onSend : null,
+        // responder. Cuenta como parte del campo: tocarlo no es tocar fuera,
+        // y el teclado no se cierra si no se envía nada.
+        TextFieldTapRegion(
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) => _ActionButton(
+              icon: Icons.send,
+              color: AppTheme.elderPrimary,
+              tooltip: 'Enviar',
+              onPressed:
+                  canSend && value.text.trim().isNotEmpty ? onSend : null,
+            ),
           ),
         ),
       ],
