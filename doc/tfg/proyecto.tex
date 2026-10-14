@@ -59,6 +59,10 @@
 \usepackage{subcaption} % figuras a dos paneles (boceto junto a mockup, capitulo 5)
 \usepackage{pgfgantt}   % cronograma del proyecto (capitulo 3)
 \usepackage{float}
+\usepackage[section]{placeins} % ningún flotante cruza un \section...
+\makeatletter                  % ...ni un \subsection
+\AtBeginDocument{\expandafter\renewcommand\expandafter\subsection\expandafter{\expandafter\@fb@secFB\subsection}}
+\makeatother
 \usepackage{pdflscape}
 \usepackage{longtable}
 \usepackage{amsmath}

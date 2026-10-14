@@ -125,7 +125,8 @@ px CSS) de WCAG~2.2. El botón de micrófono, control primario de la aplicación
 teléfono y 260~px en tableta.
 
 \textbf{Solo pulsación simple.} Toda la interacción del mayor se resuelve con \code{onTap}. No hay
-\code{onLongPress}, ni \code{onDoubleTap}, ni gestos de deslizamiento en ninguna pantalla del mayor. La
+\code{onLongPress}, ni \code{onDoubleTap}, ni gestos de deslizamiento en ninguna pantalla del mayor (excepto
+en el consentimiento del tratamiento de los datos). La
 motivación es doble: el temblor y la reducción de destreza fina hacen que el doble toque y la pulsación
 mantenida fallen con frecuencia, y ninguno de los dos tiene afordancia visible: un gesto que no se ve no
 se descubre. Nielsen Norman Group documenta precisamente este patrón de dificultad en usuarios mayores
@@ -192,9 +193,7 @@ blanco cálido (\code{\#FFF8F0}) en lugar de blanco puro. Los tokens de la panta
 eligieron con el contraste calculado por adelantado y anotado en el propio código.
 
 La \autoref{tab:contraste} recoge las razones de contraste de la paleta del mayor, calculadas según la
-fórmula de luminancia relativa de WCAG~2.2 \autocite{wcag} sobre el fondo \code{\#FFF8F0}. La tabla se ha
-elaborado para esta memoria: hasta ahora solo los dos tokens de emergencia tenían su ratio documentado en
-el código.
+fórmula de luminancia relativa de WCAG~2.2 \autocite{wcag} sobre el fondo \code{\#FFF8F0}.
 
 \begin{table}[htbp]
     \centering
@@ -208,8 +207,8 @@ el código.
         \texttt{emergencyContactCall}          & \#1B5E20 & 7{,}47:1  & AAA \\
         \texttt{elderPrimary}                  & \#A0522D & 5{,}33:1  & AA (no AAA) \\
         \texttt{elderEmergency}                & \#D90429 & 4{,}98:1  & AA (no AAA) \\
-        Estado \emph{Hablando}                 & \#2D8A4E & 4{,}10:1  & Solo no textual (1.4.11) \\
-        Estado \emph{Pensando}                 & \#E07B20 & 2{,}84:1  & \textbf{No cumple} \\
+        \texttt{elderTalking} (\emph{Hablando})  & \#2D8A4E & 4{,}10:1  & 1.4.11 (no textual) \\
+        \texttt{elderThinking} (\emph{Pensando}) & \#C1691B & 3{,}76:1  & 1.4.11 (no textual) \\
         \bottomrule
     \end{tabularx}
     \caption{Razones de contraste de la paleta del mayor sobre el fondo \texttt{\#FFF8F0}, calculadas
@@ -218,24 +217,19 @@ el código.
     \label{tab:contraste}
 \end{table}
 
-El resultado es en su mayor parte favorable y en un punto negativo, y ambos deben leerse juntos. El texto
-de cuerpo alcanza 16{,}19:1, muy por encima del AAA, y el camino crítico de emergencia supera 7:1 en los
-dos botones. En cambio, \textbf{el color del anillo del micrófono en el estado \emph{Pensando}
-(\#E07B20) queda en 2{,}84:1 y no alcanza siquiera el umbral de 3:1 que el criterio 1.4.11
-(\emph{Non-text Contrast}) exige a los elementos no textuales}; el del estado \emph{Hablando} (4{,}10:1)
-lo supera, pero se quedaría corto si ese color transportara texto.
+Toda la paleta supera el umbral que le corresponde. El texto de cuerpo alcanza 16{,}19:1, muy por encima
+del AAA, y el camino crítico de emergencia supera 7:1 en los dos botones. Los colores de los estados
+\emph{Hablando} y \emph{Pensando} solo tiñen el anillo y el icono del micrófono, nunca texto, así que se
+miden con el umbral de 3:1 del criterio 1.4.11 (\emph{Non-text Contrast}), y lo superan también sobre el
+relleno tenue del propio color que ocupa el interior del botón.
 
-El diseño mitiga el problema por construcción, aunque no lo elimina. El estado del asistente nunca se
-comunica por un único canal: hay simultáneamente una etiqueta de texto en tamaño grande
-(\emph{«Te escucho\ldots»}, \emph{«Pensando\ldots»}, \emph{«Respondiendo\ldots»}), un icono distinto por
-estado (micrófono, reloj de arena, altavoz) y un cambio de grosor del borde. Esto satisface el criterio
-1.4.1 (\emph{Use of Color}), que exige que el color no sea el único medio de transmitir información, y es
-lo que hace que la interfaz siga siendo utilizable por un usuario con daltonismo o con el defecto
-azul-amarillo descrito arriba. Pero la corrección del token sigue siendo pertinente: oscurecer
-\code{\#E07B20} hasta superar 3:1 es un cambio de una constante sin efecto sobre el resto del sistema.
+Además, el estado del asistente nunca se comunica solo por el color: hay simultáneamente una etiqueta de
+texto en tamaño grande (\emph{«Te escucho\ldots»}, \emph{«Pensando\ldots»}, \emph{«Respondiendo\ldots»}),
+un icono distinto por estado (micrófono, reloj de arena, altavoz) y un cambio de grosor del borde. Esto
+satisface el criterio 1.4.1 (\emph{Use of Color}), que exige que el color no sea el único medio de
+transmitir información, y es lo que hace que la interfaz siga siendo utilizable por un usuario con
+daltonismo o con el defecto azul-amarillo descrito arriba.
 
-% **note:** corregir el token de estado «Pensando» (#E07B20, 2,84:1) para superar el umbral 3:1 de WCAG
-% 1.4.11 antes de las pruebas de usuario; es un cambio de una línea en app_theme.dart / home_screen.dart.
 % **note:** queda pendiente un recorrido con lector de pantalla (TalkBack) sobre HomeScreen y onboarding;
 % hoy solo las filas de ajustes declaran Semantics explícito.
 
@@ -1420,9 +1414,8 @@ abiertos durante el desarrollo se \textbf{cerraron}, en cambio, antes de su fina
 en el servidor y unas reglas verificadas (ADR-0024 a ADR-0026); CU-05, con las escalas locales de
 accesibilidad (ADR-0021); el modelo de consentimiento que bloqueaba HU-5 (ADR-0030); y el botón «¿Teclado?»,
 durante meses una afordancia inerte y hoy la conversación por escrito (ADR-0035). La \textbf{deuda menor}
-incluye el camino de desbloqueo redundante citado, la ausencia de reintento ante colisión de códigos de
-vinculación (riesgo asumido con unas 923\,000 combinaciones posibles) y el color del estado
-\emph{Pensando}, que no alcanza el contraste no textual (\autoref{sec:color}).
+incluye el camino de desbloqueo redundante citado y la ausencia de reintento ante colisión de códigos de
+vinculación (riesgo asumido con unas 923\,000 combinaciones posibles).
 
 Ninguno de estos puntos invalida el resultado: la aplicación conversa por voz o por escrito, recuerda lo que
 el mayor le cuenta, informa de cómo se encuentra a quien él autoriza, se configura en remoto, llama a

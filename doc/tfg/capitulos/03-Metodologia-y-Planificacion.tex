@@ -246,8 +246,8 @@ HU-7 nació al diseñar HU-5 y HU-6, cuando se constató que el consentimiento s
 pertenecía a ninguna de las dos, sino que respondía a una necesidad propia del mayor, la de decidir qué se
 guarda de él y quién lo ve, y que además era condición previa de ambas: ningún dato de una conversación
 podía tratarse antes de que existiera el consentimiento que lo autoriza. HU-8 recoge la posibilidad de
-conversar por escrito cuando la voz no es una opción, y convirtió en funcionalidad un botón que la pantalla
-principal mostraba desde su rediseño sin que hiciera nada.
+conversar por escrito cuando la voz no es una opción, activando el icono que se introdujo en el rediseño
+de la pantalla principal, pendiente de ser activado.
 
 \subsection{Tarjetas técnicas y desglose de tareas}
 
@@ -294,8 +294,7 @@ compila, pasa el análisis estático sin advertencias y queda consolidado en el 
 \subsection{Plan de iteraciones e hitos}
 
 El trabajo se agrupó en ocho hitos. Los cinco primeros delimitan el MVP; los tres últimos, que dependen de
-HU-5 a HU-8, se abrieron solo cuando ese MVP estuvo estabilizado, y se cerraron ya en la recta final del
-proyecto. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
+HU-5 a HU-8, se abrieron solo cuando ese MVP estuvo estabilizado. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
 
 \begin{table}[htbp]
     \centering
@@ -319,13 +318,6 @@ proyecto. La tabla~\ref{tab:plan-hitos} recoge el plan y su estado al cierre.
     \vspace{2pt}
     {\footnotesize Fuente: Elaboración propia.}
 \end{table}
-
-«Completado» no significa lo mismo en todas las filas. Los cinco primeros hitos están completados y verificados
-sobre dispositivo real; M6, M7 y M8 están implementados y cubiertos por pruebas automáticas, pero su
-verificación completa en dispositivo quedaba pendiente en el momento de redactar esta memoria. La distinción
-se hace explícita porque afecta a lo que puede afirmarse en el capítulo de conclusiones.
-% **note:** actualizar este párrafo, la nota (i) de la tabla de ADR del capítulo 5 y la sección de
-% conclusiones del capítulo 6 cuando M6 a M8 se hayan verificado en dispositivo.
 
 El reparto de esos hitos en el tiempo se recoge en el cronograma de la figura~\ref{fig:cronograma}.
 
@@ -357,7 +349,7 @@ El reparto de esos hitos en el tiempo se recoge en el cronograma de la figura~\r
   \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M6. Consentimiento (RGPD)}{27}{30} \\
   \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M7. Análisis, memoria y bienestar}{28}{31} \\
   \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M8. Conversación por escrito}{32}{33} \\
-  \ganttbar[bar/.append style={fill=vizVioleta, draw=none}]{Redacción de la memoria}{25}{35}
+  \ganttbar[bar/.append style={fill=vizVioleta, draw=none}]{Redacción de la memoria}{1}{35}
 \end{ganttchart}
 \endgroup
 
@@ -373,12 +365,15 @@ El cronograma deja ver tres rasgos que la tabla anterior no muestra. El primero 
 tres primeros hitos durante marzo y abril, consecuencia directa de trabajar con un límite de una tarjeta en
 curso pero sobre historias que compartían código: cerrar el pipeline conversacional obligaba a tocar el
 modelo de datos que M1 estaba fijando. El segundo es la duración de M4, que se extiende de mayo a julio
-porque absorbió el periodo de exámenes de junio, de avance mínimo. El tercero es el encadenamiento de los
-hitos posteriores al MVP, que no
+porque absorbió un periodo con alta carga de trabajo para este autor, suponiendo un avance mínimo. El tercero
+es el encadenamiento de los hitos posteriores al MVP, que no
 admitían cualquier orden: M6 tenía que adelantarse a M7, porque el análisis de una conversación no podía
 construirse antes que el consentimiento que lo autoriza, y M8, de alcance más acotado, se abordó cuando los
-dos anteriores estaban cerrados. Los tres conviven además con la redacción de esta memoria, iniciada en
-agosto y extendida hasta el cierre del proyecto.
+dos anteriores estaban cerrados. La redacción de la memoria convive con todos ellos, ya que desde el principio 
+se ha realizado un trabajo simultáneo: Al principio de investigación de mercado y marco teórico para establecer
+los estándares y límites del proyecto; y más adelante para compaginar la documentación de las decisiones
+técnicas y arquitectónicas con el desarrollo. De esta manera, ha sido posible obtener una visión completa y fluida del
+avance del proyecto a lo largo del tiempo.
 
 La ejecución de estos hitos, con las desviaciones que se produjeron, se documenta en el
 apartado~\ref{sec:cronologia}, dentro del capítulo de diseño y desarrollo. Se ha preferido situarla allí,
@@ -405,13 +400,10 @@ apoyo: asistentes basados en LLM, concretamente Claude (apartado~\ref{sec:costes
     \item \textbf{Documentación:} apoyo en la documentación técnica, revisión ortográfica y de estilo de
     esta memoria y corrección de errores en \LaTeX.
 \end{itemize}
-% **note:** si el diagrama de arquitectura (figura fig:arquitectura) se genera con una herramienta de IA
-% de imagen (p. ej. Nano Banana Pro), añadirlo a esta lista: "generación del borrador del diagrama de
-% arquitectura, revisado y corregido elemento a elemento".
 
 En ambos casos la herramienta ha actuado como apoyo, no como autora. Las decisiones de diseño y de
-arquitectura, el código integrado y el planteamiento del trabajo son obra de quien firma esta memoria, que
-ha revisado todo lo producido con su ayuda y responde de su validez.
+arquitectura, el código integrado y el planteamiento del trabajo son obra de quien firma esta memoria, el autor
+ha revisado todo lo producido con su asistencia y responde de su validez.
 
 \section{Estudio de costes del proyecto}
 \label{sec:costes}
@@ -488,7 +480,7 @@ del proyecto a 4.704~euros, según recoge la tabla~\ref{tab:coste-personal}.
 
 \subsection{Recursos materiales}
 
-El desarrollo se ha realizado sobre un ordenador portátil Acer Aspire de titularidad personal, adquirido
+El desarrollo se ha realizado sobre un ordenador portátil Acer Aspire XV de titularidad personal, adquirido
 ocho años antes del inicio del proyecto por unos 900~euros. Aplicado el periodo máximo de ocho años que
 admite la tabla de amortización, el equipo se encuentra completamente amortizado, por lo que su
 imputación al proyecto es nula. Lo mismo ocurre con los dos terminales Android empleados para las pruebas

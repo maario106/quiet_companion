@@ -384,7 +384,7 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
         \hline
         \textbf{Origen} & HU-8 \\
         \hline
-        \textbf{Prioridad} & Media \\
+        \textbf{Prioridad} & Baja \\
         \hline
         \textbf{Descripción} & El sistema debe permitir al mayor alternar entre la voz y la escritura
             con un único botón de la pantalla principal. Un turno escrito debe seguir el mismo camino que
@@ -406,7 +406,7 @@ entradas, salidas, prioridad e Historia de Usuario asociada.
 Los requisitos no funcionales se agrupan en seis categorías canónicas. Aplican al sistema en su conjunto,
 salvo indicación contraria.
 
-\paragraph{Usabilidad y accesibilidad}
+\subsection*{Usabilidad y accesibilidad}
 \begin{itemize}
     \item \textbf{RNF-1. Cumplimiento WCAG~2.2.} La interfaz dirigida al mayor debe cumplir los criterios
     de éxito de nivel~AA de la norma WCAG~2.2 \citep{wcag}, en particular los relativos a perceptibilidad (contraste,
@@ -423,7 +423,7 @@ salvo indicación contraria.
     voz, deben presentarse en español de España (es-ES).
 \end{itemize}
 
-\paragraph{Rendimiento}
+\subsection*{Rendimiento}
 \begin{itemize}
     \item \textbf{RNF-6. Plataforma objetivo.} El sistema debe ejecutarse correctamente en dispositivos
     Android con \code{minSdk = 24} (Android~7.0), lo que asegura compatibilidad con terminales de gama
@@ -434,7 +434,7 @@ salvo indicación contraria.
     % **NOTE: confirmar umbral con pruebas en dispositivo real antes de la entrega; ajustar si las mediciones lo desmienten.
 \end{itemize}
 
-\paragraph{Seguridad}
+\subsection*{Seguridad}
 \begin{itemize}
     \item \textbf{RNF-8. Protección de credenciales de servicios externos.} Las claves de API de servicios
     externos (en particular la clave de la API de Gemini) no deben residir en el binario distribuido al
@@ -450,7 +450,7 @@ salvo indicación contraria.
     capítulo~\ref{cap:diseno-desarrollo}.
 \end{itemize}
 
-\paragraph{Privacidad y protección de datos}
+\subsection*{Privacidad y protección de datos}
 \begin{itemize}
     \item \textbf{RNF-10. Tratamiento de datos personales.} El sistema procesa datos de carácter personal:
     identificadores anónimos, preferencias del usuario y, desde la incorporación de HU-5 y HU-6, resúmenes
@@ -466,7 +466,7 @@ salvo indicación contraria.
     sale del dispositivo la constancia de que existieron.
 \end{itemize}
 
-\paragraph{Mantenibilidad}
+\subsection*{Mantenibilidad}
 \begin{itemize}
     \item \textbf{RNF-11. Arquitectura.} El código fuente debe organizarse según el modelo Clean
     Architecture combinado con Feature-Sliced Design (CFS), con separación estricta entre las capas de
@@ -478,7 +478,7 @@ salvo indicación contraria.
     (\code{flutter analyze}) sin advertencias antes de su integración en la rama principal.
 \end{itemize}
 
-\paragraph{Disponibilidad}
+\subsection*{Disponibilidad}
 \begin{itemize}
     \item \textbf{RNF-14. Dependencia de conectividad.} El sistema requiere conexión a internet para las
     funcionalidades conversacionales (acceso a la API de Gemini) y de sincronización (acceso a Firestore).
@@ -491,7 +491,7 @@ salvo indicación contraria.
 \label{sec:casos-de-uso}
 Esta sección formaliza los casos de uso de las ocho Historias de Usuario. Los seis primeros corresponden al
 MVP (HU-1 a HU-4) y los cuatro últimos a las historias que se abordaron una vez cerrado ese núcleo (HU-5 a
-HU-8). La separación no es caprichosa: CU-07 establece el consentimiento del mayor, CU-08 y CU-09 lo exigen
+HU-8). La separación es legítima por lo siguiente: CU-07 establece el consentimiento del mayor, CU-08 y CU-09 lo exigen
 como precondición, y CU-10 amplía la conversación de CU-04 a un segundo canal de entrada.
 
 \subsection{Diagramas de casos de uso (UML)}
@@ -514,17 +514,16 @@ Cada caso de uso se documenta según la plantilla habitual en ingeniería de req
 \citep{Sommerville2016}: identificador, nombre, actor primario, precondiciones, flujo principal, flujos
 alternativos y postcondiciones.
 
-\paragraph{CU-01. Seleccionar modo de uso}
+\subsection*{CU-01. Seleccionar modo de uso}
 
 \noindent\textbf{Actor primario:} Mayor (Independiente o Vinculado, según resultado del caso).
 
-\noindent\textbf{Precondiciones:} Es el primer arranque de la aplicación en el dispositivo, o el usuario
-ha solicitado expresamente reiniciar su perfil.
+\noindent\textbf{Precondiciones:} Es el primer arranque de la aplicación en el dispositivo, o se ha dado de baja al 
+perfil del usuario desde la BBDD directamente.
 
 \noindent\textbf{Flujo principal:}
 \begin{enumerate}[nosep]
-    \item El sistema presenta una pantalla con dos botones de gran tamaño: \textit{«Voy a configurar mi
-    aplicación»} y \textit{«Un familiar me va a ayudar»}.
+    \item El sistema presenta una pantalla con dos botones de gran tamaño: \textit{«Usar por mi cuenta»} y \textit{«Vincular con mi familiarr»}.
     \item El usuario pulsa una de las dos opciones.
     \item El sistema crea un perfil anónimo en la base de datos con \code{role = elder}.
     \item Si la opción seleccionada es la primera, el sistema asigna \code{autonomy = independent} y
@@ -540,7 +539,7 @@ definida.
 
 \bigskip
 
-\paragraph{CU-02. Generar código de vinculación}
+\subsection*{CU-02. Generar código de vinculación}
 
 \noindent\textbf{Actor primario:} Mayor Vinculado.
 
@@ -565,7 +564,7 @@ pendiente de ser consumido por un familiar.
 
 \bigskip
 
-\paragraph{CU-03. Introducir código de vinculación}
+\subsection*{CU-03. Introducir código de vinculación}
 
 \noindent\textbf{Actor primario:} Familiar.
 
@@ -598,7 +597,7 @@ principal.
 
 \bigskip
 
-\paragraph{CU-04. Conversar por voz}
+\subsection*{CU-04. Conversar por voz}
 
 \noindent\textbf{Actor primario:} Mayor (cualquier modalidad).
 
@@ -638,7 +637,7 @@ internet y de permisos de micrófono concedidos.
 
 \bigskip
 
-\paragraph{CU-05. Ajustar preferencias (desde el dispositivo del mayor)}
+\subsection*{CU-05. Ajustar preferencias (desde el dispositivo del mayor)}
 
 \noindent\textbf{Actor primario:} Mayor (Independiente o Vinculado).
 
@@ -667,7 +666,7 @@ ha completado.
 
 \bigskip
 
-\paragraph{CU-06. Ajustar preferencias (modo remoto, desde el Familiar)}
+\subsection*{CU-06. Ajustar preferencias (modo remoto, desde el Familiar)}
 
 \noindent\textbf{Actor primario:} Familiar.
 
@@ -696,7 +695,7 @@ dispositivo.
 
 \bigskip
 
-\paragraph{CU-07. Otorgar o retirar el consentimiento sobre las conversaciones}
+\subsection*{CU-07. Otorgar o retirar el consentimiento sobre las conversaciones}
 
 \noindent\textbf{Actor primario:} Mayor (Independiente o Vinculado).
 
@@ -732,7 +731,7 @@ persistidos y son los que rigen toda lectura posterior.
 
 \bigskip
 
-\paragraph{CU-08. Cerrar y analizar una conversación}
+\subsection*{CU-08. Cerrar y analizar una conversación}
 
 \noindent\textbf{Actor primario:} Mayor, de forma implícita. El caso no lo dispara una acción deliberada
 sino el final de la conversación, de modo que el actor que lo inicia es el mismo que conversa.
@@ -748,8 +747,7 @@ descrito en CU-07.
     en memoria.
     \item La función clasifica el sentimiento general, genera un resumen breve y extrae los datos estables
     del mayor que alimentan su memoria (RF-7).
-    \item Persiste el registro de la conversación con su resumen y su etiqueta, y actualiza el documento de
-    memoria.
+    \item Persiste el registro de la conversación (actividad, ánimo y señales) y, en un documento aparte, su contenido (temas y resumen), y actualiza el documento de memoria (véase el \autoref{lst:modelo-datos}).
     \item Descarta la transcripción, que en ningún momento llega a almacenarse.
 \end{enumerate}
 
@@ -771,7 +769,7 @@ actualizados; la transcripción no persiste en ningún soporte.
 
 \bigskip
 
-\paragraph{CU-09. Consultar el seguimiento del estado de ánimo}
+\subsection*{CU-09. Consultar el seguimiento del estado de ánimo}
 
 \noindent\textbf{Actor primario:} Mayor, en su propia vista de resumen semanal («Mi semana»), o Familiar, en
 el panel de bienestar.
@@ -803,7 +801,7 @@ sistema.
 
 \bigskip
 
-\paragraph{CU-10. Conversar por escrito}
+\subsection*{CU-10. Conversar por escrito}
 
 \noindent\textbf{Actor primario:} Mayor (cualquier modalidad).
 
