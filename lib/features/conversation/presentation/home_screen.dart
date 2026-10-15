@@ -138,11 +138,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       micColor = AppTheme.elderEmergency;
       micIcon = Icons.mic;
     } else if (status == ChatStatus.thinking) {
-      micColor = const Color(0xFFE07B20);
+      micColor = AppTheme.elderThinking;
       micIcon = Icons.hourglass_empty;
       isWorking = true;
     } else if (status == ChatStatus.talking) {
-      micColor = const Color(0xFF2D8A4E);
+      micColor = AppTheme.elderTalking;
       micIcon = Icons.volume_up;
       isWorking = true;
     }

@@ -24,6 +24,13 @@ class AppTheme {
   static const Color emergency112        = Color(0xFFA4031F);
   static const Color emergencyContactCall = Color(0xFF1B5E20);
 
+  // ── MIC STATE TOKENS ──────────────────────────────────────────
+  // Anillo e icono del micrófono, nunca texto: WCAG 1.4.11 pide ≥ 3:1.
+  // Sobre elderBackground y sobre el relleno del 8 % del propio color:
+  // elderThinking 3.76:1 / 3.44:1 · elderTalking 4.10:1 / 3.72:1.
+  static const Color elderThinking = Color(0xFFC1691B);
+  static const Color elderTalking  = Color(0xFF2D8A4E);
+
   /// Altura mínima de los botones de llamada (doble del mínimo WCAG) y de
   /// las filas de la lista de ajustes del mayor.
   static const double emergencyButtonMinHeight = 88.0;
