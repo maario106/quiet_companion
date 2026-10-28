@@ -547,17 +547,19 @@ definida.
 
 \noindent\textbf{Flujo principal:}
 \begin{enumerate}[nosep]
-    \item El sistema genera un código aleatorio de 4~caracteres (alfanumérico, excluidos caracteres
-    confundibles: O e I).
+    \item El sistema genera un código aleatorio de 4~caracteres (alfanumérico, excluidos los caracteres
+    confundibles O, 0, I y~1).
     \item El sistema persiste el código en el perfil del mayor y lo presenta en pantalla con tipografía de
     gran tamaño.
     \item El mayor permanece en esa pantalla, sin acceso todavía a la conversación, mientras el código
-    siga sin consumir.
+    siga sin consumir; cuando el familiar lo introduce, la pantalla avanza sola.
 \end{enumerate}
 
-\noindent\textbf{Flujos alternativos:} El alfabeto empleado ofrece unas 923.000 combinaciones posibles y el
-sistema no reintenta la generación ante una eventual colisión. Es una limitación conocida y asumida a la
-escala de pruebas del MVP, que se documenta como deuda en el capítulo~\ref{cap:diseno-desarrollo}.
+\noindent\textbf{Flujos alternativos:}
+\begin{itemize}[nosep]
+    \item \textbf{3a.} El mayor pulsa «Cancelar»: el código se borra de su perfil y vuelve a la elección de
+    modo (CU-01).
+\end{itemize}
 
 \noindent\textbf{Postcondiciones:} Existe un código de vinculación activo en el perfil del mayor,
 pendiente de ser consumido por un familiar.
