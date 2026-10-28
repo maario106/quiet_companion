@@ -10,19 +10,29 @@ import 'package:quiet_companion/core/theme/app_theme.dart';
 /// que edita viven donde les corresponde y se escriben por sus repositorios.
 /// Las filas y su visibilidad vienen de core/config/settings_rows.dart, la
 /// misma fuente que decide si HomeScreen muestra el botón de ajustes.
+///
+/// Sin [group] es el menú de Ajustes; con él, la lista de filas de ese grupo.
+/// Es la misma pantalla para que un grupo se vea y se toque igual que el menú.
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.group});
+
+  final SettingsGroup? group;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider).valueOrNull;
     final textScale = user?.preferences.textSizeMultiplier ?? 1.0;
-    final rows = user == null ? const <SettingsRow>[] : visibleSettingsRows(user);
+    final group = this.group;
+    final List<SettingsEntry> entries = user == null
+        ? const []
+        : group != null
+            ? group.visibleRows(user)
+            : visibleSettingsEntries(user);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Ajustes',
+          group?.title ?? 'Ajustes',
           style: TextStyle(
             fontSize: AppTheme.fontMedium * textScale,
             fontWeight: FontWeight.bold,
@@ -39,14 +49,14 @@ class SettingsScreen extends ConsumerWidget {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.separated(
                     padding: EdgeInsets.all(AppTheme.screenPadding(context)),
-                    itemCount: rows.length,
+                    itemCount: entries.length,
                     // Separación explícita entre filas: son destinos táctiles
                     // grandes y contiguos, y pegadas invitan al toque erróneo.
                     // Mismo hueco que entre los botones de EmergencyScreen.
                     separatorBuilder: (_, __) => const SizedBox(height: 24),
-                    itemBuilder: (context, index) => _SettingsRowTile(
-                      row: rows[index],
-                      value: rows[index].value(user),
+                    itemBuilder: (context, index) => _SettingsEntryTile(
+                      entry: entries[index],
+                      value: entries[index].subtitleFor(user),
                       textScale: textScale,
                     ),
                   ),
@@ -57,14 +67,14 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _SettingsRowTile extends StatelessWidget {
-  const _SettingsRowTile({
-    required this.row,
+class _SettingsEntryTile extends StatelessWidget {
+  const _SettingsEntryTile({
+    required this.entry,
     required this.value,
     required this.textScale,
   });
 
-  final SettingsRow row;
+  final SettingsEntry entry;
   final String value;
   final double textScale;
 
@@ -72,13 +82,13 @@ class _SettingsRowTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '${row.title}: $value',
+      label: '${entry.title}: $value',
       child: Material(
         color: AppTheme.elderSurface,
         borderRadius: const BorderRadius.all(Radius.circular(16)),
         child: InkWell(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
-          onTap: () => context.push(row.route),
+          onTap: () => context.push(entry.route),
           child: Container(
             constraints: const BoxConstraints(
               minHeight: AppTheme.emergencyButtonMinHeight,
@@ -97,7 +107,7 @@ class _SettingsRowTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        row.title,
+                        entry.title,
                         style: TextStyle(
                           fontSize: AppTheme.fontButton * textScale,
                           fontWeight: FontWeight.bold,

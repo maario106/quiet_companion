@@ -44,29 +44,54 @@ initializeApp();
 const REGION = "europe-west1";
 
 /**
- * Voz de síntesis. Constante de servidor: el cliente NUNCA envía parámetros
- * de voz (menor superficie de abuso y una sola fuente de verdad del timbre).
+ * Voces que el mayor puede elegir en Ajustes. El cliente envía solo la clave
+ * (`sulafat`) y el nombre completo vive aquí: la lista es cerrada, nadie pide
+ * una voz cualquiera ni cuela parámetros de síntesis, y el servidor sigue
+ * siendo la única fuente de verdad del timbre.
  *
- * Chirp 3: HD sigue el patrón `<locale>-Chirp3-HD-<Nombre>`. Elegida
- * `Sulafat` porque es la única del catálogo que Google describe literalmente
- * como *Warm* — el registro que pide un acompañante para personas mayores.
- * Alternativas femeninas del mismo catálogo, por si en la escucha real suena
- * mal para la persona: Vindemiatrix (*Gentle*), Achernar (*Soft*),
- * Despina (*Smooth*), Gacrux (*Mature*), Leda (*Youthful*), Kore (*Firm*).
+ * Chirp 3: HD sigue el patrón `<locale>-Chirp3-HD-<Nombre>`. Son las cuatro
+ * que Google describe con el registro que pide un acompañante para personas
+ * mayores: Sulafat (*Warm*), Vindemiatrix (*Gentle*), Achird (*Friendly*) y
+ * Algieba (*Smooth*). Las claves coinciden con `ttsVoices` del cliente
+ * (`lib/core/config/tts_voices.dart`).
  *
- * Cambiar de voz = cambiar esta constante y redesplegar. Nada más.
- *
- * Verificación: `npm run list-voices` enumera las voces realmente disponibles
- * en el proyecto (requiere la API de Cloud Text-to-Speech habilitada y ADC).
+ * Cambiar una voz = cambiar esta tabla y redesplegar. Un nombre que no exista
+ * no da error en el móvil: todo sale por el respaldo y el registro de la
+ * Function dice "Fallo de síntesis".
  */
-const VOICE_NAME = "es-ES-Chirp3-HD-Sulafat";
+const VOICES = {
+  sulafat: "es-ES-Chirp3-HD-Sulafat",
+  vindemiatrix: "es-ES-Chirp3-HD-Vindemiatrix",
+  achird: "es-ES-Chirp3-HD-Achird",
+  algieba: "es-ES-Chirp3-HD-Algieba",
+};
+
+/**
+ * Voz de quien no ha elegido ninguna. Masculina a propósito: el motor de los
+ * móviles de prueba habla con voz femenina, así que el respaldo se distingue
+ * de oído sin mirar los registros.
+ */
+const DEFAULT_VOICE = "achird";
 const LANGUAGE_CODE = "es-ES";
+
+/**
+ * @param {unknown} key clave de voz enviada por el cliente.
+ * @return {string} nombre completo de la voz; el de la voz por defecto si la
+ *   clave no está en la lista.
+ */
+function voiceNameFor(key) {
+  // `hasOwn` y no `VOICES[key]` a secas: "constructor" devolvería una
+  // propiedad heredada del prototipo.
+  return typeof key === "string" && Object.hasOwn(VOICES, key) ?
+    VOICES[key] :
+    VOICES[DEFAULT_VOICE];
+}
 
 /**
  * Ritmo neutro. La preferencia de velocidad del mayor NO se aplica aquí sino
  * en el reproductor del cliente (ADR-0019): así el audio sintetizado es
  * independiente de la preferencia y el cliente sigue sin enviar parámetros de
- * voz. Rango admitido por Chirp 3: HD si algún día se moviera: 0.25 – 2.0.
+ * síntesis. Rango admitido por Chirp 3: HD si algún día se moviera: 0.25 – 2.0.
  */
 const SPEAKING_RATE = 1.0;
 
@@ -87,11 +112,12 @@ function ttsClient() {
 }
 
 /**
- * Sintetiza una frase en español con la voz Chirp 3: HD del proyecto.
+ * Sintetiza una frase en español con la voz Chirp 3: HD que eligió el mayor.
  *
- * Entrada: `{ text: string }`. Salida: `{ audioContent: string }` (MP3 en
- * base64). Autenticación obligatoria; la anónima es válida (los mayores usan
- * Firebase Auth anónimo).
+ * Entrada: `{ text: string, voice?: string }`, donde `voice` es una clave de
+ * `VOICES`. Salida: `{ audioContent: string }` (MP3 en base64).
+ * Autenticación obligatoria; la anónima es válida (los mayores usan Firebase
+ * Auth anónimo).
  */
 exports.synthesizeSpeech = onCall(
     {
@@ -124,12 +150,14 @@ exports.synthesizeSpeech = onCall(
         );
       }
 
+      const voiceName = voiceNameFor(request.data?.voice);
+
       try {
         const [response] = await ttsClient().synthesizeSpeech({
           // Texto plano siempre: nunca se envuelve en SSML. La respuesta del
           // LLM es texto libre y un `<` suelto rompería el marcado.
           input: {text},
-          voice: {languageCode: LANGUAGE_CODE, name: VOICE_NAME},
+          voice: {languageCode: LANGUAGE_CODE, name: voiceName},
           audioConfig: {audioEncoding: "MP3", speakingRate: SPEAKING_RATE},
         });
 
@@ -140,7 +168,7 @@ exports.synthesizeSpeech = onCall(
         // El detalle se queda en el log; al cliente solo le llega un error
         // genérico y nunca el texto de entrada (es contenido conversacional).
         logger.error("Fallo de síntesis", {
-          voice: VOICE_NAME,
+          voice: voiceName,
           textLength: text.length,
           error: error.message,
         });

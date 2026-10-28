@@ -41,6 +41,9 @@ class RecordingSynthesizer implements TtsSynthesizer {
   final List<String> log;
   final List<String> requested = [];
 
+  /// Clave de voz de cada petición, paralela a [requested].
+  final List<String> voices = [];
+
   /// Textos cuya síntesis falla.
   final Set<String> failures = {};
 
@@ -52,8 +55,9 @@ class RecordingSynthesizer implements TtsSynthesizer {
   final Map<String, Completer<Uint8List>> pending = {};
 
   @override
-  Future<Uint8List> synthesize(String text) {
+  Future<Uint8List> synthesize(String text, {required String voice}) {
     requested.add(text);
+    voices.add(voice);
     log.add('synth:$text');
 
     if (failures.contains(text)) {
@@ -379,6 +383,14 @@ void main() {
       expect(player.speed, equals(1.0), reason: '0.5 es el ritmo natural');
       expect(player.volume, equals(0.7));
       expect(fallback.appliedPreferences, equals(prefs));
+    });
+
+    test('la voz elegida viaja con cada fragmento de la locución', () async {
+      await service.applyPreferences(const UserPreferences(voice: 'sulafat'));
+
+      await service.speak(_threeSentences);
+
+      expect(synthesizer.voices, equals(['sulafat', 'sulafat', 'sulafat']));
     });
 
     test('playerSpeedFor traduce la escala del deslizador', () {

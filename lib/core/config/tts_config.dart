@@ -1,9 +1,9 @@
 /// Parámetros de la síntesis de voz en nube (ADR-0017).
 ///
-/// La voz, el idioma y el ritmo de síntesis NO están aquí: son constantes de
-/// servidor en `functions/index.js` (`VOICE_NAME`, `LANGUAGE_CODE`,
-/// `SPEAKING_RATE`). El cliente nunca envía parámetros de voz; solo el texto.
-/// Cambiar de voz es un cambio de una línea en la Function y un redespliegue.
+/// El idioma, el ritmo de síntesis y el nombre real de cada voz NO están aquí:
+/// son constantes de servidor en `functions/index.js` (`VOICES`,
+/// `LANGUAGE_CODE`, `SPEAKING_RATE`). El cliente envía el texto y la clave de
+/// la voz elegida (`tts_voices.dart`), nunca parámetros de síntesis.
 library;
 
 /// Nombre de la callable de síntesis desplegada.

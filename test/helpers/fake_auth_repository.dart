@@ -9,7 +9,7 @@ class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({this.shouldThrow = false});
 
   bool shouldThrow;
-  final preferenceWrites = <(String uid, String field, double value)>[];
+  final preferenceWrites = <(String uid, String field, Object value)>[];
   final nameWrites = <(String uid, String name)>[];
 
   void _maybeThrow() {
@@ -69,7 +69,7 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> updatePreferenceField(
-      String uid, String field, double value) async {
+      String uid, String field, Object value) async {
     _maybeThrow();
     preferenceWrites.add((uid, field, value));
   }

@@ -50,6 +50,9 @@ class CloudTtsService implements TtsService {
   int _generation = 0;
   bool _speaking = false;
 
+  /// Clave de la voz elegida por el mayor; llega con [applyPreferences].
+  String _voice = UserPreferences.defaultVoice;
+
   @override
   bool get isSpeaking => _speaking;
 
@@ -58,6 +61,9 @@ class CloudTtsService implements TtsService {
     // Hablar mientras se habla interrumpe: nunca dos voces a la vez.
     await stop();
     final generation = _generation;
+    // Se fija al empezar: si el mayor cambia de voz a mitad de una respuesta,
+    // la respuesta no cambia de voz entre dos frases.
+    final voice = _voice;
 
     final spoken = sanitizeForSpeech(text);
     final chunks = splitIntoSentences(spoken);
@@ -68,7 +74,7 @@ class CloudTtsService implements TtsService {
       // Prefetch de exactamente uno: se sintetiza el siguiente fragmento
       // mientras suena el actual. Lanzarlos todos a la vez multiplicaría el
       // coste y el ancho de banda por una respuesta que puede cortarse.
-      var pending = _synthesize(chunks.first, generation);
+      var pending = _synthesize(chunks.first, voice, generation);
 
       for (var i = 0; i < chunks.length; i++) {
         final audio = await pending;
@@ -76,7 +82,7 @@ class CloudTtsService implements TtsService {
 
         if (audio != null) {
           pending = i + 1 < chunks.length
-              ? _synthesize(chunks[i + 1], generation)
+              ? _synthesize(chunks[i + 1], voice, generation)
               : Future<Uint8List?>.value();
 
           if (await _play(audio)) continue;
@@ -110,9 +116,10 @@ class CloudTtsService implements TtsService {
   @override
   Future<void> applyPreferences(UserPreferences prefs) async {
     // La voz se sintetiza siempre a ritmo neutro; la preferencia del mayor se
-    // aplica en la reproducción. Así el cliente no envía parámetros de voz al
-    // servidor y el deslizador del familiar sigue significando lo mismo en
-    // ambas voces.
+    // aplica en la reproducción. Así el cliente no envía parámetros de
+    // síntesis al servidor y el deslizador del familiar sigue significando lo
+    // mismo en ambas voces. De la voz solo viaja la clave.
+    _voice = prefs.voice;
     await _player.setSpeed(playerSpeedFor(prefs.speechRate));
     await _player.setVolume(prefs.volume);
     await _fallback.applyPreferences(prefs);
@@ -142,10 +149,12 @@ class CloudTtsService implements TtsService {
 
   /// Sintetiza un fragmento. Devuelve null si falla, vence el plazo o la
   /// locución ya ha sido cancelada: el llamante trata los tres casos igual.
-  Future<Uint8List?> _synthesize(String chunk, int generation) async {
+  Future<Uint8List?> _synthesize(
+      String chunk, String voice, int generation) async {
     try {
-      final audio =
-          await _synthesizer.synthesize(chunk).timeout(_chunkTimeout);
+      final audio = await _synthesizer
+          .synthesize(chunk, voice: voice)
+          .timeout(_chunkTimeout);
       return generation == _generation ? audio : null;
     } catch (error) {
       if (kDebugMode) debugPrint('[TTS] Síntesis fallida: $error');

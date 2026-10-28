@@ -5,6 +5,7 @@ import 'package:quiet_companion/core/models/conversation_settings.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
+import 'package:quiet_companion/core/widgets/choice_option_tile.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_controller.dart';
 
 /// Una de las decisiones del mayor sobre sus conversaciones, como lista corta
@@ -131,8 +132,11 @@ class PrivacyChoiceScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
                   for (var i = 0; i < options.length; i++) ...[
-                    _OptionTile(
-                      option: options[i],
+                    ChoiceOptionTile(
+                      label: i == selected
+                          ? '${options[i].label} (elegido)'
+                          : options[i].label,
+                      description: options[i].description,
                       selected: i == selected,
                       textScale: textScale,
                       onTap: state.saving || i == selected
@@ -152,87 +156,6 @@ class PrivacyChoiceScreen extends ConsumerWidget {
                     ),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  const _OptionTile({
-    required this.option,
-    required this.selected,
-    required this.textScale,
-    required this.onTap,
-  });
-
-  final _Option option;
-  final bool selected;
-  final double textScale;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? AppTheme.elderPrimary : AppTheme.elderTextSecondary;
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: Material(
-        color: selected
-            ? AppTheme.elderPrimary.withValues(alpha: 0.08)
-            : AppTheme.elderSurface,
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          child: Container(
-            constraints: const BoxConstraints(
-              minHeight: AppTheme.emergencyButtonMinHeight,
-            ),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              border: Border.all(color: color, width: selected ? 4 : 2),
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                  size: 36 * textScale,
-                  color: color,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        selected ? '${option.label} (elegido)' : option.label,
-                        style: TextStyle(
-                          fontSize: AppTheme.fontButton * textScale,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.elderTextPrimary,
-                        ),
-                      ),
-                      if (option.description != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          option.description!,
-                          style: TextStyle(
-                            fontSize: AppTheme.fontButton * textScale,
-                            color: AppTheme.elderTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
             ),
           ),
         ),

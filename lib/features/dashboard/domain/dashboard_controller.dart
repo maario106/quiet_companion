@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/repositories/auth_repository.dart';
@@ -41,6 +42,21 @@ class DashboardController extends StateNotifier<DashboardState> {
     } catch (e) {
       if (!mounted) return;
       state = state.copyWith(errorMessage: 'No se ha podido guardar el ajuste.');
+    }
+  }
+
+  /// La voz del mayor: una clave de `ttsVoices`. Se escribe sola, como las
+  /// escalas, para no pisar lo que el mayor cambie a la vez.
+  Future<void> updateElderVoice(String voice) async {
+    final elderId = _elderId;
+    if (elderId == null) return;
+
+    try {
+      await _repository.updatePreferenceField(
+          elderId, UserPreferences.voiceKey, voice);
+    } catch (e) {
+      if (!mounted) return;
+      state = state.copyWith(errorMessage: 'No se ha podido guardar la voz.');
     }
   }
 

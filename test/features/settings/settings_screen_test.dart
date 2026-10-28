@@ -48,20 +48,21 @@ Widget _buildSubject(UserModel user) {
 
 void main() {
   group('visibleSettingsRows (función compartida con HomeScreen)', () {
-    // Contacto de emergencia + las cuatro escalas (ADR-0021, ADR-0036)
-    // + "Guardar mis conversaciones" (ADR-0030). Sin consentimiento, ninguna
-    // de las filas que dependen de él (ADR-0031, ADR-0034).
-    test('sin contacto (null) → contacto + 4 escalas + consentimiento', () {
-      expect(visibleSettingsRows(_elderSinConfigurar), hasLength(6));
+    // Contacto de emergencia + las cuatro escalas (ADR-0021, ADR-0036) + la
+    // voz + "Guardar mis conversaciones" (ADR-0030). Sin consentimiento,
+    // ninguna de las filas que dependen de él (ADR-0031, ADR-0034).
+    test('sin contacto (null) → contacto + 4 escalas + voz + consentimiento',
+        () {
+      expect(visibleSettingsRows(_elderSinConfigurar), hasLength(7));
     });
 
-    test('contacto manual → contacto + 4 escalas + consentimiento', () {
-      expect(visibleSettingsRows(_elderConContactoManual), hasLength(6));
+    test('contacto manual → contacto + 4 escalas + voz + consentimiento', () {
+      expect(visibleSettingsRows(_elderConContactoManual), hasLength(7));
     });
 
     test('contacto de vinculación (companion) → oculta el contacto, deja las '
         '4 escalas: el botón de ajustes ya no desaparece', () {
-      expect(visibleSettingsRows(_elderAcompanado), hasLength(5));
+      expect(visibleSettingsRows(_elderAcompanado), hasLength(6));
       expect(
         visibleSettingsRows(_elderAcompanado)
             .any((row) => row.title == 'Contacto de emergencia'),
@@ -74,6 +75,18 @@ void main() {
       expect(row.title, equals('Contacto de emergencia'));
       expect(row.value(_elderConContactoManual), equals('María'));
       expect(row.value(_elderSinConfigurar), equals('Sin configurar'));
+    });
+
+    test('el menú cabe en una pantalla: contacto, letra y dos grupos', () {
+      expect(
+        visibleSettingsEntries(_elderSinConfigurar).map((e) => e.title),
+        equals([
+          'Contacto de emergencia',
+          'Tamaño de la letra',
+          'Cómo hablamos',
+          'Mis conversaciones',
+        ]),
+      );
     });
   });
 

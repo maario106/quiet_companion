@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/config/preference_scales.dart';
 import 'package:quiet_companion/core/config/route_redirect.dart';
+import 'package:quiet_companion/core/config/settings_rows.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/consent_prompt_deferred_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
@@ -16,6 +17,7 @@ import 'package:quiet_companion/features/emergency/presentation/emergency_screen
 import 'package:quiet_companion/features/my_week/presentation/my_week_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/preference_stepper_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/settings_screen.dart';
+import 'package:quiet_companion/features/settings/presentation/voice_choice_screen.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/companion_auth_controller.dart';
 import 'package:quiet_companion/features/onboarding/domain/elder_auth_state.dart';
@@ -147,6 +149,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
         routes: [
+          // Los grupos del menú ("Cómo hablamos") son la misma pantalla con
+          // otras filas; un slug desconocido enseña el error, no un crash.
+          GoRoute(
+            path: 'group/:id',
+            builder: (context, state) {
+              final group = settingsGroupBySlug(state.pathParameters['id']);
+              return group == null
+                  ? const UnknownPreferenceScreen()
+                  : SettingsScreen(group: group);
+            },
+          ),
+          GoRoute(
+            path: 'voice',
+            builder: (context, state) => const VoiceChoiceScreen(),
+          ),
           // Anidada bajo /settings aunque el widget viva en features/emergency:
           // la jerarquía de rutas refleja la navegación del usuario, no el
           // sistema de ficheros.

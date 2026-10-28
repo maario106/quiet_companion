@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:quiet_companion/core/config/tts_voices.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/providers/linked_elder_provider.dart';
+import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/sign_out_button.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_controller.dart';
@@ -111,6 +113,8 @@ class _DashboardContent extends ConsumerWidget {
                       horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
+                      _VoiceSelector(prefs: prefs),
+                      const Divider(height: 1),
                       _SettingSlider(
                         label: 'Volumen de la voz',
                         icon: Icons.volume_up_outlined,
@@ -302,6 +306,70 @@ class _ElderNameCardState extends ConsumerState<_ElderNameCard> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// La voz con la que la app habla al mayor. Cada opción se puede escuchar en
+/// este móvil antes de elegirla: el familiar elige cómo va a oír otra persona
+/// todo lo que la app le diga, y eso no se elige por el nombre.
+class _VoiceSelector extends ConsumerWidget {
+  const _VoiceSelector({required this.prefs});
+
+  final UserPreferences prefs;
+
+  /// Suena con el volumen y la velocidad del mayor, como en su móvil. El
+  /// servicio se lee en la pulsación, no en el build, para no construir la
+  /// voz de nube al abrir el panel.
+  Future<void> _listen(WidgetRef ref, TtsVoice voice) async {
+    final tts = ref.read(ttsServiceProvider);
+    await tts.applyPreferences(prefs.copyWith(voice: voice.id));
+    await tts.speak(kVoicePreviewPhrase);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chosen = ttsVoiceFor(prefs).id;
+    final controller = ref.read(dashboardControllerProvider.notifier);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.record_voice_over_outlined,
+                  size: 20, color: AppTheme.companionTextSecondary),
+              SizedBox(width: 12),
+              Text(
+                'Voz',
+                style: TextStyle(
+                  fontSize: AppTheme.companionFontBody,
+                  color: AppTheme.companionTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          for (final voice in ttsVoices)
+            ListTile(
+              contentPadding: const EdgeInsets.only(left: 20),
+              selected: voice.id == chosen,
+              leading: Icon(voice.id == chosen
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked),
+              title: Text(voice.label),
+              onTap: voice.id == chosen
+                  ? null
+                  : () => controller.updateElderVoice(voice.id),
+              trailing: IconButton(
+                icon: const Icon(Icons.play_circle_outline),
+                tooltip: 'Escuchar',
+                onPressed: () => _listen(ref, voice),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -111,9 +111,10 @@ class AuthRepository {
   /// Escribe **una** magnitud de preferencias del mayor con ruta de punto
   /// (`preferences.volume`). La usa el panel del familiar: si el mayor cambió
   /// otra magnitud entretanto, esta escritura no la pisa (ADR-0027). [field]
-  /// es una de las claves de [UserPreferences] (`volumeKey`, …).
+  /// es una de las claves de [UserPreferences] (`volumeKey`, …). [value] es
+  /// un `double` en las escalas y un `String` en la voz (`voiceKey`).
   Future<void> updatePreferenceField(
-      String uid, String field, double value) async {
+      String uid, String field, Object value) async {
     await _firestore
         .collection(FirestorePaths.usersCollection)
         .doc(uid)
