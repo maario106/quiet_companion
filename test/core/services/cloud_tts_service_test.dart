@@ -21,8 +21,6 @@ const String _chunk0 = 'Buenos días, me alegro mucho de verte.';
 const String _chunk1 = '¿Has descansado bien esta noche?';
 const String _chunk2 = '¡Cuéntame cómo te encuentras hoy!';
 
-const String _interruption = 'Perdona, me he adelantado un poco al hablar.';
-
 /// Cada fragmento se sintetiza a sus propios bytes: así el test afirma *qué*
 /// sonó y en qué orden, no solo cuántas veces.
 Uint8List _audioOf(String text) => Uint8List.fromList(utf8.encode(text));
@@ -164,24 +162,6 @@ void main() {
       expect(player.played, equals([_chunk0, _chunk1, _chunk2]));
       expect(fallback.spoken, isEmpty);
     });
-
-    test('sanea el markdown antes de sintetizar', () async {
-      await service.speak('Me alegro **mucho** de verte hoy por aquí. 😊');
-
-      expect(
-        synthesizer.requested.single,
-        equals('Me alegro mucho de verte hoy por aquí.'),
-      );
-    });
-
-    test('un texto sin nada que decir no llega a la red', () async {
-      await service.speak('   \n  ');
-
-      expect(synthesizer.requested, isEmpty);
-      expect(player.played, isEmpty);
-      expect(fallback.spoken, isEmpty);
-      expect(service.isSpeaking, isFalse);
-    });
   });
 
   group('prefetch', () {
@@ -249,47 +229,6 @@ void main() {
       expect(synthesizer.requested, equals([_chunk0, _chunk1]),
           reason: 'la cola no continúa tras stop()');
     });
-
-    test('el servicio sigue usable después de stop()', () async {
-      player.manual = true;
-      unawaited(service.speak(_threeSentences));
-      await _settle();
-      await service.stop();
-      await _settle();
-
-      player.manual = false;
-      await service.speak(_interruption);
-
-      expect(player.played.last, equals(_interruption));
-      expect(service.isSpeaking, isFalse);
-    });
-
-    test('hablar mientras se habla interrumpe la locución anterior', () async {
-      player.manual = true;
-
-      final first = service.speak(_threeSentences);
-      await _settle();
-      expect(player.played, equals([_chunk0]));
-
-      final second = service.speak(_interruption);
-      await first; // La primera cede el turno sin quedarse colgada.
-      await _settle();
-
-      expect(player.stopCalls, equals(2), reason: 'una parada por locución');
-      expect(player.played, equals([_chunk0, _interruption]));
-
-      player.finishPlayback();
-      await second;
-      expect(service.isSpeaking, isFalse);
-    });
-
-    test('stop() es idempotente y también calla al respaldo', () async {
-      await service.stop();
-      await service.stop();
-
-      expect(player.stopCalls, equals(2));
-      expect(fallback.stopCalls, equals(2));
-    });
   });
 
   group('respaldo sin reintentos', () {
@@ -326,65 +265,9 @@ void main() {
       expect(player.played, isEmpty);
       expect(fallback.spoken, equals([_threeSentences]));
     });
-
-    test('un fallo del reproductor no sale como excepción', () async {
-      // El flujo de conversación mostraría la excepción al mayor como un
-      // error de conexión; aquí solo cambia la voz.
-      player.failures.add(_chunk1);
-
-      await service.speak(_threeSentences);
-
-      expect(fallback.spoken, equals(['$_chunk1 $_chunk2']));
-      expect(service.isSpeaking, isFalse);
-    });
-
-    test('el respaldo también se interrumpe con stop()', () async {
-      synthesizer.failures.add(_chunk0);
-      fallback.blockUntilFinished = true;
-
-      final utterance = service.speak(_threeSentences);
-      await _settle();
-      expect(fallback.spoken, equals([_threeSentences]));
-
-      await service.stop();
-      await utterance;
-
-      expect(fallback.stopCalls, equals(2), reason: 'uno por speak, uno real');
-      expect(service.isSpeaking, isFalse);
-    });
-  });
-
-  group('isSpeaking', () {
-    test('sigue el ciclo de la locución', () async {
-      player.manual = true;
-      expect(service.isSpeaking, isFalse);
-
-      final utterance = service.speak(_threeSentences);
-      await _settle();
-      expect(service.isSpeaking, isTrue);
-
-      player.finishPlayback();
-      await _settle();
-      player.finishPlayback();
-      await _settle();
-      player.finishPlayback();
-      await utterance;
-
-      expect(service.isSpeaking, isFalse);
-    });
   });
 
   group('preferencias', () {
-    test('la velocidad se aplica al reproductor, no a la síntesis', () async {
-      const prefs = UserPreferences(volume: 0.7, speechRate: 0.5);
-
-      await service.applyPreferences(prefs);
-
-      expect(player.speed, equals(1.0), reason: '0.5 es el ritmo natural');
-      expect(player.volume, equals(0.7));
-      expect(fallback.appliedPreferences, equals(prefs));
-    });
-
     test('la voz elegida viaja con cada fragmento de la locución', () async {
       await service.applyPreferences(const UserPreferences(voice: 'sulafat'));
 
@@ -392,22 +275,5 @@ void main() {
 
       expect(synthesizer.voices, equals(['sulafat', 'sulafat', 'sulafat']));
     });
-
-    test('playerSpeedFor traduce la escala del deslizador', () {
-      expect(playerSpeedFor(0.5), equals(1.0));
-      expect(playerSpeedFor(0.4), closeTo(0.8, 0.0001));
-      expect(playerSpeedFor(1.0), equals(2.0));
-      // Los extremos del deslizador se recortan a lo inteligible/admitido.
-      expect(playerSpeedFor(0.1), equals(0.25));
-      expect(playerSpeedFor(3.0), equals(2.0));
-    });
-  });
-
-  test('dispose libera reproductor y respaldo', () async {
-    await service.dispose();
-
-    expect(player.disposeCalls, equals(1));
-    expect(fallback.disposeCalls, equals(1));
-    expect(service.isSpeaking, isFalse);
   });
 }

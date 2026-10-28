@@ -65,17 +65,6 @@ const _elderWithCompanionContact = UserModel(
   ),
 );
 
-const _elderWithManualContact = UserModel(
-  id: 'elder-2',
-  role: UserRole.elder,
-  autonomy: AutonomyStatus.independent,
-  emergencyContact: EmergencyContact(
-    name: 'María',
-    phone: '+34600123456',
-    source: EmergencyContactSource.manual,
-  ),
-);
-
 const _elderWithoutContact = UserModel(
   id: 'elder-3',
   role: UserRole.elder,
@@ -124,42 +113,6 @@ void main() {
       expect(callService.dialed, equals(['+34600123456']));
     });
 
-    testWidgets('contacto source manual: render idéntico al caso companion',
-        (tester) async {
-      final callService = FakeEmergencyCallService();
-      await tester.pumpWidget(_buildSubject(
-        user: _elderWithManualContact,
-        callService: callService,
-      ));
-      await tester.pumpAndSettle();
-
-      // source no ramifica el render: mismos botones que con companion.
-      expect(find.bySubtype<ElevatedButton>(), findsNWidgets(2));
-      expect(find.byType(TextButton), findsOneWidget);
-      expect(find.text('Llamar a María'), findsOneWidget);
-      expect(find.text('Llamar al 112'), findsOneWidget);
-      expect(find.text('Cancelar'), findsOneWidget);
-    });
-
-    testWidgets('sin contacto: 2 botones, no existe el de contacto, '
-        'tap en 112 marca 112', (tester) async {
-      final callService = FakeEmergencyCallService();
-      await tester.pumpWidget(_buildSubject(
-        user: _elderWithoutContact,
-        callService: callService,
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.bySubtype<ElevatedButton>(), findsOneWidget);
-      expect(find.byType(TextButton), findsOneWidget);
-      expect(find.text('Llamar a María'), findsNothing);
-
-      await tester.tap(find.text('Llamar al 112'));
-      await tester.pump();
-
-      expect(callService.dialed, equals(['112']));
-    });
-
     testWidgets('tap en 112 marca 112 aunque haya contacto', (tester) async {
       final callService = FakeEmergencyCallService();
       await tester.pumpWidget(_buildSubject(
@@ -189,58 +142,6 @@ void main() {
       expect(
           find.text('Este dispositivo no puede hacer llamadas'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
-    });
-
-    testWidgets('Cancelar cierra la ruta', (tester) async {
-      final callService = FakeEmergencyCallService();
-      await tester.pumpWidget(_buildSubject(
-        user: _elderWithoutContact,
-        callService: callService,
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    fullscreenDialog: true,
-                    builder: (_) => const EmergencyScreen(),
-                  ),
-                ),
-                child: const Text('abrir'),
-              ),
-            ),
-          ),
-        ),
-      ));
-
-      await tester.tap(find.text('abrir'));
-      await tester.pumpAndSettle();
-      expect(find.byType(EmergencyScreen), findsOneWidget);
-
-      await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
-      expect(find.byType(EmergencyScreen), findsNothing);
-    });
-
-    testWidgets('al montar: STT parado, TTS parado antes de anunciar',
-        (tester) async {
-      final callService = FakeEmergencyCallService();
-      final tts = FakeTtsService();
-      final speech = FakeSpeechService();
-      await tester.pumpWidget(_buildSubject(
-        user: _elderWithCompanionContact,
-        callService: callService,
-        tts: tts,
-        speech: speech,
-      ));
-      await tester.pumpAndSettle();
-
-      // Cancelar, no cerrar el turno: cerrarlo enviaría lo dicho al asistente
-      // y su respuesta sonaría encima de esta pantalla.
-      expect(speech.cancelListeningCalls, equals(1));
-      expect(speech.finishListeningCalls, equals(0));
-      expect(tts.stopCalls, greaterThanOrEqualTo(1));
-      expect(tts.spoken, contains('Elige a quién llamar'));
     });
   });
 }

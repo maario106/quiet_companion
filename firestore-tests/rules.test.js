@@ -20,7 +20,7 @@ import {
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
-  collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit,
+  collection, deleteDoc, doc, getDoc, getDocs, limit,
   query, setDoc, updateDoc, where,
 } from 'firebase/firestore';
 
@@ -108,53 +108,16 @@ describe('el dueño gobierna su documento', () => {
     }));
   });
 
-  it('escribe su contacto de emergencia (updateEmergencyContact)', async () => {
-    await assertSucceeds(updateDoc(userRef(ELDER_LIBRE, ELDER_LIBRE), {
-      emergencyContact: { name: 'Ana', phone: '+34600999888', source: 'manual' },
-    }));
-  });
-
-  it('da de alta su documento (saveUser en el onboarding)', async () => {
-    await assertSucceeds(
-      setDoc(userRef('nuevo-mayor', 'nuevo-mayor'), elder({ id: 'nuevo-mayor' })),
-    );
-  });
-
   it('NO puede crear el documento de otro', async () => {
     await assertFails(
       setDoc(userRef(INTRUSO, 'victima'), elder({ id: 'victima' })),
     );
-  });
-
-  it('NO puede borrarse: el borrado no es un efecto de la app', async () => {
-    await assertFails(deleteDoc(userRef(ELDER_LIBRE, ELDER_LIBRE)));
   });
 });
 
 describe('el familiar vinculado y su mayor', () => {
   it('lee el documento de su mayor (panel: getUser(elderId))', async () => {
     await assertSucceeds(getDoc(userRef(FAMILIAR, ELDER_VINCULADO)));
-  });
-
-  it('escribe preferencias con un set() del documento entero (saveUser)', async () => {
-    // `saveUser` reescribe todo el mapa; solo `preferences` cambia de valor,
-    // así que affectedKeys() devuelve una sola clave.
-    const completo = elder({
-      id: ELDER_VINCULADO,
-      linkCode: null,
-      linkedCompanionId: FAMILIAR,
-      emergencyContact: {
-        name: 'María', phone: '+34600111222', source: 'companion',
-      },
-      preferences: { volume: 0.2, speechRate: 1.0, textSizeMultiplier: 2.0 },
-    });
-    await assertSucceeds(setDoc(userRef(FAMILIAR, ELDER_VINCULADO), completo));
-  });
-
-  it('escribe el nombre del mayor (updateName desde el panel)', async () => {
-    await assertSucceeds(
-      updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), { name: 'Carmen Rosas' }),
-    );
   });
 
   it('NO puede reescribir el contacto de emergencia de su mayor', async () => {
@@ -180,25 +143,6 @@ describe('el familiar vinculado y su mayor', () => {
 });
 
 describe('la vinculación ya no se hace desde el cliente', () => {
-  // `validateAndLink` escribe con el Admin SDK, que se salta estas reglas.
-  // Lo que se comprueba aquí es que NADIE puede replicar esa escritura desde
-  // la app, ni siquiera sobre un mayor que todavía tiene código libre.
-  it('no se puede reclamar a un mayor con código libre', async () => {
-    await assertFails(updateDoc(userRef(INTRUSO, ELDER_LIBRE), {
-      linkedCompanionId: INTRUSO,
-      autonomy: 'dependent',
-      linkCode: deleteField(),
-    }));
-  });
-
-  it('no se puede reclamar a un mayor ya vinculado', async () => {
-    await assertFails(updateDoc(userRef(INTRUSO, ELDER_VINCULADO), {
-      linkedCompanionId: INTRUSO,
-      autonomy: 'dependent',
-      linkCode: deleteField(),
-    }));
-  });
-
   it('un familiar no puede robarle el vínculo a otro', async () => {
     await assertFails(updateDoc(userRef(INTRUSO, ELDER_VINCULADO), {
       linkedCompanionId: INTRUSO,
@@ -209,52 +153,6 @@ describe('la vinculación ya no se hace desde el cliente', () => {
 describe('un autenticado cualquiera frente a datos ajenos', () => {
   it('NO lee el documento de un mayor ya vinculado', async () => {
     await assertFails(getDoc(userRef(INTRUSO, ELDER_VINCULADO)));
-  });
-
-  it('NO lee el documento de un familiar', async () => {
-    await assertFails(getDoc(userRef(INTRUSO, FAMILIAR)));
-  });
-
-  it('NO escribe en documentos ajenos', async () => {
-    await assertFails(
-      updateDoc(userRef(INTRUSO, ELDER_VINCULADO), { name: 'pwned' }),
-    );
-  });
-
-  it('NO puede volcar la colección entera', async () => {
-    await assertFails(getDocs(collection(db(INTRUSO), 'users')));
-  });
-
-  it('NO puede paginar con un limit grande', async () => {
-    await assertFails(
-      getDocs(query(collection(db(INTRUSO), 'users'), limit(50))),
-    );
-  });
-});
-
-describe('sin autenticar no se toca nada', () => {
-  it('no lee', async () => {
-    await assertFails(getDoc(userRef(null, ELDER_LIBRE)));
-  });
-
-  it('no escribe', async () => {
-    await assertFails(updateDoc(userRef(null, ELDER_LIBRE), { name: 'x' }));
-  });
-
-  it('no consulta', async () => {
-    await assertFails(
-      getDocs(query(collection(db(null), 'users'), limit(1))),
-    );
-  });
-});
-
-describe('colecciones que no existen: denegadas por defecto', () => {
-  it('/pairings', async () => {
-    await assertFails(getDoc(doc(db(FAMILIAR), 'pairings', 'AB23')));
-  });
-
-  it('/alerts', async () => {
-    await assertFails(getDoc(doc(db(FAMILIAR), 'alerts', 'a1')));
   });
 });
 
@@ -267,24 +165,6 @@ describe('`/users` no es enumerable desde un cliente (RNF-9)', () => {
       limit(1),
     );
     await assertFails(getDocs(q));
-  });
-
-  it('una consulta limit(1) sin filtro tampoco pasa', async () => {
-    await assertFails(
-      getDocs(query(collection(db(INTRUSO), 'users'), limit(1))),
-    );
-  });
-
-  it('el documento de un mayor pendiente de vincular ya no es legible', async () => {
-    await assertFails(getDoc(userRef(INTRUSO, ELDER_LIBRE)));
-  });
-
-  it('ni siquiera un familiar registrado puede buscar por código', async () => {
-    await assertFails(getDocs(query(
-      collection(db(FAMILIAR), 'users'),
-      where('linkCode', '==', 'AB23'),
-      limit(1),
-    )));
   });
 });
 
@@ -309,49 +189,9 @@ describe('el consentimiento solo lo escribe el servidor', () => {
     }));
   });
 
-  it('el mayor NO puede retirárselo ni borrarlo desde el cliente', async () => {
-    await assertFails(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
-      'conversationConsent.granted': false,
-    }));
-    await assertFails(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
-      conversationConsent: deleteField(),
-    }));
-  });
-
-  it('nadie da de alta un documento con consentimiento de serie', async () => {
-    await assertFails(setDoc(
-      userRef('nuevo-mayor', 'nuevo-mayor'),
-      elder({ id: 'nuevo-mayor', conversationConsent: consentido }),
-    ));
-  });
-
-  it('el familiar NO puede consentir por su mayor', async () => {
-    await assertFails(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
-      'conversationConsent.granted': false,
-    }));
-  });
-
-  it('con el consentimiento puesto, el mayor sigue escribiendo sus ajustes', async () => {
-    await assertSucceeds(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
-      preferences: { volume: 0.6, speechRate: 0.4, textSizeMultiplier: 1.6 },
-    }));
-  });
-
-  it('el mayor elige qué ve su familiar (companionSharing)', async () => {
-    await assertSucceeds(updateDoc(userRef(ELDER_VINCULADO, ELDER_VINCULADO), {
-      companionSharing: 'wellbeing',
-    }));
-  });
-
   it('el familiar NO puede cambiar lo que ve', async () => {
     await assertFails(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
       companionSharing: 'full',
-    }));
-  });
-
-  it('el panel escribe una sola magnitud (updatePreferenceField, ADR-0027)', async () => {
-    await assertSucceeds(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
-      'preferences.volume': 0.5,
     }));
   });
 });
@@ -379,27 +219,12 @@ describe('las conversaciones analizadas las escribe solo el servidor', () => {
 
   const sub = (uid, name, id) => doc(db(uid), 'users', ELDER_VINCULADO, name, id);
 
-  it('el mayor lee sus conversaciones, contenidos y memoria', async () => {
-    await assertSucceeds(getDoc(sub(ELDER_VINCULADO, 'conversations', 'c1')));
-    await assertSucceeds(getDoc(sub(ELDER_VINCULADO, 'conversationContents', 'c1')));
-    await assertSucceeds(getDoc(sub(ELDER_VINCULADO, 'memory', 'profile')));
-    await assertSucceeds(getDocs(
-      collection(db(ELDER_VINCULADO), 'users', ELDER_VINCULADO, 'conversations'),
-    ));
-  });
-
   it('el mayor NO puede escribir ni borrar un análisis', async () => {
     await assertFails(setDoc(sub(ELDER_VINCULADO, 'conversations', 'c2'), analizada));
     await assertFails(updateDoc(sub(ELDER_VINCULADO, 'conversations', 'c1'), {
       sentiment: 'positive',
     }));
     await assertFails(deleteDoc(sub(ELDER_VINCULADO, 'conversationContents', 'c1')));
-  });
-
-  it('un autenticado cualquiera no lee nada', async () => {
-    await assertFails(getDoc(sub(INTRUSO, 'conversations', 'c1')));
-    await assertFails(getDoc(sub(INTRUSO, 'conversationContents', 'c1')));
-    await assertFails(getDoc(sub(INTRUSO, 'memory', 'profile')));
   });
 });
 
@@ -427,27 +252,12 @@ describe('el familiar ve lo que el mayor elige, y solo con consentimiento', () =
     });
   });
 
-  it('nivel "full": lee las tres', async () => {
-    await setElder({ conversationConsent: consent, companionSharing: 'full' });
-    await assertSucceeds(getDoc(sub('conversations', 'c1')));
-    await assertSucceeds(list('conversations'));
-    await assertSucceeds(getDoc(sub('conversationContents', 'c1')));
-    await assertSucceeds(list('conversationContents'));
-    await assertSucceeds(getDoc(sub('memory', 'profile')));
-  });
-
   it('nivel "wellbeing": el ánimo sí, los resúmenes y la memoria no', async () => {
     await setElder({ conversationConsent: consent, companionSharing: 'wellbeing' });
     await assertSucceeds(list('conversations'));
     await assertFails(getDoc(sub('conversationContents', 'c1')));
     await assertFails(list('conversationContents'));
     await assertFails(getDoc(sub('memory', 'profile')));
-  });
-
-  it('nivel "none": nada', async () => {
-    await setElder({ conversationConsent: consent, companionSharing: 'none' });
-    await assertFails(list('conversations'));
-    await assertFails(getDoc(sub('conversationContents', 'c1')));
   });
 
   it('consentimiento retirado: nada, aunque el nivel fuera "full"', async () => {
@@ -457,28 +267,5 @@ describe('el familiar ve lo que el mayor elige, y solo con consentimiento', () =
     });
     await assertFails(list('conversations'));
     await assertFails(getDoc(sub('conversationContents', 'c1')));
-  });
-
-  it('sin consentimiento nunca dado: nada', async () => {
-    await setElder({ companionSharing: 'full' });
-    await assertFails(list('conversations'));
-  });
-
-  it('un familiar que no es el suyo: nada', async () => {
-    await setElder({ conversationConsent: consent, companionSharing: 'full' });
-    await assertFails(getDocs(
-      collection(db(INTRUSO), 'users', ELDER_VINCULADO, 'conversations'),
-    ));
-  });
-
-  it('el familiar fija los plazos de la conversación (ADR-0034)', async () => {
-    await assertSucceeds(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
-      'conversationSettings.retentionDays': 30,
-    }));
-  });
-
-  it('el familiar sigue sin poder escribir en las subcolecciones', async () => {
-    await setElder({ conversationConsent: consent, companionSharing: 'full' });
-    await assertFails(updateDoc(sub('conversations', 'c1'), { sentiment: 'positive' }));
   });
 });

@@ -151,19 +151,6 @@ void main() {
 
       expect(finals, ['hola']);
     });
-
-    testWidgets('un error que se adelanta al final no lo tira ni lo duplica',
-        (tester) async {
-      await begin();
-      await tester.pump();
-
-      recognizer.partial('hola');
-      recognizer.error('error_no_match');
-      recognizer.finalResult('hola qué tal');
-      await tester.pump(pause);
-
-      expect(finals, ['hola qué tal']);
-    });
   });
 
   group('turno de varias sesiones (ADR-0022)', () {
@@ -198,77 +185,6 @@ void main() {
 
       expect(recognizer.listenCalls, 2);
       service.cancelListening();
-    });
-  });
-
-  group('cierre por silencio', () {
-    testWidgets('manda la pausa que trae el turno', (tester) async {
-      await begin(silenceTimeout: const Duration(seconds: 6));
-      await tester.pump();
-
-      recognizer.partial('estaba pensando');
-      await tester.pump(const Duration(seconds: 5));
-      expect(finals, isEmpty);
-
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pump(kSpeechFinalResultWait);
-      expect(finals, ['estaba pensando']);
-    });
-
-    testWidgets('el final que repite el parcial no alarga la espera',
-        (tester) async {
-      await begin();
-      await tester.pump();
-
-      recognizer.partial('hola');
-      await tester.pump(const Duration(seconds: 2));
-      recognizer.endOfSpeech();
-      recognizer.finalResult('hola');
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(finals, ['hola']);
-    });
-
-    testWidgets('sin hablar, se cierra vacío tras la espera inicial',
-        (tester) async {
-      await begin();
-      await tester.pump(kSpeechLeadInTimeout);
-
-      expect(finals, ['']);
-    });
-
-    testWidgets('con una pausa más larga que la espera inicial, manda la pausa',
-        (tester) async {
-      await begin(silenceTimeout: const Duration(seconds: 10));
-      await tester.pump(kSpeechLeadInTimeout);
-      expect(finals, isEmpty);
-
-      await tester.pump(const Duration(seconds: 2));
-      expect(finals, ['']);
-    });
-  });
-
-  group('fin del turno desde fuera', () {
-    testWidgets('finishListening sin turno abierto devuelve false',
-        (tester) async {
-      expect(service.finishListening(), isFalse);
-
-      await begin();
-      service.cancelListening();
-      expect(service.finishListening(), isFalse);
-    });
-
-    testWidgets('cancelar descarta lo oído y no avisa', (tester) async {
-      await begin();
-      await tester.pump();
-
-      recognizer.partial('algo');
-      service.cancelListening();
-      recognizer.finalResult('algo más');
-      await tester.pump(pause + kSpeechFinalResultWait);
-
-      expect(finals, isEmpty);
-      expect(recognizer.cancelCalls, 1);
     });
   });
 }

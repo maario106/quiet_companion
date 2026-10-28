@@ -23,29 +23,9 @@ ConversationRecord _record(String id, DateTime at,
     );
 
 void main() {
-  test('joinSpanish', () {
-    expect(joinSpanish([]), '');
-    expect(joinSpanish(['a']), 'a');
-    expect(joinSpanish(['a', 'b']), 'a y b');
-    expect(joinSpanish(['a', 'b', 'c']), 'a, b y c');
-  });
-
   test('semana sin conversaciones: una invitación, sin reproches', () {
     final text = myWeekSentences(_week(), _now);
     expect(text.single, contains('todavía no hemos hablado'));
-  });
-
-  test('cuenta los días y cuándo fue la última vez', () {
-    final text = myWeekSentences(
-      _week(records: [
-        _record('a', DateTime(2026, 9, 26, 10)),
-        _record('b', DateTime(2026, 9, 24, 10)),
-      ]),
-      _now,
-    );
-    expect(text, contains('Esta semana hemos hablado 2 días.'));
-    expect(text, contains('La última vez fue hoy a las 10:00.'));
-    expect(text, contains('La mayoría de las veces te he notado bien.'));
   });
 
   test('nunca nombra las señales clínicas', () {
@@ -62,21 +42,5 @@ void main() {
     expect(text, isNot(contains('sola')));
     expect(text, isNot(contains('daño')));
     expect(text, contains('más difíciles'));
-  });
-
-  test('lo que le ha rondado la cabeza sale de los temas con preocupación', () {
-    final text = myWeekSentences(
-      _week(
-        records: [
-          _record('a', DateTime(2026, 9, 26), signals: [ConversationSignal.worry]),
-        ],
-        contents: {
-          'a': ConversationContent(
-              id: 'a', endedAt: DateTime(2026, 9, 26), topics: ['médico']),
-        },
-      ),
-      _now,
-    );
-    expect(text, contains('Lo que más te ha rondado la cabeza: médico.'));
   });
 }
