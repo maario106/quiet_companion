@@ -89,6 +89,10 @@ class JustAudioTtsPlayer implements TtsAudioPlayer {
   Future<void> dispose() => _player.dispose();
 }
 
+// StreamAudioSource sigue marcada como experimental en just_audio, pero es la
+// única vía del paquete para reproducir desde memoria el MP3 de la callable.
+// ignore_for_file: experimental_member_use
+
 /// Fuente de audio en memoria. `just_audio` no acepta bytes directamente:
 /// exige un [StreamAudioSource] que sirva el rango pedido.
 class _Mp3BytesSource extends StreamAudioSource {

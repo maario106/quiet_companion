@@ -88,8 +88,12 @@ class OnboardingScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
+                    // Sin botón de "Continuar": al vincular, el servidor borra
+                    // el linkCode, currentUserProvider emite y el router
+                    // navega solo.
                     const Text(
-                      'Tu familiar deberá introducir este código en su aplicación.',
+                      'Tu familiar deberá introducir este código en su aplicación. '
+                      'Cuando lo haga, esta pantalla cambiará sola.',
                       style: TextStyle(
                         fontSize: AppTheme.fontMedium,
                         color: AppTheme.elderTextSecondary,
@@ -97,13 +101,6 @@ class OnboardingScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
-                    _ModeButton(
-                      label: 'Continuar',
-                      onTap: () => ref
-                          .read(elderAuthControllerProvider.notifier)
-                          .checkPairingStatus(),
-                    ),
-                    const SizedBox(height: 16),
                     TextButton(
                       onPressed: () => ref
                           .read(elderAuthControllerProvider.notifier)

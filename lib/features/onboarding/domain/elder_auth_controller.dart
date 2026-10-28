@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'elder_auth_state.dart';
-import '../data/auth_repository.dart';
+import 'package:quiet_companion/core/repositories/auth_repository.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 
@@ -89,28 +89,6 @@ class ElderAuthController extends StateNotifier<AuthState> {
       await _authRepository.saveUser(updatedUser);
     } catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
-    }
-  }
-
-  // TODO: Hacer un sistema en "tiempo real" que compruebe si el familiar ha metido el
-  // TODO: código en vez de tener este method.
-  Future<void> checkPairingStatus() async {
-    if (state.user == null) return;
-
-    try {
-      // 1. Preguntamos a Firebase por los datos más recientes del Mayor
-      final updatedUser = await _authRepository.getUser(state.user!.id);
-
-      if (updatedUser != null) {
-        // 2. Actualizamos el estado local.
-        // Si el familiar hizo bien su trabajo, este updatedUser ya no tendrá linkCode.
-        state = state.copyWith(user: updatedUser);
-      }
-    } catch (e) {
-      state = state.copyWith(
-        status: AuthStatus.error,
-        errorMessage: e.toString(),
-      );
     }
   }
 

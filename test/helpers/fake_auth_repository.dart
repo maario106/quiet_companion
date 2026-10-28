@@ -1,7 +1,7 @@
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
-import 'package:quiet_companion/features/onboarding/data/auth_repository.dart';
+import 'package:quiet_companion/core/repositories/auth_repository.dart';
 
 /// Registra las escrituras por campo del panel (ADR-0027). `saveUser` lanza a
 /// propósito: el panel ya no debe reescribir el documento entero del mayor.

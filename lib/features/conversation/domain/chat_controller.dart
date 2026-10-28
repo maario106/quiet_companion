@@ -18,7 +18,7 @@ import 'package:quiet_companion/core/services/conversation_closer.dart';
 import 'package:quiet_companion/core/services/gemini_service.dart';
 import 'package:quiet_companion/core/services/speech_service.dart';
 import 'package:quiet_companion/core/services/tts_service.dart';
-import 'package:quiet_companion/features/onboarding/data/auth_repository.dart';
+import 'package:quiet_companion/core/repositories/auth_repository.dart';
 import 'chat_state.dart';
 
 typedef TimerFactory = Timer Function(Duration duration, void Function() onFire);
