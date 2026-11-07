@@ -6,6 +6,7 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/repositories/auth_repository.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
 /// "Mi cuenta": cómo entra el mayor en la aplicación.
 ///
@@ -173,16 +174,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Mi cuenta',
-          style: TextStyle(
-            fontSize: AppTheme.fontMedium * textScale,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.elderTextPrimary,
-          ),
-        ),
-      ),
+      appBar: AppBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -193,6 +185,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  ElderScreenTitle('Mi cuenta', textScale: textScale),
+                  const SizedBox(height: 24),
                   ...content,
                   if (_error != null) ...[
                     const SizedBox(height: 24),
