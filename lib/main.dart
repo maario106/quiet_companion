@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/config/app_router.dart';
 import 'package:quiet_companion/core/config/emulator_config.dart';
@@ -18,7 +17,6 @@ Future<void> main() async {
   // Antes de cualquier lectura o escritura: los SDK fijan su destino en la
   // primera operación. No hace nada salvo con --dart-define=USE_EMULATOR=true.
   await connectToEmulators();
-  await dotenv.load(fileName: '.env');
 
   runApp(
     const ProviderScope(

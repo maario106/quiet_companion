@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quiet_companion/core/models/conversation_settings.dart';
-import 'package:quiet_companion/core/models/elder_memory.dart';
 import 'package:quiet_companion/core/services/conversation_closer.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_state.dart';
 
-import '../../helpers/fake_auth_repository.dart';
 import '../../helpers/fake_gemini_service.dart';
 import '../../helpers/fake_speech_service.dart';
 import '../../helpers/fake_tts_service.dart';
@@ -39,9 +37,6 @@ void main() {
       gemini,
       speech,
       tts,
-      FakeAuthRepository(),
-      'elder-1',
-      'Carmen',
       closer: closer,
       consentGranted: consent,
       settings: const ConversationSettings(inactivityMinutes: 5),
@@ -108,25 +103,42 @@ void main() {
     });
   });
 
-  group('memoria del mayor (ADR-0032)', () {
-    const memory = ElderMemory(facts: {'ciudad': 'Sevilla'});
-
-    test('con consentimiento, la sesión nueva lleva la memoria', () async {
+  group('historial que viaja a chatTurn', () {
+    test('cada turno lleva los anteriores de la conversación, no el suyo',
+        () async {
       final controller = build();
-      controller.updateMemory(memory);
+      await talk(controller, 2);
 
-      await controller.sendMessage('hola');
+      await controller.sendMessage('tercera');
 
-      expect(gemini.lastMemory, same(memory));
+      expect(gemini.lastHistory.map((t) => t.text), [
+        'frase 0',
+        'Respuesta a: frase 0',
+        'frase 1',
+        'Respuesta a: frase 1',
+      ]);
     });
 
-    test('sin consentimiento, la memoria no se inyecta', () async {
-      final controller = build(consent: false);
-      controller.updateMemory(memory);
+    test('un turno fallido no entra, y el siguiente no lo arrastra', () async {
+      final controller = build();
+      await talk(controller, 1);
+      gemini.failNext = true;
+      await controller.sendMessage('se corta');
 
-      await controller.sendMessage('hola');
+      await controller.sendMessage('repito');
 
-      expect(gemini.lastMemory, isNull);
+      expect(gemini.lastHistory, hasLength(2));
+    });
+
+    test('tras el cierre, la conversación nueva empieza sin historial',
+        () async {
+      final controller = build();
+      await talk(controller, 3);
+      timers.last.fire();
+
+      await controller.sendMessage('hola otra vez');
+
+      expect(gemini.lastHistory, isEmpty);
     });
   });
 

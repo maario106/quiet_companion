@@ -8,3 +8,8 @@ library;
 /// texto a analizar: un "hola, adiós" no tiene ánimo que medir y no justifica
 /// sacar lo dicho del teléfono.
 const int kMinElderTurnsForAnalysis = 3;
+
+/// Turnos de la conversación en curso que viajan con cada mensaje a
+/// `chatTurn`. Espejo de `MAX_TURNS` del servidor, que rechaza más. Es par:
+/// los turnos se apuntan por parejas y el recorte empieza siempre en el mayor.
+const int kChatHistoryMaxTurns = 200;

@@ -23,3 +23,7 @@ const String kSetConversationConsentCallable = 'setConversationConsent';
 /// Análisis de una conversación terminada (ADR-0029). Recibe la transcripción,
 /// guarda solo el resultado y la descarta.
 const String kCloseConversationCallable = 'closeConversation';
+
+/// Un turno del chat con el mayor (ADR-0014). Gemini se llama desde el
+/// servidor: la app no lleva ninguna clave de API que se pueda extraer.
+const String kChatTurnCallable = 'chatTurn';

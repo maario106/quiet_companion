@@ -6,9 +6,9 @@
  *
  * Contiene la síntesis de voz (`synthesizeSpeech`), la vinculación
  * (`validateAndLink`), el consentimiento sobre las conversaciones
- * (`setConversationConsent`) y su análisis al cierre (`closeConversation`).
- * El análisis es la primera llamada a Gemini que no usa la clave del cliente;
- * la del chat en vivo sigue allí y su migración es trabajo aparte (ADR-0014).
+ * (`setConversationConsent`), su análisis al cierre (`closeConversation`) y
+ * el chat en vivo (`chatTurn`). Las dos llamadas a Gemini van por Vertex AI
+ * con las credenciales del entorno: no hay ninguna clave en la app (ADR-0014).
  */
 
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
@@ -37,6 +37,17 @@ const {
   pushRecentSummary,
   retentionCutoffMs,
 } = require("./conversation");
+const {
+  GUARDAR_NOMBRE_DECLARATION,
+  CHAT_SAFETY_SETTINGS,
+  parseChatRequest,
+  memoryFromDoc,
+  buildChatSystemPrompt,
+  chatContents,
+  replyTextOf,
+  nameCallOf,
+  nameResponseContent,
+} = require("./chat");
 
 initializeApp();
 
@@ -674,5 +685,113 @@ exports.closeConversation = onCall(
           userRef, retentionCutoffMs(nowMs, retentionDays));
 
       return {conversationId: conversationRef.id, status};
+    },
+);
+
+// ─── Chat en vivo (ADR-0014) ─────────────────────────────────────────────
+
+/** Modelo del chat. El mismo que el del análisis, y por la misma vía. */
+const CHAT_MODEL = "gemini-2.5-flash";
+
+/**
+ * @param {object[]} contents conversación en el formato de Gemini.
+ * @param {object} config instrucción de sistema, herramientas y seguridad.
+ * @return {Promise<object|null>} `candidates[0].content`, o null.
+ */
+async function generateChatReply(contents, config) {
+  const response = await geminiClient().models.generateContent({
+    model: CHAT_MODEL,
+    contents,
+    config,
+  });
+  return response.candidates?.[0]?.content ?? null;
+}
+
+/**
+ * Un turno de la conversación con el mayor. Antes lo hacía el cliente contra
+ * la API de Gemini con una clave empaquetada en la app, que cualquiera podía
+ * sacar del APK; aquí no hay clave que sacar.
+ *
+ * Entrada: `{ message, history, utcOffsetMinutes }`. `history` son los turnos
+ * de la conversación en curso: el servidor no guarda nada entre llamadas, ni
+ * el texto va a los registros. Salida: `{ text }`, null si el modelo no ha
+ * dado ningún texto.
+ *
+ * El nombre y la memoria se leen del documento del mayor en cada turno, y la
+ * memoria solo si consiente guardar sus conversaciones (ADR-0032). Si el
+ * modelo llama a `guardarNombre`, el nombre se guarda aquí.
+ */
+exports.chatTurn = onCall(
+    {
+      region: REGION,
+      memory: "256MiB",
+      timeoutSeconds: 60,
+      maxInstances: 10,
+    },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Se requiere sesión iniciada.");
+      }
+
+      const input = parseChatRequest(request.data);
+      if (!input) {
+        throw new HttpsError("invalid-argument", "Turno no válido.");
+      }
+
+      const uid = request.auth.uid;
+      const userRef = getFirestore().collection(COLLECTIONS.users).doc(uid);
+      const snap = await userRef.get();
+      if (!snap.exists || snap.get("role") !== "elder") {
+        throw new HttpsError("permission-denied", "Solo para personas mayores.");
+      }
+
+      // Sin consentimiento la memoria ni se lee.
+      const memory = snap.get("conversationConsent.granted") === true ?
+        memoryFromDoc((await userRef.collection(COLLECTIONS.memory)
+            .doc(MEMORY_PROFILE_DOC).get()).data()) :
+        null;
+
+      const config = {
+        systemInstruction: buildChatSystemPrompt(
+            snap.get("name"), memory, Date.now(), input.utcOffsetMinutes),
+        tools: [{functionDeclarations: [GUARDAR_NOMBRE_DECLARATION]}],
+        safetySettings: CHAT_SAFETY_SETTINGS,
+      };
+      const contents = chatContents(input.history, input.message);
+
+      try {
+        const first = await generateChatReply(contents, config);
+        let text = replyTextOf(first);
+
+        const call = nameCallOf(first);
+        if (call) {
+          let saved = null;
+          if (call.name) {
+            try {
+              await userRef.update({name: call.name});
+              saved = call.name;
+            } catch (error) {
+              logger.error("Fallo al guardar el nombre", {
+                uid,
+                error: error.message,
+              });
+            }
+          }
+          // La respuesta de la función va junto a la llamada del modelo tal
+          // cual llegó: con ella viaja su razonamiento.
+          contents.push(first, nameResponseContent(saved));
+          text = replyTextOf(await generateChatReply(contents, config)) ?? text;
+        }
+
+        return {text};
+      } catch (error) {
+        // Solo metadatos: el texto de la conversación no va a los registros.
+        logger.error("Fallo del chat", {
+          uid,
+          turns: input.history.length,
+          error: error.message,
+        });
+        throw new HttpsError("internal", "No se ha podido responder.");
+      }
     },
 );

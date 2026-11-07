@@ -8,7 +8,6 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
 import 'package:quiet_companion/features/conversation/presentation/home_screen.dart';
 
-import '../../helpers/fake_auth_repository.dart';
 import '../../helpers/fake_gemini_service.dart';
 import '../../helpers/fake_speech_service.dart';
 import '../../helpers/fake_tts_service.dart';
@@ -40,9 +39,6 @@ void main() {
       gemini,
       FakeSpeechService(),
       tts,
-      FakeAuthRepository(),
-      _elder.id,
-      null,
       // Un temporizador real de inactividad quedaría pendiente al acabar.
       startTimer: ManualTimer.new,
     );

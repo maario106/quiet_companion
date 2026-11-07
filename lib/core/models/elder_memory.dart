@@ -9,8 +9,8 @@ class RecentSummary {
 }
 
 /// `users/{elderId}/memory/profile`: lo que el asistente recuerda del mayor
-/// (ADR-0032). Lo escribe solo `closeConversation`; se inyecta en el modelo al
-/// empezar cada conversación.
+/// (ADR-0032). Lo escribe solo `closeConversation` y lo inyecta en el modelo
+/// `chatTurn`; aquí solo lo lee el panel del familiar.
 class ElderMemory {
   const ElderMemory({this.facts = const {}, this.recent = const []});
 

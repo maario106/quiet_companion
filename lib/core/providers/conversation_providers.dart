@@ -30,8 +30,8 @@ final conversationContentsProvider = StreamProvider.autoDispose
       .watchContents(elderId, since);
 });
 
-/// Lo que el asistente recuerda del mayor [elderId] (ADR-0032). Lo leen el chat
-/// (para inyectarlo al empezar cada conversación) y el panel con nivel `full`.
+/// Lo que el asistente recuerda del mayor [elderId] (ADR-0032). Lo lee el panel
+/// con nivel `full`; al modelo se lo inyecta el servidor (`chatTurn`).
 final elderMemoryProvider =
     StreamProvider.autoDispose.family<ElderMemory?, String>((ref, elderId) {
   return ref.watch(conversationRepositoryProvider).watchMemory(elderId);

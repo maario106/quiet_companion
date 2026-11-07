@@ -129,7 +129,10 @@ const SIGNALS = [
   "risk",
 ];
 
-/** Topes de tamaño: una conversación de voz real queda muy por debajo. */
+/**
+ * Topes de tamaño: una conversación de voz real queda muy por debajo. El chat
+ * en vivo (`chat.js`) aplica los mismos a su historial.
+ */
 const MAX_TURNS = 200;
 const MAX_TURN_CHARS = 2000;
 const MAX_TOPICS = 5;
@@ -433,6 +436,9 @@ module.exports = {
   frozenExpireAtMs,
   parseConsentRequest,
   MIN_ELDER_TURNS_FOR_ANALYSIS,
+  ROLES,
+  MAX_TURNS,
+  MAX_TURN_CHARS,
   ANALYSIS_PROMPT_VERSION,
   SENTIMENTS,
   SIGNALS,
