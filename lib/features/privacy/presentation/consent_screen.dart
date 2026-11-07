@@ -5,6 +5,7 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_controller.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_text.dart';
@@ -34,17 +35,6 @@ class ConsentScreen extends ConsumerWidget {
 
     return StopSpeakingOnExit(
       child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: Text(
-            'Antes de empezar',
-            style: TextStyle(
-              fontSize: AppTheme.fontMedium * textScale,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.elderTextPrimary,
-            ),
-          ),
-        ),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -55,6 +45,8 @@ class ConsentScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    ElderScreenTitle('Antes de empezar', textScale: textScale),
+                    const SizedBox(height: 24),
                     Text(
                       ConsentText.question,
                       style: TextStyle(

@@ -9,6 +9,7 @@ import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/utils/week_summary.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 import 'package:quiet_companion/features/my_week/domain/my_week_text.dart';
 
@@ -45,7 +46,7 @@ class MyWeekScreen extends ConsumerWidget {
 
     return StopSpeakingOnExit(
       child: Scaffold(
-        appBar: AppBar(title: Text('Mi semana', style: titleStyle)),
+        appBar: AppBar(),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -75,6 +76,8 @@ class MyWeekScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        ElderScreenTitle('Mi semana', textScale: textScale),
+                        const SizedBox(height: 24),
                         _DaysRow(week: week, textScale: textScale),
                         const SizedBox(height: 32),
                         for (final sentence in sentences) ...[

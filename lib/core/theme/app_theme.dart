@@ -65,11 +65,18 @@ class AppTheme {
   static double contentMaxWidth(BuildContext context) =>
       isTablet(context) ? 560.0 : double.infinity;
 
-  static double micButtonSize(BuildContext context) =>
-      isTablet(context) ? 260.0 : 200.0;
+  /// El micrófono mengua al crecer la letra: quien la amplía necesita sitio
+  /// para leer la respuesta más que un botón aún mayor. Mide lo mismo hasta
+  /// "Normal" (1,2) y baja al 70 % con "La más grande" (2,0): 140 px en
+  /// teléfono, casi el doble del mínimo de 80 y aún el control más grande.
+  static double micButtonSize(BuildContext context, double textScale) {
+    final base = isTablet(context) ? 260.0 : 200.0;
+    final shrink = ((textScale - 1.2) / 0.8).clamp(0.0, 1.0);
+    return base * (1 - 0.3 * shrink);
+  }
 
-  static double micIconSize(BuildContext context) =>
-      isTablet(context) ? 130.0 : 100.0;
+  static double micIconSize(BuildContext context, double textScale) =>
+      micButtonSize(context, textScale) / 2;
 
   // ── ELDER THEME ───────────────────────────────────────────────
   static ThemeData get elderTheme {

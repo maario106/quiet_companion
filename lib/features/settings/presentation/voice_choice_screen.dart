@@ -8,6 +8,7 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/choice_option_tile.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 
 /// Elección de la voz con la que habla la app. Un toque elige, guarda y dice
@@ -85,16 +86,7 @@ class _VoiceChoiceScreenState extends ConsumerState<VoiceChoiceScreen> {
 
     return StopSpeakingOnExit(
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Voz',
-            style: TextStyle(
-              fontSize: AppTheme.fontMedium * textScale,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.elderTextPrimary,
-            ),
-          ),
-        ),
+        appBar: AppBar(),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -105,6 +97,8 @@ class _VoiceChoiceScreenState extends ConsumerState<VoiceChoiceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    ElderScreenTitle('Voz', textScale: textScale),
+                    const SizedBox(height: 24),
                     Text(
                       '¿Con qué voz quieres que te hable? Toca una para oírla.',
                       style: TextStyle(

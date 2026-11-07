@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:quiet_companion/core/models/conversation_consent.dart';
 import 'package:quiet_companion/core/models/conversation_record.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
+import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/providers/conversation_providers.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
@@ -95,5 +98,37 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField));
       expect(field.controller!.text, 'Me llamo Carmen');
     });
+  });
+
+  testWidgets('con la letra más grande, la pantalla cabe en un teléfono '
+      'estrecho: el saludo no se corta y el micrófono mengua', (tester) async {
+    // Teléfono de gama media, 360 × 800 dp, y con "Mi semana" visible: el
+    // caso con menos sitio.
+    tester.view.devicePixelRatio = 3.0;
+    tester.view.physicalSize = const Size(1080, 2400);
+    addTearDown(tester.view.reset);
+    const user = UserModel(
+      id: 'elder-1',
+      name: 'Carmen',
+      role: UserRole.elder,
+      autonomy: AutonomyStatus.independent,
+      preferences: UserPreferences(textSizeMultiplier: 2.0),
+      conversationConsent: ConversationConsent(granted: true),
+    );
+
+    await tester.pumpWidget(buildSubject(user: user));
+    // Hasta que acaba la animación del micrófono al llegar la preferencia.
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Mi semana'), findsOneWidget);
+    final greeting =
+        tester.renderObject<RenderParagraph>(find.text('Hola, Carmen'));
+    expect(greeting.didExceedMaxLines, isFalse);
+    final mic = find.ancestor(
+      of: find.byIcon(Icons.mic_none),
+      matching: find.byType(AnimatedContainer),
+    );
+    expect(tester.getSize(mic), const Size(140, 140));
   });
 }

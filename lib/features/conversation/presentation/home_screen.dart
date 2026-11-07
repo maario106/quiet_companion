@@ -6,6 +6,7 @@ import 'package:quiet_companion/core/providers/conversation_providers.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_controller.dart';
 import 'package:quiet_companion/features/conversation/domain/chat_state.dart';
 
@@ -104,8 +105,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final padding = AppTheme.screenPadding(context);
     final maxWidth = AppTheme.contentMaxWidth(context);
-    final micSize = AppTheme.micButtonSize(context);
-    final micIconSz = AppTheme.micIconSize(context);
+    final micSize = AppTheme.micButtonSize(context, textScale);
+    final micIconSz = AppTheme.micIconSize(context, textScale);
 
     String? statusLabel;
     String subtitle = '';
@@ -148,17 +149,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text(
-          elderName != null ? 'Hola, $elderName' : 'Hola',
-          style: TextStyle(
-            fontSize: AppTheme.fontMedium * textScale,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.elderTextPrimary,
-          ),
-        ),
-      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -168,7 +158,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (statusLabel != null) ...[
+                  // Arriba, el saludo en reposo y el estado durante un turno.
+                  // Los dos a la vez le quitarían a la respuesta el sitio que
+                  // más le falta con la letra grande.
+                  if (statusLabel == null)
+                    ElderScreenTitle(
+                      elderName != null ? 'Hola, $elderName' : 'Hola',
+                      textScale: textScale,
+                    )
+                  else
                     Text(
                       statusLabel,
                       style: TextStyle(
@@ -178,8 +176,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
-                  ],
+                  const SizedBox(height: 12),
                   Expanded(
                     child: SingleChildScrollView(
                       controller: _scrollController,
@@ -289,13 +286,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // emergencia nunca está vacía.
                         onPressed: () => context.push('/emergency'),
                       ),
-                      _InputModeButton(
-                        typing: typing,
-                        textScale: textScale,
-                        onPressed: () => ref
-                            .read(chatControllerProvider.notifier)
-                            .setInputMode(
-                                typing ? InputMode.voice : InputMode.keyboard),
+                      // Flexible: con la letra más grande la etiqueta no cabe
+                      // entre los otros dos botones en un teléfono estrecho.
+                      Flexible(
+                        child: _InputModeButton(
+                          typing: typing,
+                          textScale: textScale,
+                          onPressed: () => ref
+                              .read(chatControllerProvider.notifier)
+                              .setInputMode(typing
+                                  ? InputMode.voice
+                                  : InputMode.keyboard),
+                        ),
                       ),
                       // Mientras se escribe, Ajustes no hace falta y su sitio,
                       // justo encima del teclado, es para cerrarlo. Mismo
@@ -418,11 +420,15 @@ class _InputModeButton extends StatelessWidget {
                 Icon(typing ? Icons.mic_none : Icons.keyboard_outlined,
                     size: 26, color: AppTheme.elderTextSecondary),
                 const SizedBox(height: 4),
-                Text(
-                  typing ? '¿Hablar?' : '¿Teclado?',
-                  style: TextStyle(
-                    fontSize: 14 * textScale,
-                    color: AppTheme.elderTextSecondary,
+                // Se reduce solo si no cabe; si cabe, sigue la preferencia.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    typing ? '¿Hablar?' : '¿Teclado?',
+                    style: TextStyle(
+                      fontSize: 14 * textScale,
+                      color: AppTheme.elderTextSecondary,
+                    ),
                   ),
                 ),
               ],

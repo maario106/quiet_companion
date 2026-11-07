@@ -5,6 +5,7 @@ import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
 /// Alta / edición del contacto de emergencia por el mayor cuyo contacto no
 /// viene impuesto por la vinculación. Única entrada: la fila "Contacto de
@@ -126,16 +127,7 @@ class _EmergencyContactSetupScreenState
     final textScale = user?.preferences.textSizeMultiplier ?? 1.0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Contacto de emergencia',
-          style: TextStyle(
-            fontSize: AppTheme.fontMedium * textScale,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.elderTextPrimary,
-          ),
-        ),
-      ),
+      appBar: AppBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -143,9 +135,17 @@ class _EmergencyContactSetupScreenState
                 BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
             child: SingleChildScrollView(
               padding: EdgeInsets.all(AppTheme.screenPadding(context)),
-              child: _confirming
-                  ? _buildConfirmStep(textScale)
-                  : _buildEditStep(textScale),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ElderScreenTitle('Contacto de emergencia',
+                      textScale: textScale),
+                  const SizedBox(height: 24),
+                  _confirming
+                      ? _buildConfirmStep(textScale)
+                      : _buildEditStep(textScale),
+                ],
+              ),
             ),
           ),
         ),

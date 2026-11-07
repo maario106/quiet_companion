@@ -6,6 +6,7 @@ import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
 /// Subpantalla única para todas las escalas de accesibilidad del mayor. No hay
 /// una pantalla por ajuste: la [PreferenceScale] que llega por la ruta lleva
@@ -99,16 +100,7 @@ class _PreferenceStepperScreenState
     final textScale = previewPrefs.textSizeMultiplier;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          scale.title,
-          style: TextStyle(
-            fontSize: AppTheme.fontMedium * textScale,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.elderTextPrimary,
-          ),
-        ),
-      ),
+      appBar: AppBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -119,6 +111,8 @@ class _PreferenceStepperScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  ElderScreenTitle(scale.title, textScale: textScale),
+                  const SizedBox(height: 24),
                   Text(
                     scale.question,
                     style: TextStyle(

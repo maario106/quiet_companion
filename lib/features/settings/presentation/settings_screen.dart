@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:quiet_companion/core/config/settings_rows.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
 /// Shell de ajustes del mayor: una lista de filas grandes que enrutan a
 /// subpantallas. No tiene modelo, repositorio ni estado propio — los campos
@@ -30,16 +31,7 @@ class SettingsScreen extends ConsumerWidget {
             : visibleSettingsEntries(user);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          group?.title ?? 'Ajustes',
-          style: TextStyle(
-            fontSize: AppTheme.fontMedium * textScale,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.elderTextPrimary,
-          ),
-        ),
-      ),
+      appBar: AppBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -49,16 +41,20 @@ class SettingsScreen extends ConsumerWidget {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.separated(
                     padding: EdgeInsets.all(AppTheme.screenPadding(context)),
-                    itemCount: entries.length,
+                    // El título es el primer elemento de la lista.
+                    itemCount: entries.length + 1,
                     // Separación explícita entre filas: son destinos táctiles
                     // grandes y contiguos, y pegadas invitan al toque erróneo.
                     // Mismo hueco que entre los botones de EmergencyScreen.
                     separatorBuilder: (_, __) => const SizedBox(height: 24),
-                    itemBuilder: (context, index) => _SettingsEntryTile(
-                      entry: entries[index],
-                      value: entries[index].subtitleFor(user),
-                      textScale: textScale,
-                    ),
+                    itemBuilder: (context, index) => index == 0
+                        ? ElderScreenTitle(group?.title ?? 'Ajustes',
+                            textScale: textScale)
+                        : _SettingsEntryTile(
+                            entry: entries[index - 1],
+                            value: entries[index - 1].subtitleFor(user),
+                            textScale: textScale,
+                          ),
                   ),
           ),
         ),

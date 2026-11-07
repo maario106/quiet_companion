@@ -6,6 +6,7 @@ import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/choice_option_tile.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_controller.dart';
 
 /// Una de las decisiones del mayor sobre sus conversaciones, como lista corta
@@ -103,16 +104,7 @@ class PrivacyChoiceScreen extends ConsumerWidget {
     final controller = ref.read(consentControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          choice.title,
-          style: TextStyle(
-            fontSize: AppTheme.fontMedium * textScale,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.elderTextPrimary,
-          ),
-        ),
-      ),
+      appBar: AppBar(),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -123,6 +115,8 @@ class PrivacyChoiceScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  ElderScreenTitle(choice.title, textScale: textScale),
+                  const SizedBox(height: 24),
                   Text(
                     choice.question,
                     style: TextStyle(

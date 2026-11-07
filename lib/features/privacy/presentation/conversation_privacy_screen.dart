@@ -6,6 +6,7 @@ import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/utils/spanish_date.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
+import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_controller.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_text.dart';
@@ -49,16 +50,7 @@ class _ConversationPrivacyScreenState
 
     return StopSpeakingOnExit(
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            widget.manage ? 'Guardar mis conversaciones' : 'Saber más',
-            style: TextStyle(
-              fontSize: AppTheme.fontMedium * textScale,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.elderTextPrimary,
-            ),
-          ),
-        ),
+        appBar: AppBar(),
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -69,6 +61,13 @@ class _ConversationPrivacyScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    ElderScreenTitle(
+                      widget.manage
+                          ? 'Guardar mis conversaciones'
+                          : 'Saber más',
+                      textScale: textScale,
+                    ),
+                    const SizedBox(height: 24),
                     if (widget.manage) ...[
                       _Status(user: user, textScale: textScale),
                       const SizedBox(height: 24),
