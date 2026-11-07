@@ -12,6 +12,10 @@ class CompanionAuthChoiceScreen extends ConsumerWidget {
     final maxWidth = AppTheme.contentMaxWidth(context);
 
     return Scaffold(
+      // Registro y acceso se apilan encima (`push`) y vuelven con `pop`: así
+      // la flecha y el botón atrás del sistema deshacen los pasos en orden.
+      // Con `go`, la pila se quedaría solo con la pantalla de destino y la
+      // flecha no tendría adónde volver.
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -48,12 +52,12 @@ class CompanionAuthChoiceScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 48),
                   FilledButton(
-                    onPressed: () => context.go('/companion/register'),
+                    onPressed: () => context.push('/companion/register'),
                     child: const Text('Crear una cuenta nueva'),
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton(
-                    onPressed: () => context.go('/companion/login'),
+                    onPressed: () => context.push('/companion/login'),
                     child: const Text('Ya tengo una cuenta'),
                   ),
                 ],
