@@ -16,3 +16,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     functions: FirebaseFunctions.instanceFor(region: kFunctionsRegion),
   );
 });
+
+/// Cómo ha entrado quien usa el móvil: anónimo o con Google. Lo lee
+/// "Mi cuenta" (`AccountScreen`).
+final authAccountProvider = StreamProvider<AuthAccount?>((ref) {
+  return ref.watch(authRepositoryProvider).accountChanges();
+});

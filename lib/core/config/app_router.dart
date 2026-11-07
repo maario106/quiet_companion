@@ -15,6 +15,7 @@ import 'package:quiet_companion/features/dashboard/presentation/dashboard_screen
 import 'package:quiet_companion/features/emergency/presentation/emergency_contact_setup_screen.dart';
 import 'package:quiet_companion/features/emergency/presentation/emergency_screen.dart';
 import 'package:quiet_companion/features/my_week/presentation/my_week_screen.dart';
+import 'package:quiet_companion/features/settings/presentation/account_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/preference_stepper_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/settings_screen.dart';
 import 'package:quiet_companion/features/settings/presentation/voice_choice_screen.dart';
@@ -190,6 +191,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'conversation-retention',
             builder: (context, state) =>
                 const PrivacyChoiceScreen(choice: PrivacyChoice.retention),
+          ),
+          GoRoute(
+            path: 'account',
+            builder: (context, state) => const AccountScreen(),
           ),
           // Una sola ruta paramétrica para todas las escalas de accesibilidad:
           // añadir un ajuste es añadir una PreferenceScale, sin tocar aquí.

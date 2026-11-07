@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart' show AuthCredential;
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
@@ -5,6 +8,9 @@ import 'package:quiet_companion/core/repositories/auth_repository.dart';
 
 /// Registra las escrituras por campo del panel (ADR-0027). `saveUser` lanza a
 /// propósito: el panel ya no debe reescribir el documento entero del mayor.
+///
+/// Simula además la sesión: [signInAs] emite por [authStateUid], y entrar con
+/// Google sigue el contrato del repositorio real, cuenta de familiar incluida.
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({this.shouldThrow = false});
 
@@ -12,12 +18,38 @@ class FakeAuthRepository implements AuthRepository {
   final preferenceWrites = <(String uid, String field, Object value)>[];
   final nameWrites = <(String uid, String name)>[];
 
+  /// Documentos de `users`, por uid.
+  final users = <String, UserModel>{};
+
+  /// Cuenta que devuelve el selector de Google; null = el mayor lo cierra.
+  String? googleUid;
+
+  /// Lo que devuelve [linkWithGoogle].
+  GoogleLinkResult linkResult = const GoogleLinked();
+
+  /// Lo que enseña [accountChanges].
+  AuthAccount? account;
+
+  String? signedInUid;
+  int anonymousSignIns = 0;
+  int signOutCalls = 0;
+  final _uids = StreamController<String?>.broadcast();
+
   void _maybeThrow() {
     if (shouldThrow) throw Exception('Write failed');
   }
 
+  void signInAs(String? uid) {
+    signedInUid = uid;
+    _uids.add(uid);
+  }
+
   @override
-  Future<String> signInAnonymously() async => 'anon-uid';
+  Future<String> signInAnonymously() async {
+    anonymousSignIns++;
+    signInAs('anon-uid');
+    return 'anon-uid';
+  }
 
   @override
   Future<String> signInWithEmail(String email, String password) async =>
@@ -28,7 +60,32 @@ class FakeAuthRepository implements AuthRepository {
       'register-uid';
 
   @override
-  Future<void> signOut() async {}
+  Future<bool> signInWithGoogle() async {
+    final uid = googleUid;
+    if (uid == null) return false;
+    signInAs(uid);
+    if (users[uid]?.role == UserRole.companion) {
+      await signOut();
+      throw const CompanionAccountException();
+    }
+    return true;
+  }
+
+  @override
+  Future<void> signInWithGoogleCredential(AuthCredential credential) async =>
+      signInAs(googleUid);
+
+  @override
+  Future<GoogleLinkResult> linkWithGoogle() async => linkResult;
+
+  @override
+  Stream<AuthAccount?> accountChanges() => Stream.value(account);
+
+  @override
+  Future<void> signOut() async {
+    signOutCalls++;
+    signInAs(null);
+  }
 
   @override
   Future<void> saveUser(UserModel user) async {
@@ -36,16 +93,16 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<UserModel?> getUser(String uid) async => null;
+  Future<UserModel?> getUser(String uid) async => users[uid];
 
   @override
   Stream<UserModel?> streamUser(String uid) => const Stream.empty();
 
   @override
-  String? currentUid() => null;
+  String? currentUid() => signedInUid;
 
   @override
-  Stream<String?> authStateUid() => const Stream.empty();
+  Stream<String?> authStateUid() => _uids.stream;
 
   @override
   Future<void> ensureCompanionUserDoc(

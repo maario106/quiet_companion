@@ -71,8 +71,9 @@ class SettingsGroup extends SettingsEntry {
   final String title;
 
   /// Qué hay dentro. Va bajo el título porque un grupo no tiene un valor
-  /// propio que enseñar.
-  final String description;
+  /// propio que enseñar. Depende del usuario porque no todas las filas se
+  /// ven siempre, y no debe anunciar una que no está.
+  final String Function(UserModel user) description;
 
   final List<SettingsRow> rows;
 
@@ -80,7 +81,7 @@ class SettingsGroup extends SettingsEntry {
   String get route => '/settings/group/$slug';
 
   @override
-  String subtitleFor(UserModel user) => description;
+  String subtitleFor(UserModel user) => description(user);
 
   /// Visible si lo es alguna de sus filas: un grupo sin filas llevaría a una
   /// pantalla vacía.
@@ -109,28 +110,45 @@ SettingsRow _scaleRow(PreferenceScale scale) => SettingsRow(
       route: scale.route,
     );
 
-/// Menú de Ajustes, en orden: lo que urge en una emergencia, lo que se ve,
-/// lo que se oye y lo que se guarda. Única fuente de verdad de las filas.
+/// Menú de Ajustes, en orden: lo personal (a quién se llama en una emergencia
+/// y cómo se entra), lo que se ve, lo que se oye y lo que se guarda. Única
+/// fuente de verdad de las filas.
 /// Vive en core/ porque la consumen dos features que no pueden acoplarse
 /// entre sí: conversation (visibilidad del botón de ajustes de HomeScreen) y
 /// settings (render de las listas). Si botón y pantalla calcularan su
 /// visibilidad por separado, acabarían divergiendo.
 final List<SettingsEntry> settingsMenu = [
-  SettingsRow(
-    title: 'Contacto de emergencia',
-    value: (user) => user.emergencyContact?.name ?? 'Sin configurar',
-    // Oculta exactamente cuando el contacto no es editable: viene impuesto
-    // por la vinculación. Deriva del mismo `source` que gobierna la
-    // precedencia de escritura, sin criterios paralelos (role, companionId).
-    visible: (user) =>
-        user.emergencyContact?.source != EmergencyContactSource.companion,
-    route: '/settings/emergency-contact',
+  // Va primero porque el contacto de emergencia es lo que urge. Siempre está,
+  // aunque el familiar haya fijado el contacto y solo quede la cuenta: el
+  // menú no cambia de forma según el estado del mayor.
+  SettingsGroup(
+    slug: 'personal',
+    title: 'Mis datos',
+    // Si falta el contacto, se ve desde el menú sin entrar en el grupo.
+    description: (user) => !_emergencyContactRow.visible(user)
+        ? 'Cómo entras en la aplicación'
+        : user.emergencyContact == null
+            ? 'Falta tu contacto de emergencia'
+            : 'Tu contacto de emergencia y tu cuenta',
+    rows: [
+      _emergencyContactRow,
+      // Guardar con Google la cuenta anónima, o cerrar la sesión. Si la
+      // cuenta es anónima o de Google lo dice la sesión de Firebase, no el
+      // documento, así que la fila no lo enseña: lo resuelve su pantalla.
+      SettingsRow(
+        title: 'Mi cuenta',
+        value: (user) => 'Cómo entras en la aplicación',
+        visible: (user) => true,
+        route: '/settings/account',
+      ),
+    ],
   ),
   _scaleRow(textSizeScale),
   SettingsGroup(
     slug: 'talk',
     title: 'Cómo hablamos',
-    description: 'La voz, el volumen, la velocidad y cuánto te espero',
+    description: (user) =>
+        'La voz, el volumen, la velocidad y cuánto te espero',
     rows: [
       SettingsRow(
         title: 'Voz',
@@ -146,7 +164,7 @@ final List<SettingsEntry> settingsMenu = [
   SettingsGroup(
     slug: 'conversations',
     title: 'Mis conversaciones',
-    description: 'Qué se guarda de lo que hablamos',
+    description: (user) => 'Qué se guarda de lo que hablamos',
     rows: [
       // El consentimiento sobre las conversaciones (ADR-0030). Visible para
       // todo mayor, vinculado o no: es suyo, y retirarlo tiene que ser tan
@@ -187,6 +205,18 @@ final List<SettingsEntry> settingsMenu = [
     ],
   ),
 ];
+
+/// Fuera de la lista porque la descripción de «Mis datos» pregunta por ella.
+final SettingsRow _emergencyContactRow = SettingsRow(
+  title: 'Contacto de emergencia',
+  value: (user) => user.emergencyContact?.name ?? 'Sin configurar',
+  // Oculta exactamente cuando el contacto no es editable: viene impuesto
+  // por la vinculación. Deriva del mismo `source` que gobierna la
+  // precedencia de escritura, sin criterios paralelos (role, companionId).
+  visible: (user) =>
+      user.emergencyContact?.source != EmergencyContactSource.companion,
+  route: '/settings/emergency-contact',
+);
 
 bool _independentWithConsent(UserModel user) =>
     user.autonomy == AutonomyStatus.independent && user.hasConversationConsent;

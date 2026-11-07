@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,8 @@ class OnboardingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(elderAuthControllerProvider);
+    // Sin sesión todavía: primero se elige cómo entrar, y después el modo.
+    final choosingAccess = authState.user == null;
     final isPending = authState.user?.autonomy == AutonomyStatus.dependent;
     final linkCode = authState.user?.linkCode;
 
@@ -29,7 +33,7 @@ class OnboardingScreen extends ConsumerWidget {
           child: ConstrainedBox(
             constraints:
                 BoxConstraints(maxWidth: AppTheme.contentMaxWidth(context)),
-            child: Padding(
+            child: _CenteredScroll(
               padding: EdgeInsets.all(AppTheme.screenPadding(context)),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -46,9 +50,11 @@ class OnboardingScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    isPending
-                        ? 'Dile este código a tu familiar:'
-                        : '¿Cómo prefieres usar la aplicación?',
+                    choosingAccess
+                        ? '¿Cómo quieres entrar?'
+                        : isPending
+                            ? 'Dile este código a tu familiar:'
+                            : '¿Cómo prefieres usar la aplicación?',
                     style: const TextStyle(
                       fontSize: AppTheme.fontLarge,
                       color: AppTheme.elderTextSecondary,
@@ -56,7 +62,39 @@ class OnboardingScreen extends ConsumerWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 60),
-                  if (!isPending) ...[
+                  // Las dos vías tienen el mismo peso: entrar sin registrarse
+                  // es una opción legítima, no un camino escondido.
+                  if (choosingAccess) ...[
+                    _ModeButton(
+                      label: 'Entrar con Google',
+                      onTap: () => ref
+                          .read(elderAuthControllerProvider.notifier)
+                          .signInWithGoogle(),
+                    ),
+                    const SizedBox(height: 24),
+                    _ModeButton(
+                      label: 'Entrar sin registrarme',
+                      onTap: () => ref
+                          .read(elderAuthControllerProvider.notifier)
+                          .continueWithoutAccount(),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Con Google no pierdes nada si cambias de móvil. Sin '
+                      'registrarte, al borrar la aplicación se empieza de cero.',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontMedium,
+                        color: AppTheme.elderTextSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 40),
+                    TextButton(
+                      onPressed: () => context.push('/companion/choice'),
+                      child: const Text('Soy el acompañante'),
+                    ),
+                  ],
+                  if (!choosingAccess && !isPending) ...[
                     _ModeButton(
                       label: 'Usar por mi cuenta',
                       onTap: () => ref
@@ -123,6 +161,30 @@ class OnboardingScreen extends ConsumerWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Centrada mientras quepa y desplazable cuando no: con los botones del mayor,
+/// la bienvenida no cabe entera en un móvil de 360×800.
+class _CenteredScroll extends StatelessWidget {
+  const _CenteredScroll({required this.padding, required this.child});
+
+  final EdgeInsets padding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: padding,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: math.max(0, constraints.maxHeight - padding.vertical),
+          ),
+          child: child,
         ),
       ),
     );

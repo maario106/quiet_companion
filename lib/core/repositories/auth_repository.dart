@@ -1,11 +1,53 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:quiet_companion/core/config/functions_config.dart';
 import 'package:quiet_companion/core/constants/firestore_paths.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
+
+/// La sesión de Firebase, tal y como la enseña "Mi cuenta": anónima o con una
+/// cuenta de Google. No está en el documento del mayor porque no es un dato
+/// suyo, sino de cómo ha entrado.
+class AuthAccount {
+  const AuthAccount({required this.isAnonymous, this.email});
+
+  final bool isAnonymous;
+  final String? email;
+}
+
+/// Cómo termina guardar con Google la cuenta anónima del mayor.
+sealed class GoogleLinkResult {
+  const GoogleLinkResult();
+}
+
+/// La cuenta anónima pasa a ser de Google con el mismo uid: lo hablado, la
+/// memoria y el vínculo con el familiar siguen ahí.
+final class GoogleLinked extends GoogleLinkResult {
+  const GoogleLinked();
+}
+
+/// El mayor cerró el selector de cuentas sin elegir ninguna.
+final class GoogleLinkCancelled extends GoogleLinkResult {
+  const GoogleLinkCancelled();
+}
+
+/// Esa cuenta de Google ya tiene su propia cuenta en la aplicación (la del
+/// móvil anterior, por ejemplo) y no se puede vincular. Se puede entrar con
+/// ella usando [credential], y lo de esta sesión anónima se queda sin cuenta.
+final class GoogleAccountInUse extends GoogleLinkResult {
+  const GoogleAccountInUse(this.credential);
+
+  final AuthCredential credential;
+}
+
+/// Se intentó entrar como mayor con la cuenta de Google de un familiar. La
+/// sesión ya está cerrada cuando llega.
+class CompanionAccountException implements Exception {
+  const CompanionAccountException();
+}
 
 class AuthRepository {
   const AuthRepository({
@@ -41,7 +83,97 @@ class AuthRepository {
     return credential.user!.uid;
   }
 
+  /// `google_sign_in` exige inicializarse una vez antes de cualquier otra
+  /// llamada. En Android toma el id de cliente web de `google-services.json`,
+  /// que aparece al activar el proveedor de Google en la consola de Firebase.
+  static Future<void>? _googleReady;
+
+  Future<GoogleSignIn> _google() async {
+    await (_googleReady ??= GoogleSignIn.instance.initialize());
+    return GoogleSignIn.instance;
+  }
+
+  /// Credencial de Firebase de la cuenta de Google que elija el mayor, o null
+  /// si cierra el selector sin elegir: eso no es un error.
+  Future<AuthCredential?> _googleCredential() async {
+    try {
+      final account = await (await _google()).authenticate();
+      return GoogleAuthProvider.credential(
+        idToken: account.authentication.idToken,
+      );
+    } on GoogleSignInException catch (error) {
+      if (error.code == GoogleSignInExceptionCode.canceled) return null;
+      rethrow;
+    }
+  }
+
+  /// "Entrar con Google", en la bienvenida. Si esa cuenta ya entró en
+  /// otro móvil, el mayor recupera su documento tal cual. Devuelve false si
+  /// cierra el selector.
+  Future<bool> signInWithGoogle() async {
+    final credential = await _googleCredential();
+    if (credential == null) return false;
+    await signInWithGoogleCredential(credential);
+    return true;
+  }
+
+  /// Entra como mayor con una credencial de Google ya obtenida: la del
+  /// selector, o la de [GoogleAccountInUse] cuando el mayor decide usar esa
+  /// cuenta.
+  ///
+  /// Con "una cuenta por email", la cuenta de Google de un familiar que se
+  /// registró con ese mismo email es la suya, y entrar con ella como mayor le
+  /// reescribiría el rol al elegir modo. En ese caso se cierra la sesión y
+  /// lanza [CompanionAccountException].
+  Future<void> signInWithGoogleCredential(AuthCredential credential) async {
+    final signedIn = await _auth.signInWithCredential(credential);
+    final uid = signedIn.user?.uid;
+    if (uid == null) return;
+    if ((await getUser(uid))?.role != UserRole.companion) return;
+    await signOut();
+    throw const CompanionAccountException();
+  }
+
+  /// Guarda con Google la cuenta anónima en curso sin cambiar de uid, desde
+  /// "Mi cuenta". Ni el documento del mayor ni las reglas notan nada: el uid
+  /// es el mismo y solo cambia cómo se entra.
+  Future<GoogleLinkResult> linkWithGoogle() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('No hay sesión que guardar.');
+    final credential = await _googleCredential();
+    if (credential == null) return const GoogleLinkCancelled();
+    try {
+      await user.linkWithCredential(credential);
+      return const GoogleLinked();
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'credential-already-in-use') {
+        return GoogleAccountInUse(error.credential ?? credential);
+      }
+      rethrow;
+    }
+  }
+
+  /// La sesión en vivo. `userChanges` y no `authStateChanges`: vincular con
+  /// Google no cambia de usuario, solo de proveedor, y la pantalla tiene que
+  /// enterarse.
+  Stream<AuthAccount?> accountChanges() {
+    return _auth.userChanges().map((user) {
+      if (user == null) return null;
+      final email = user.email ??
+          user.providerData.map((p) => p.email).whereType<String>().firstOrNull;
+      return AuthAccount(isAnonymous: user.isAnonymous, email: email);
+    });
+  }
+
   Future<void> signOut() async {
+    // Sin esto, el selector de Google podría volver a entrar solo con la misma
+    // cuenta. Que falle (familiar con email, o Google sin configurar) no debe
+    // impedir cerrar la sesión de Firebase.
+    try {
+      await (await _google()).signOut();
+    } catch (_) {
+      // Se cierra igual.
+    }
     await _auth.signOut();
   }
 
