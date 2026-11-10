@@ -17,6 +17,7 @@ class OnboardingScreen extends ConsumerWidget {
     // Sin sesión todavía: primero se elige cómo entrar, y después el modo.
     final choosingAccess = authState.user == null;
     final isPending = authState.user?.autonomy == AutonomyStatus.dependent;
+    final choosingMode = !choosingAccess && !isPending;
     final linkCode = authState.user?.linkCode;
 
     if (authState.status == AuthStatus.checking) {
@@ -26,8 +27,14 @@ class OnboardingScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
+    void backToAccessChoice() =>
+        ref.read(elderAuthControllerProvider.notifier).backToAccessChoice();
+
+    final page = Scaffold(
       backgroundColor: AppTheme.elderBackground,
+      appBar: choosingMode
+          ? AppBar(leading: BackButton(onPressed: backToAccessChoice))
+          : null,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -94,7 +101,9 @@ class OnboardingScreen extends ConsumerWidget {
                       child: const Text('Soy el acompañante'),
                     ),
                   ],
-                  if (!choosingAccess && !isPending) ...[
+                  // Aquí ya ha entrado como mayor: el acceso del familiar se
+                  // queda en el paso anterior, al que lleva la flecha.
+                  if (choosingMode) ...[
                     _ModeButton(
                       label: 'Usar por mi cuenta',
                       onTap: () => ref
@@ -107,11 +116,6 @@ class OnboardingScreen extends ConsumerWidget {
                       onTap: () => ref
                           .read(elderAuthControllerProvider.notifier)
                           .selectLinkedMode(),
-                    ),
-                    const SizedBox(height: 40),
-                    TextButton(
-                      onPressed: () => context.push('/companion/choice'),
-                      child: const Text('Soy el acompañante'),
                     ),
                   ],
                   if (isPending) ...[
@@ -163,6 +167,17 @@ class OnboardingScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+
+    // Al elegir modo ya se ha entrado: la flecha, y también el botón atrás
+    // del sistema, deshacen esa entrada por si el mayor se equivocó (quería
+    // Google, o es el familiar) en vez de salir de la aplicación.
+    return PopScope(
+      canPop: !choosingMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) backToAccessChoice();
+      },
+      child: page,
     );
   }
 }

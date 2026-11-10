@@ -52,6 +52,35 @@ void main() {
     expect(controller.state.user?.autonomy, AutonomyStatus.independent);
   });
 
+  test('volver atrás tras entrar sin registrarse borra esa cuenta anónima',
+      () async {
+    await controller.continueWithoutAccount();
+    await settle();
+    expect(controller.state.user?.id, 'anon-uid');
+
+    await controller.backToAccessChoice();
+    await settle();
+
+    expect(repo.deletedAnonymousUids, ['anon-uid']);
+    expect(repo.signedInUid, isNull);
+    expect(controller.state.status, AuthStatus.nonAuthenticated);
+    expect(controller.state.user, isNull);
+  });
+
+  test('volver atrás tras entrar con Google cierra la sesión sin borrarla',
+      () async {
+    repo.googleUid = 'g-1';
+    await controller.signInWithGoogle();
+    await settle();
+
+    await controller.backToAccessChoice();
+    await settle();
+
+    expect(repo.deletedAnonymousUids, isEmpty);
+    expect(repo.signOutCalls, 1);
+    expect(controller.state.status, AuthStatus.nonAuthenticated);
+  });
+
   test('la cuenta de Google de un familiar no entra como mayor, y se dice',
       () async {
     repo.users['fam-1'] = const UserModel(id: 'fam-1', role: UserRole.companion);

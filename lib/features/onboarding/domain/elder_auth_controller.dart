@@ -79,6 +79,21 @@ class ElderAuthController extends StateNotifier<AuthState> {
     }
   }
 
+  /// La flecha atrás de "¿Cómo prefieres usar la aplicación?": el mayor se
+  /// equivocó al elegir cómo entrar. Al cerrarse la sesión, [_init] lleva a
+  /// la bienvenida; mientras, la rueda de espera impide elegir modo en una
+  /// cuenta que se está borrando.
+  Future<void> backToAccessChoice() async {
+    final previous = state;
+    state = const AuthState(status: AuthStatus.checking);
+    try {
+      await _authRepository.leaveBeforeChoosingMode();
+    } catch (_) {
+      // La sesión sigue abierta: el mayor vuelve a tener la flecha.
+      state = previous;
+    }
+  }
+
   @override
   void dispose() {
     _authSubscription?.cancel();

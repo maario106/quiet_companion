@@ -87,6 +87,18 @@ class FakeAuthRepository implements AuthRepository {
     signInAs(null);
   }
 
+  /// Uids de las cuentas anónimas borradas al volver a la bienvenida.
+  final deletedAnonymousUids = <String>[];
+
+  @override
+  Future<void> leaveBeforeChoosingMode() async {
+    final uid = signedInUid;
+    if (uid == null) return;
+    if (uid != 'anon-uid') return signOut();
+    deletedAnonymousUids.add(uid);
+    signInAs(null);
+  }
+
   @override
   Future<void> saveUser(UserModel user) async {
     throw StateError('El panel no debe reescribir el documento entero');

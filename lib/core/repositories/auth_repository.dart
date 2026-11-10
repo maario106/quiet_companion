@@ -177,6 +177,21 @@ class AuthRepository {
     await _auth.signOut();
   }
 
+  /// Vuelve de "¿Cómo prefieres usar la aplicación?" a la bienvenida. Con
+  /// Google basta cerrar la sesión: se puede volver a entrar con esa cuenta.
+  /// La anónima se borra, porque sin sesión nadie podría volver a ella. Si
+  /// Firebase no deja borrarla (sin red, por ejemplo), se cierra igual.
+  Future<void> leaveBeforeChoosingMode() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    if (!user.isAnonymous) return signOut();
+    try {
+      await user.delete();
+    } catch (_) {
+      await _auth.signOut();
+    }
+  }
+
   /// Escribe el documento **entero**. Solo para crearlo (onboarding del
   /// mayor): reescribir a partir de una copia deshace lo que otro haya
   /// cambiado desde que se leyó (ADR-0027). Para editar, un `update` por campo.
