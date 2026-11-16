@@ -7,15 +7,8 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
-/// Alta / edición del contacto de emergencia por el mayor cuyo contacto no
-/// viene impuesto por la vinculación. Única entrada: la fila "Contacto de
-/// emergencia" de la pantalla de ajustes. Vive en features/emergency/ porque
-/// su lógica (E.164, rechazo del 112, semántica de source) es de emergencia;
-/// settings solo enruta hacia aquí.
-///
-/// Dos fases en la misma pantalla (sin diálogos): edición → confirmación con
-/// el número en grande. Un dígito mal en un contacto de emergencia es un
-/// fallo silencioso hasta el peor momento posible.
+/// Alta o edición del contacto de emergencia por el mayor, con confirmación del
+/// número en grande antes de guardar.
 class EmergencyContactSetupScreen extends ConsumerStatefulWidget {
   const EmergencyContactSetupScreen({super.key});
 
@@ -37,11 +30,10 @@ class _EmergencyContactSetupScreenState
   @override
   void initState() {
     super.initState();
-    // Precarga el contacto vigente: quien entra a cambiarlo tiene que ver qué
-    // hay guardado, no un formulario vacío que parece decir que no hay nada.
+    // Precarga el contacto vigente.
     final current = ref.read(currentUserProvider).valueOrNull?.emergencyContact;
     if (current != null) {
-      // El campo solo admite los 9 dígitos nacionales; el +34 es un prefijo fijo.
+      // Solo los 9 dígitos nacionales; el +34 es fijo.
       final digits = current.phone.replaceAll(RegExp(r'\D'), '');
       _phoneController.text =
           digits.startsWith('34') && digits.length == 11 ? digits.substring(2) : digits;
@@ -101,7 +93,6 @@ class _EmergencyContactSetupScreenState
       _saveError = null;
     });
     try {
-      // Nunca se escribe a Firestore desde la pantalla: siempre vía repositorio.
       await ref.read(authRepositoryProvider).updateEmergencyContact(
             uid,
             EmergencyContact(
@@ -178,8 +169,6 @@ class _EmergencyContactSetupScreenState
         const SizedBox(height: 8),
         TextField(
           controller: _phoneController,
-          // El mayor teclea solo los 9 dígitos nacionales; el prefijo +34 es
-          // fijo y no se teclea: menos superficie de error.
           keyboardType: TextInputType.phone,
           autofocus: true,
           inputFormatters: [

@@ -8,9 +8,7 @@ import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 
-/// La sesión de Firebase, tal y como la enseña "Mi cuenta": anónima o con una
-/// cuenta de Google. No está en el documento del mayor porque no es un dato
-/// suyo, sino de cómo ha entrado.
+/// Sesión de Firebase como la enseña "Mi cuenta": anónima o con Google.
 class AuthAccount {
   const AuthAccount({required this.isAnonymous, this.email});
 
@@ -23,8 +21,7 @@ sealed class GoogleLinkResult {
   const GoogleLinkResult();
 }
 
-/// La cuenta anónima pasa a ser de Google con el mismo uid: lo hablado, la
-/// memoria y el vínculo con el familiar siguen ahí.
+/// La cuenta anónima pasa a ser de Google con el mismo uid.
 final class GoogleLinked extends GoogleLinkResult {
   const GoogleLinked();
 }
@@ -34,17 +31,15 @@ final class GoogleLinkCancelled extends GoogleLinkResult {
   const GoogleLinkCancelled();
 }
 
-/// Esa cuenta de Google ya tiene su propia cuenta en la aplicación (la del
-/// móvil anterior, por ejemplo) y no se puede vincular. Se puede entrar con
-/// ella usando [credential], y lo de esta sesión anónima se queda sin cuenta.
+/// Esa cuenta de Google ya tiene su propia cuenta en la app; se puede entrar
+/// con [credential].
 final class GoogleAccountInUse extends GoogleLinkResult {
   const GoogleAccountInUse(this.credential);
 
   final AuthCredential credential;
 }
 
-/// Se intentó entrar como mayor con la cuenta de Google de un familiar. La
-/// sesión ya está cerrada cuando llega.
+/// Se intentó entrar como mayor con la cuenta de Google de un familiar.
 class CompanionAccountException implements Exception {
   const CompanionAccountException();
 }
@@ -83,9 +78,7 @@ class AuthRepository {
     return credential.user!.uid;
   }
 
-  /// `google_sign_in` exige inicializarse una vez antes de cualquier otra
-  /// llamada. En Android toma el id de cliente web de `google-services.json`,
-  /// que aparece al activar el proveedor de Google en la consola de Firebase.
+  /// google_sign_in exige inicializarse una vez antes de cualquier llamada.
   static Future<void>? _googleReady;
 
   Future<GoogleSignIn> _google() async {
@@ -93,8 +86,7 @@ class AuthRepository {
     return GoogleSignIn.instance;
   }
 
-  /// Credencial de Firebase de la cuenta de Google que elija el mayor, o null
-  /// si cierra el selector sin elegir: eso no es un error.
+  /// Credencial de la cuenta de Google elegida, o null si se cierra el selector.
   Future<AuthCredential?> _googleCredential() async {
     try {
       final account = await (await _google()).authenticate();
@@ -107,9 +99,7 @@ class AuthRepository {
     }
   }
 
-  /// "Entrar con Google", en la bienvenida. Si esa cuenta ya entró en
-  /// otro móvil, el mayor recupera su documento tal cual. Devuelve false si
-  /// cierra el selector.
+  /// "Entrar con Google". Devuelve false si se cierra el selector.
   Future<bool> signInWithGoogle() async {
     final credential = await _googleCredential();
     if (credential == null) return false;
@@ -117,14 +107,8 @@ class AuthRepository {
     return true;
   }
 
-  /// Entra como mayor con una credencial de Google ya obtenida: la del
-  /// selector, o la de [GoogleAccountInUse] cuando el mayor decide usar esa
-  /// cuenta.
-  ///
-  /// Con "una cuenta por email", la cuenta de Google de un familiar que se
-  /// registró con ese mismo email es la suya, y entrar con ella como mayor le
-  /// reescribiría el rol al elegir modo. En ese caso se cierra la sesión y
-  /// lanza [CompanionAccountException].
+  /// Entra como mayor con una credencial de Google. Si la cuenta es de un
+  /// familiar, cierra la sesión y lanza [CompanionAccountException].
   Future<void> signInWithGoogleCredential(AuthCredential credential) async {
     final signedIn = await _auth.signInWithCredential(credential);
     final uid = signedIn.user?.uid;
@@ -134,9 +118,7 @@ class AuthRepository {
     throw const CompanionAccountException();
   }
 
-  /// Guarda con Google la cuenta anónima en curso sin cambiar de uid, desde
-  /// "Mi cuenta". Ni el documento del mayor ni las reglas notan nada: el uid
-  /// es el mismo y solo cambia cómo se entra.
+  /// Guarda con Google la cuenta anónima sin cambiar de uid.
   Future<GoogleLinkResult> linkWithGoogle() async {
     final user = _auth.currentUser;
     if (user == null) throw StateError('No hay sesión que guardar.');
@@ -153,9 +135,7 @@ class AuthRepository {
     }
   }
 
-  /// La sesión en vivo. `userChanges` y no `authStateChanges`: vincular con
-  /// Google no cambia de usuario, solo de proveedor, y la pantalla tiene que
-  /// enterarse.
+  /// La sesión en vivo; userChanges también avisa al vincular con Google.
   Stream<AuthAccount?> accountChanges() {
     return _auth.userChanges().map((user) {
       if (user == null) return null;
@@ -166,9 +146,7 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
-    // Sin esto, el selector de Google podría volver a entrar solo con la misma
-    // cuenta. Que falle (familiar con email, o Google sin configurar) no debe
-    // impedir cerrar la sesión de Firebase.
+    // Para que el selector no vuelva a entrar solo con la misma cuenta.
     try {
       await (await _google()).signOut();
     } catch (_) {
@@ -177,10 +155,7 @@ class AuthRepository {
     await _auth.signOut();
   }
 
-  /// Vuelve de "¿Cómo prefieres usar la aplicación?" a la bienvenida. Con
-  /// Google basta cerrar la sesión: se puede volver a entrar con esa cuenta.
-  /// La anónima se borra, porque sin sesión nadie podría volver a ella. Si
-  /// Firebase no deja borrarla (sin red, por ejemplo), se cierra igual.
+  /// Vuelve a la bienvenida. La sesión anónima se borra; la de Google solo se cierra.
   Future<void> leaveBeforeChoosingMode() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -192,9 +167,7 @@ class AuthRepository {
     }
   }
 
-  /// Escribe el documento **entero**. Solo para crearlo (onboarding del
-  /// mayor): reescribir a partir de una copia deshace lo que otro haya
-  /// cambiado desde que se leyó (ADR-0027). Para editar, un `update` por campo.
+  /// Escribe el documento entero; solo para crearlo. Para editar, update por campo.
   Future<void> saveUser(UserModel user) async {
     await _firestore.collection(FirestorePaths.usersCollection).doc(user.id).set(user.toMap());
   }
@@ -243,11 +216,7 @@ class AuthRepository {
         .update({'name': name});
   }
 
-  /// Escribe las preferencias de accesibilidad del mayor desde su propio
-  /// dispositivo. Actualiza solo el campo `preferences`, a diferencia de
-  /// [saveUser] (que reescribe el documento entero y usa el familiar desde su
-  /// panel): el mayor no debe poder tocar de rebote su rol, su vinculación ni
-  /// su contacto de emergencia al subir el tamaño de la letra.
+  /// Actualiza solo el campo preferences del mayor.
   Future<void> updatePreferences(String uid, UserPreferences prefs) async {
     await _firestore
         .collection(FirestorePaths.usersCollection)
@@ -255,11 +224,7 @@ class AuthRepository {
         .update({'preferences': prefs.toMap()});
   }
 
-  /// Escribe **una** magnitud de preferencias del mayor con ruta de punto
-  /// (`preferences.volume`). La usa el panel del familiar: si el mayor cambió
-  /// otra magnitud entretanto, esta escritura no la pisa (ADR-0027). [field]
-  /// es una de las claves de [UserPreferences] (`volumeKey`, …). [value] es
-  /// un `double` en las escalas y un `String` en la voz (`voiceKey`).
+  /// Escribe una sola preferencia con ruta de punto, sin pisar las demás.
   Future<void> updatePreferenceField(
       String uid, String field, Object value) async {
     await _firestore
@@ -268,9 +233,7 @@ class AuthRepository {
         .update({'preferences.$field': value});
   }
 
-  /// Un plazo de la conversación del mayor vinculado, escrito por su familiar
-  /// desde el panel (ADR-0034). [field] es una clave de `ConversationSettings`;
-  /// el servidor acota el valor por su cuenta.
+  /// Un plazo de la conversación, escrito por el familiar desde el panel.
   Future<void> updateConversationSettingField(
       String uid, String field, int value) async {
     await _firestore
@@ -288,25 +251,14 @@ class AuthRepository {
         .update({'emergencyContact': contact.toMap()});
   }
 
-  /// Vincula al familiar autenticado con el mayor dueño de [code].
-  ///
-  /// La búsqueda y la transacción viven en la Cloud Function
-  /// `validateAndLink`, no aquí: encontrar al mayor obliga a consultar
-  /// `/users` por `linkCode`, y las reglas de Firestore no pueden acotar una
-  /// consulta de colección (no ven las cláusulas `where`). Mientras esto se
-  /// hacía en el cliente, `/users` tenía que ser consultable por cualquier
-  /// autenticado (RNF-9, ADR-0008).
-  ///
-  /// El identificador del familiar ya no es un parámetro: el servidor lo toma
-  /// de la sesión, así que nadie puede vincular a un tercero.
+  /// Vincula al familiar autenticado con el mayor dueño de [code], vía validateAndLink.
   Future<String> linkCompanionToElder(String code) async {
     try {
       final result = await _functions
           .httpsCallable(kValidateAndLinkCallable)
           .call<dynamic>(<String, dynamic>{'code': code});
 
-      // El canal de plataforma entrega mapas sin tipar; se lee
-      // defensivamente en vez de castear, que falla en Android.
+      // El canal de plataforma entrega mapas sin tipar.
       final data = result.data;
       final elderId = data is Map ? data['elderId'] : null;
       if (elderId is! String || elderId.isEmpty) {
@@ -314,9 +266,7 @@ class AuthRepository {
       }
       return elderId;
     } on FirebaseFunctionsException catch (error) {
-      // El mensaje de la Function ya viene en es-ES y redactado para el
-      // familiar; se reenvía tal cual para que la UI no cambie de texto
-      // respecto de la versión que hacía esto en el cliente.
+      // El mensaje de la Function ya viene redactado para el familiar.
       throw Exception(error.message ?? 'No se ha podido vincular.');
     }
   }

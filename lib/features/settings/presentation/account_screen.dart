@@ -8,11 +8,8 @@ import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/elder_button.dart';
 import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
-/// "Mi cuenta": cómo entra el mayor en la aplicación.
-///
-/// Sin registrarse, la cuenta es la de esta instalación: aquí se guarda con
-/// Google sin cambiar de uid, y no se ofrece cerrar sesión, porque cerrarla
-/// sería perderlo todo. Con Google, se puede cerrar y volver a entrar.
+/// "Mi cuenta". Sin registrarse se puede guardar con Google; cerrar sesión solo
+/// se ofrece con Google, porque la anónima se perdería.
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
 
@@ -24,8 +21,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   bool _busy = false;
   String? _error;
 
-  /// La cuenta de Google elegida ya tenía la suya: se pregunta antes de
-  /// entrar con ella, porque lo de esta sesión se quedaría sin cuenta.
+  /// La cuenta de Google elegida ya tenía la suya; se pregunta antes de entrar.
   AuthCredential? _accountInUse;
 
   /// Cerrar sesión pide un segundo toque, en la misma pantalla.
@@ -57,9 +53,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       }, 'No se ha podido guardar con Google. '
           'Comprueba la conexión e inténtalo otra vez.');
 
-  /// Si la cuenta resulta ser la de un familiar, el repositorio cierra la
-  /// sesión y el enrutador lleva a la bienvenida: el mayor ya sabía que lo de
-  /// este móvil se perdía.
+  /// Si la cuenta es de un familiar, el repositorio cierra la sesión.
   Future<void> _enterWithAccountInUse(AuthCredential credential) => _run(
         () async {
           await ref
@@ -190,8 +184,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                   ...content,
                   if (_error != null) ...[
                     const SizedBox(height: 24),
-                    // Texto fijo, no SnackBar: un aviso que se va solo es un
-                    // aviso que el mayor no llega a leer.
+                    // Texto fijo y no SnackBar, que se va antes de leerlo.
                     Text(
                       _error!,
                       style: TextStyle(

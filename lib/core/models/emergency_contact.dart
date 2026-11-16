@@ -1,13 +1,8 @@
-/// Origen del contacto de emergencia del mayor. Discrimina "lo puso la
-/// vinculación" ([companion]) de "lo puso el mayor a mano" ([manual]).
-/// Gobierna dos cosas: la precedencia en la escritura (una vinculación nunca
-/// sobrescribe un contacto manual) y la visibilidad de la fila de ajustes
-/// (solo es editable el contacto que no viene impuesto por la vinculación).
+/// Origen del contacto de emergencia: la vinculación o el propio mayor.
+/// Una vinculación nunca sobrescribe un contacto manual.
 enum EmergencyContactSource { companion, manual }
 
-/// Contacto de emergencia del mayor, desnormalizado en `users/{elderId}`.
-/// Inmutable. El teléfono se guarda siempre en E.164 (`+34600123456`):
-/// normalizado en escritura, nunca en lectura.
+/// Contacto de emergencia del mayor; el teléfono siempre en E.164.
 class EmergencyContact {
   final String name;
   final String phone;
@@ -19,21 +14,15 @@ class EmergencyContact {
     this.source = EmergencyContactSource.manual,
   });
 
-  /// Etiqueta por defecto cuando el mayor no introdujo nombre. El nombre
-  /// nunca está vacío: se muestra en el botón "Llamar a {name}".
+  /// Nombre por defecto si el mayor no puso ninguno.
   static const String defaultName = 'Mi contacto';
 
-  /// Números de emergencia españoles que no se aceptan como contacto
-  /// personal: ya existe un botón dedicado para llamar a emergencias y
-  /// guardarlos aquí duplicaría la acción con etiqueta engañosa.
+  /// Números de emergencia, que no se aceptan como contacto personal.
   static const Set<String> emergencyNumbers = {
     '112', '061', '062', '080', '085', '091', '092', '016',
   };
 
-  /// Lectura defensiva desde Firestore: devuelve null si el mapa no existe o
-  /// no contiene un teléfono utilizable. Un contacto a medias es peor que
-  /// ninguno. Origen desconocido o ausente → manual (fallback conservador:
-  /// no se asume que venga de una vinculación).
+  /// null si no hay un teléfono utilizable; sin origen, se asume manual.
   static EmergencyContact? fromMapOrNull(Object? raw) {
     if (raw is! Map) return null;
     final map = Map<String, dynamic>.from(raw);
@@ -58,11 +47,8 @@ class EmergencyContact {
     };
   }
 
-  /// Normaliza un teléfono español tecleado como 9 dígitos nacionales a
-  /// E.164 (`+34600123456`). Devuelve null si no es un número personal
-  /// válido: longitud distinta de 9, no empieza por 6-9, o es un número de
-  /// emergencia ([emergencyNumbers]). Función pura: es la única fuente de
-  /// validación tanto del registro del familiar como del alta manual.
+  /// Teléfono español de 9 dígitos a E.164, o null si no es un número
+  /// personal válido.
   static String? normalizeSpanishPhone(String raw) {
     final digits = raw.replaceAll(RegExp(r'\D'), '');
     if (emergencyNumbers.contains(digits)) return null;

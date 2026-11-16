@@ -10,9 +10,6 @@ import 'package:quiet_companion/core/services/tts_synthesizer.dart';
 
 import '../../helpers/fake_tts_service.dart';
 
-// Ni red ni Firebase ni plugin de audio: se testea la orquestación (troceado,
-// prefetch, cancelación y respaldo) contra las dos costuras del servicio.
-
 const String _threeSentences = 'Buenos días, me alegro mucho de verte. '
     '¿Has descansado bien esta noche? '
     '¡Cuéntame cómo te encuentras hoy!';
@@ -21,8 +18,7 @@ const String _chunk0 = 'Buenos días, me alegro mucho de verte.';
 const String _chunk1 = '¿Has descansado bien esta noche?';
 const String _chunk2 = '¡Cuéntame cómo te encuentras hoy!';
 
-/// Cada fragmento se sintetiza a sus propios bytes: así el test afirma *qué*
-/// sonó y en qué orden, no solo cuántas veces.
+/// Cada fragmento tiene sus propios bytes, para comprobar qué sonó y en qué orden.
 Uint8List _audioOf(String text) => Uint8List.fromList(utf8.encode(text));
 String _textOf(Uint8List audio) => utf8.decode(audio);
 
@@ -174,8 +170,7 @@ void main() {
       player.finishPlayback();
       await utterance;
 
-      // Prefetch de exactamente uno: nunca hay dos peticiones por delante.
-      // Toda locución empieza callando la anterior, de ahí el 'stop' inicial.
+      // Prefetch de uno; toda locución empieza con 'stop'.
       expect(
         log,
         equals([

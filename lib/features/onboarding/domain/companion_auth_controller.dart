@@ -49,8 +49,7 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
     }
   }
 
-  /// [name] y [phoneNumber] (E.164) se desnormalizan en el documento del
-  /// mayor al vincular, como su contacto de emergencia.
+  /// [name] y [phoneNumber] (E.164) se copian al mayor al vincular.
   Future<void> register(
     String email,
     String password, {
@@ -84,8 +83,7 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
   Future<void> linkWithCode(String code) async {
     state = state.copyWith(status: CompanionAuthStatus.loading, errorMessage: '');
     try {
-      // La callable devuelve el mayor vinculado: ya no hace falta releer el
-      // documento propio para enterarse de con quién nos han vinculado.
+      // La callable devuelve el id del mayor vinculado.
       final elderId = await _authRepository.linkCompanionToElder(code);
 
       state = state.copyWith(

@@ -11,12 +11,7 @@ import 'package:quiet_companion/core/widgets/choice_option_tile.dart';
 import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 
-/// Elección de la voz con la que habla la app. Un toque elige, guarda y dice
-/// una frase con esa voz: el mayor elige de oído, no por un nombre. Tocar la
-/// voz ya elegida la vuelve a decir.
-///
-/// Sin botón de guardar, como las escalas (ADR-0021): el mayor acaba de oír
-/// lo que ha elegido, no hace falta que además lo confirme.
+/// Elección de la voz: un toque elige, guarda y la dice. Tocar la elegida la repite.
 class VoiceChoiceScreen extends ConsumerStatefulWidget {
   const VoiceChoiceScreen({super.key});
 
@@ -25,9 +20,7 @@ class VoiceChoiceScreen extends ConsumerStatefulWidget {
 }
 
 class _VoiceChoiceScreenState extends ConsumerState<VoiceChoiceScreen> {
-  /// Voz tocada aquí mientras la pantalla está abierta. Manda sobre el valor
-  /// de Firestore, como en `PreferenceStepperScreen`: la marca no salta
-  /// mientras el cambio va y vuelve.
+  /// Voz tocada aquí; manda sobre Firestore mientras la pantalla está abierta.
   String? _pendingVoice;
 
   bool _saving = false;
@@ -51,8 +44,7 @@ class _VoiceChoiceScreenState extends ConsumerState<VoiceChoiceScreen> {
       });
     }
 
-    // Se aplica al servicio sin esperar a que Firestore devuelva el cambio:
-    // la frase tiene que sonar ya con la voz recién tocada.
+    // Se aplica ya, sin esperar a Firestore, para que la frase suene con esa voz.
     await tts.applyPreferences(prefs);
     unawaited(tts.speak(kVoicePreviewPhrase));
     if (alreadyChosen) return;
@@ -61,8 +53,7 @@ class _VoiceChoiceScreenState extends ConsumerState<VoiceChoiceScreen> {
       await ref.read(authRepositoryProvider).updatePreferences(user.id, prefs);
       if (mounted) setState(() => _saving = false);
     } catch (_) {
-      // Retroceso honesto, como en las escalas: ni la marca ni la voz se
-      // quedan en una elección que no ha llegado a guardarse.
+      // Si no se guarda, se vuelve a la voz anterior.
       unawaited(tts.applyPreferences(user.preferences));
       if (!mounted) return;
       setState(() {
@@ -119,8 +110,7 @@ class _VoiceChoiceScreenState extends ConsumerState<VoiceChoiceScreen> {
                       const SizedBox(height: 20),
                     ],
                     if (_saveError != null)
-                      // Texto fijo en la pantalla, no SnackBar: un aviso que se
-                      // va solo es un aviso que el mayor no llega a leer.
+                      // Texto fijo y no SnackBar, que se va antes de leerlo.
                       Text(
                         _saveError!,
                         style: TextStyle(

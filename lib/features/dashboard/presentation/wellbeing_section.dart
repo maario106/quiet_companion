@@ -9,12 +9,7 @@ import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/utils/spanish_date.dart';
 import 'package:quiet_companion/core/utils/week_summary.dart';
 
-/// Lo que el familiar ve del análisis de las conversaciones (HU-6, RF-8).
-///
-/// Ordenado de lo más fiable a lo menos: primero la actividad (dato objetivo,
-/// sin IA), luego las señales, el ánimo y los temas. Solo pide lo que el nivel
-/// elegido por el mayor le deja leer (ADR-0031); si no hay nada que enseñar, no
-/// pinta nada y `ConversationStatusCard` explica por qué.
+/// Lo que el familiar ve del análisis. Solo pide lo que permite el nivel del mayor.
 class WellbeingSection extends ConsumerWidget {
   const WellbeingSection({super.key, required this.elder});
 
@@ -61,7 +56,7 @@ class WellbeingSection extends ConsumerWidget {
   }
 }
 
-// ── Piezas compartidas por el panel y el detalle ──────────────────────────
+// Piezas compartidas por el panel y el detalle
 
 IconData sentimentIcon(Sentiment? sentiment) => switch (sentiment) {
       Sentiment.positive => Icons.sentiment_satisfied_alt,
@@ -147,7 +142,7 @@ const TextStyle _small = TextStyle(
   color: AppTheme.companionTextSecondary,
 );
 
-// ── Esta semana ────────────────────────────────────────────────────────────
+// Esta semana
 
 class _WeekCard extends StatelessWidget {
   const _WeekCard({required this.week, required this.now});
@@ -233,7 +228,7 @@ class _WeekCard extends StatelessWidget {
   }
 }
 
-// ── Señales ────────────────────────────────────────────────────────────────
+// Señales
 
 class _SignalsCard extends StatelessWidget {
   const _SignalsCard({required this.week});
@@ -261,8 +256,7 @@ class _SignalsCard extends StatelessWidget {
               border: Border.all(color: AppTheme.companionError),
               borderRadius: const BorderRadius.all(Radius.circular(8)),
             ),
-            // No es una alarma (la app no avisa en el momento, ADR-0029): es
-            // lo que el familiar ve al abrir el panel, con qué hacer.
+            // No es una alarma: es lo que el familiar ve al abrir el panel.
             child: const Text(
               'Esta semana habló de hacerse daño o de no querer vivir. '
               'Habla con él o con ella hoy. Si crees que hay peligro, llama al '
@@ -296,7 +290,7 @@ class _SignalsCard extends StatelessWidget {
   }
 }
 
-// ── Temas ──────────────────────────────────────────────────────────────────
+// Temas
 
 class _TopicsCard extends StatelessWidget {
   const _TopicsCard({required this.week});
@@ -320,7 +314,7 @@ class _TopicsCard extends StatelessWidget {
   }
 }
 
-// ── Lista de conversaciones ────────────────────────────────────────────────
+// Lista de conversaciones
 
 class _ConversationList extends StatelessWidget {
   const _ConversationList({
@@ -368,7 +362,7 @@ class _ConversationList extends StatelessWidget {
   }
 }
 
-// ── Lo que el asistente recuerda (ADR-0032) ────────────────────────────────
+// Lo que el asistente recuerda
 
 class _MemoryCard extends ConsumerWidget {
   const _MemoryCard({required this.elderId});
@@ -395,8 +389,7 @@ class _MemoryCard extends ConsumerWidget {
               child: Text('${_capitalize(fact.key)}: ${fact.value}', style: _body),
             ),
         const SizedBox(height: 8),
-        // Corregirlo desde aquí es trabajo futuro (ADR-0032); hoy, si algo está
-        // mal, se corrige hablando: "eso no es así" o "no lo recuerdes".
+        // Se corrige hablando: "eso no es así" o "no lo recuerdes".
         const Text(
           'Lo extrae la IA de las conversaciones y puede equivocarse. Si algo no '
           'es correcto, basta con que se lo diga al asistente.',

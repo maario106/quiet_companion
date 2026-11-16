@@ -10,8 +10,7 @@ class FakeGeminiService implements GeminiService {
   List<ConversationTurn> lastHistory = const [];
   final sent = <String>[];
 
-  /// Si no es `null`, la respuesta espera a que el test lo complete: así se
-  /// puede mirar el controlador con un turno en vuelo.
+  /// Si no es null, la respuesta espera a que el test lo complete.
   Completer<void>? gate;
 
   @override

@@ -4,11 +4,7 @@ import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/utils/spanish_date.dart';
 
-/// Estado del registro de conversaciones del mayor, visto por el familiar.
-///
-/// **Solo lectura.** El consentimiento y lo que ve el familiar los decide el
-/// mayor en su móvil (ADR-0030, ADR-0031); aquí se explica qué hay y, si no hay
-/// nada, cómo se consigue: hablándolo en persona, no desde este panel.
+/// Estado del registro de conversaciones, solo lectura: lo decide el mayor.
 class ConversationStatusCard extends StatelessWidget {
   const ConversationStatusCard({super.key, required this.elder});
 

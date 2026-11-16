@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 
-/// Ánimo del mayor en una conversación, en las tres clases de RF-8.
+/// Ánimo del mayor en una conversación.
 enum Sentiment {
   positive('Positivo'),
   neutral('Neutro'),
@@ -15,8 +15,7 @@ enum Sentiment {
       raw is String ? Sentiment.values.asNameMap()[raw] : null;
 }
 
-/// Señales de lista cerrada que el análisis puede marcar (ADR-0029). Solo las
-/// que el mayor expresa por sí mismo.
+/// Señales de lista cerrada que puede marcar el análisis.
 enum ConversationSignal {
   loneliness('loneliness', 'Soledad'),
   sadness('sadness', 'Tristeza'),
@@ -30,8 +29,7 @@ enum ConversationSignal {
   /// Nombre en Firestore (lo escribe la Function).
   final String wireName;
 
-  /// Etiqueta para el panel del familiar. Nunca se enseña al mayor tal cual
-  /// (ADR-0033).
+  /// Etiqueta para el panel del familiar.
   final String label;
 
   static ConversationSignal? fromWireOrNull(Object? raw) {
@@ -55,8 +53,7 @@ enum ConversationStatus {
       };
 }
 
-/// `users/{elderId}/conversations/{id}`: el nivel "cómo se encuentra"
-/// (ADR-0031). Lo escribe solo `closeConversation`.
+/// users/{elderId}/conversations/{id}: actividad, ánimo y señales.
 class ConversationRecord {
   const ConversationRecord({
     required this.id,
@@ -104,8 +101,7 @@ class ConversationRecord {
   }
 }
 
-/// `users/{elderId}/conversationContents/{id}`: el nivel "de qué habláis"
-/// (ADR-0031). Mismo id que su [ConversationRecord].
+/// users/{elderId}/conversationContents/{id}: temas y resumen.
 class ConversationContent {
   const ConversationContent({
     required this.id,

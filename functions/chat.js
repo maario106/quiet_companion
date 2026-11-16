@@ -1,10 +1,4 @@
-/**
- * Reglas puras del chat en vivo con el mayor (`chatTurn`, ADR-0014).
- *
- * Como `conversation.js`, viven fuera de `index.js` para poder testearlas sin
- * Firestore ni Gemini: el prompt, la memoria que se inyecta y lo que se acepta
- * del cliente.
- */
+/** Lógica pura del chat en vivo (chatTurn), separada para testearla. */
 
 const {DAY_MS, ROLES, MAX_TURNS, MAX_TURN_CHARS} = require("./conversation");
 
@@ -13,17 +7,12 @@ const MINUTE_MS = 60 * 1000;
 /** Desfase horario máximo admitido (UTC±14). */
 const MAX_UTC_OFFSET_MINUTES = 14 * 60;
 
-/** Tope del nombre que se guarda: un nombre de verdad queda muy por debajo. */
+/** Tope de longitud del nombre guardado. */
 const MAX_NAME_CHARS = 60;
 
 const GUARDAR_NOMBRE = "guardarNombre";
 
-/**
- * Declaración de la función que el modelo llama al oír el nombre del mayor.
- * "En cuanto lo diga", no "en cuanto lo confirme": con la confirmación como
- * condición, el modelo podía dar por bueno un "Mario" en la conversación sin
- * llegar a guardarlo (ADR-0036).
- */
+/** Función que el modelo llama en cuanto el mayor dice su nombre. */
 const GUARDAR_NOMBRE_DECLARATION = {
   name: GUARDAR_NOMBRE,
   description: "Guarda cómo se llama el mayor, o cómo quiere que le llames. " +
@@ -44,7 +33,7 @@ const GUARDAR_NOMBRE_DECLARATION = {
   },
 };
 
-/** Bloquea solo lo de probabilidad alta, como hacía el cliente. */
+/** Solo se bloquea lo de probabilidad alta. */
 const CHAT_SAFETY_SETTINGS = [
   "HARM_CATEGORY_HARASSMENT",
   "HARM_CATEGORY_HATE_SPEECH",
@@ -52,12 +41,7 @@ const CHAT_SAFETY_SETTINGS = [
   "HARM_CATEGORY_DANGEROUS_CONTENT",
 ].map((category) => ({category, threshold: "BLOCK_ONLY_HIGH"}));
 
-/**
- * Valida y normaliza la petición de `chatTurn`.
- *
- * @param {*} data `request.data`.
- * @return {object|null} petición normalizada, o null si no es válida.
- */
+/** Valida y normaliza la petición de chatTurn; null si no es válida. */
 function parseChatRequest(data) {
   if (typeof data?.message !== "string") return null;
   const message = data.message.trim().slice(0, MAX_TURN_CHARS);
@@ -83,14 +67,7 @@ function parseChatRequest(data) {
   return {message, history, utcOffsetMinutes: offset};
 }
 
-/**
- * Lo que el asistente recuerda, leído de `memory/profile` como lo leía el
- * cliente (`ElderMemory.fromMapOrNull`): se ignora lo que no tenga forma.
- *
- * @param {object|undefined} data datos del documento.
- * @return {{facts: Object<string, string>,
- *   recent: {endedAtMs: number, summary: string}[]}|null} memoria, o null.
- */
+/** Memoria leída de memory/profile; ignora lo que no tenga forma válida. */
 function memoryFromDoc(data) {
   if (data == null) return null;
   const facts = {};
@@ -124,17 +101,7 @@ const WEEKDAYS = [
   "domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado",
 ];
 
-/**
- * Cuándo fue algo, en la hora del teléfono del mayor: "hoy a las 10:05",
- * "ayer a las 18:30", "el lunes", "el 26 de septiembre". Espejo de
- * `relativeSpanish` del cliente; el servidor corre en UTC y por eso recibe el
- * desfase del teléfono.
- *
- * @param {number} dateMs el momento, en milisegundos.
- * @param {number} nowMs ahora, en milisegundos.
- * @param {number} offsetMinutes desfase del teléfono respecto de UTC.
- * @return {string} la fecha relativa.
- */
+/** Fecha relativa ("hoy a las 10:05", "el lunes") en la hora del teléfono. */
 function relativeSpanish(dateMs, nowMs, offsetMinutes) {
   const date = new Date(dateMs + offsetMinutes * MINUTE_MS);
   const now = new Date(nowMs + offsetMinutes * MINUTE_MS);
@@ -149,16 +116,7 @@ function relativeSpanish(dateMs, nowMs, offsetMinutes) {
   return `el ${date.getUTCDate()} de ${MONTHS[date.getUTCMonth()]}`;
 }
 
-/**
- * Lo que el modelo sabe del mayor al empezar el turno (ADR-0032). Vacío si no
- * hay memoria: el bloque se omite, no se dice que no la hay.
- *
- * @param {string|null} name nombre del mayor, si se sabe.
- * @param {object|null} memory memoria normalizada (`memoryFromDoc`).
- * @param {number} nowMs ahora, en milisegundos.
- * @param {number} offsetMinutes desfase del teléfono respecto de UTC.
- * @return {string} el bloque de memoria del prompt.
- */
+/** Bloque de memoria del prompt; vacío si no hay memoria. */
 function memoryContext(name, memory, nowMs, offsetMinutes) {
   const facts = Object.entries(memory?.facts ?? {});
   const recent = memory?.recent ?? [];
@@ -184,17 +142,7 @@ function memoryContext(name, memory, nowMs, offsetMinutes) {
     "no digas que tienes notas y no preguntes lo que ya sabes.\n\n";
 }
 
-/**
- * Instrucción de sistema del chat. El nombre y la memoria se leen en cada
- * turno: un nombre nuevo vale desde el turno siguiente y, al retirar el
- * consentimiento, la memoria deja de inyectarse en el acto.
- *
- * @param {*} rawName campo `name` del documento del mayor.
- * @param {object|null} memory memoria, o null sin consentimiento.
- * @param {number} nowMs ahora, en milisegundos.
- * @param {number} offsetMinutes desfase del teléfono respecto de UTC.
- * @return {string} la instrucción de sistema.
- */
+/** Instrucción de sistema del chat, con el nombre y la memoria del mayor. */
 function buildChatSystemPrompt(rawName, memory, nowMs, offsetMinutes) {
   const name = typeof rawName === "string" && rawName.trim().length > 0 ?
     rawName.trim() :
@@ -233,13 +181,7 @@ function buildChatSystemPrompt(rawName, memory, nowMs, offsetMinutes) {
     "gratis al 024, a cualquier hora, y al 112 si está en peligro.";
 }
 
-/**
- * Historial y mensaje nuevo en el formato de Gemini.
- *
- * @param {{role: string, text: string}[]} history turnos validados.
- * @param {string} message lo que acaba de decir el mayor.
- * @return {object[]} `contents` de la petición.
- */
+/** Historial y mensaje nuevo en el formato de Gemini. */
 function chatContents(history, message) {
   return [
     ...history.map((turn) => ({
@@ -250,12 +192,7 @@ function chatContents(history, message) {
   ];
 }
 
-/**
- * Texto de una respuesta del modelo, sin las partes de razonamiento.
- *
- * @param {object|null} content `candidates[0].content` de la respuesta.
- * @return {string|null} el texto, o null si no trae ninguno.
- */
+/** Texto de la respuesta del modelo, sin las partes de razonamiento. */
 function replyTextOf(content) {
   const text = (content?.parts ?? [])
       .filter((part) => typeof part.text === "string" && part.thought !== true)
@@ -265,14 +202,7 @@ function replyTextOf(content) {
   return text.length > 0 ? text : null;
 }
 
-/**
- * Llamada a `guardarNombre` en una respuesta del modelo. Si hay varias, vale
- * el último nombre utilizable, como en el cliente.
- *
- * @param {object|null} content `candidates[0].content` de la respuesta.
- * @return {{name: string|null}|null} null si el modelo no la llamó; si la
- *   llamó, el nombre limpio, o null si no traía uno utilizable.
- */
+/** Llamada a guardarNombre en la respuesta; null si el modelo no la hizo. */
 function nameCallOf(content) {
   const calls = (content?.parts ?? [])
       .map((part) => part.functionCall)
@@ -288,14 +218,7 @@ function nameCallOf(content) {
   return {name};
 }
 
-/**
- * Respuesta a `guardarNombre`. Se contesta SIEMPRE, también si no se guardó
- * nada: una llamada sin su respuesta deja la conversación a medias para el
- * modelo.
- *
- * @param {string|null} savedName nombre guardado, o null.
- * @return {object} contenido con la respuesta de la función.
- */
+/** Respuesta a guardarNombre. Se envía siempre, aunque no se guarde nada. */
 function nameResponseContent(savedName) {
   return {
     role: "user",

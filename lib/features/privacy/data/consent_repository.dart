@@ -16,11 +16,7 @@ class ConsentRepository {
   final FirebaseFunctions _functions;
   final FirebaseFirestore _firestore;
 
-  /// Registra la respuesta a "¿guardo un resumen de nuestras conversaciones?".
-  ///
-  /// Va por la callable y no por Firestore: la hora del registro la pone el
-  /// servidor (es la prueba del consentimiento), y retirarlo obliga a congelar
-  /// datos que solo el servidor puede tocar (ADR-0030).
+  /// Registra la respuesta al consentimiento. Por la callable: la hora la pone el servidor.
   Future<void> answer({required bool granted, required int textVersion}) async {
     try {
       await _functions
@@ -34,8 +30,7 @@ class ConsentRepository {
     }
   }
 
-  /// Qué ve el familiar (ADR-0031). Lo escribe el propio mayor sobre su
-  /// documento; las reglas impiden que lo haga el familiar.
+  /// Qué ve el familiar. Solo lo escribe el propio mayor.
   Future<void> updateCompanionSharing(
       String uid, CompanionSharing level) async {
     await _firestore
@@ -44,8 +39,7 @@ class ConsentRepository {
         .update({'companionSharing': level.name});
   }
 
-  /// Un plazo de la conversación, escrito por el propio mayor independiente
-  /// (ADR-0034). [field] es una clave de `ConversationSettings`.
+  /// Un plazo de la conversación, escrito por el mayor independiente.
   Future<void> updateConversationSetting(
       String uid, String field, int value) async {
     await _firestore

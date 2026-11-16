@@ -6,14 +6,8 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
-/// Shell de ajustes del mayor: una lista de filas grandes que enrutan a
-/// subpantallas. No tiene modelo, repositorio ni estado propio — los campos
-/// que edita viven donde les corresponde y se escriben por sus repositorios.
-/// Las filas y su visibilidad vienen de core/config/settings_rows.dart, la
-/// misma fuente que decide si HomeScreen muestra el botón de ajustes.
-///
-/// Sin [group] es el menú de Ajustes; con él, la lista de filas de ese grupo.
-/// Es la misma pantalla para que un grupo se vea y se toque igual que el menú.
+/// Ajustes del mayor: filas grandes que llevan a subpantallas (settings_rows.dart).
+/// Con [group], las filas de ese grupo.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key, this.group});
 
@@ -43,9 +37,7 @@ class SettingsScreen extends ConsumerWidget {
                     padding: EdgeInsets.all(AppTheme.screenPadding(context)),
                     // El título es el primer elemento de la lista.
                     itemCount: entries.length + 1,
-                    // Separación explícita entre filas: son destinos táctiles
-                    // grandes y contiguos, y pegadas invitan al toque erróneo.
-                    // Mismo hueco que entre los botones de EmergencyScreen.
+                    // Separación entre filas para evitar toques erróneos.
                     separatorBuilder: (_, __) => const SizedBox(height: 24),
                     itemBuilder: (context, index) => index == 0
                         ? ElderScreenTitle(group?.title ?? 'Ajustes',
@@ -111,8 +103,7 @@ class _SettingsEntryTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      // Vacío explícito y accionable ("Sin configurar"),
-                      // nunca fila en blanco ni deshabilitada.
+                      // Vacío explícito ("Sin configurar"), nunca una fila en blanco.
                       Text(
                         value,
                         style: TextStyle(

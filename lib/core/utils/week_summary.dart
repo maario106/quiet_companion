@@ -18,10 +18,7 @@ class DaySummary {
   final Sentiment? mood;
 }
 
-/// Lo que el panel y "Mi semana" cuentan de los últimos siete días.
-///
-/// Una sola función para los dos (ADR-0033): si cada pantalla calculara por su
-/// cuenta, el mayor y su familiar acabarían viendo números distintos.
+/// Resumen de los últimos siete días; lo comparten el panel y "Mi semana".
 class WeekSummary {
   const WeekSummary({
     required this.days,
@@ -36,8 +33,7 @@ class WeekSummary {
   /// Siete días, del más antiguo a hoy.
   final List<DaySummary> days;
 
-  /// La conversación más reciente de toda la ventana, no solo de la semana:
-  /// que el mayor deje de hablar es en sí una señal.
+  /// La conversación más reciente de toda la ventana, no solo de la semana.
   final DateTime? lastConversationAt;
 
   /// Ánimo predominante de la semana; null sin conversaciones analizadas.
@@ -49,8 +45,7 @@ class WeekSummary {
   /// Temas más repetidos de la semana (como mucho 5).
   final List<String> topTopics;
 
-  /// Temas de las conversaciones con la señal `worry`: "lo que le ha rondado
-  /// la cabeza" (como mucho 3).
+  /// Temas de las conversaciones con la señal worry (como mucho 3).
   final List<String> worryTopics;
 
   final int analyzedCount;
@@ -129,8 +124,7 @@ DaySummary _summarizeDay(DateTime day, List<ConversationRecord> week) {
   );
 }
 
-/// El ánimo más repetido. En empate, neutro: ante la duda no se afirma ni que
-/// estuvo bien ni que estuvo mal.
+/// El ánimo más repetido; en empate, neutro.
 Sentiment? predominantSentiment(Iterable<Sentiment?> sentiments) {
   final counts = <Sentiment, int>{};
   for (final s in sentiments) {
@@ -142,8 +136,7 @@ Sentiment? predominantSentiment(Iterable<Sentiment?> sentiments) {
   return leaders.length == 1 ? leaders.single : Sentiment.neutral;
 }
 
-/// Temas por frecuencia; en empate, el orden de aparición (más reciente
-/// primero, porque los registros llegan así).
+/// Temas por frecuencia; en empate, el más reciente primero.
 List<String> _topTopics(Iterable<ConversationContent> contents, int max) {
   final counts = <String, int>{};
   for (final content in contents) {

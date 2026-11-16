@@ -4,7 +4,6 @@ import 'package:quiet_companion/core/config/app_router.dart';
 import 'package:quiet_companion/core/config/emulator_config.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
-// FIREBASE
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
@@ -14,8 +13,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // Antes de cualquier lectura o escritura: los SDK fijan su destino en la
-  // primera operación. No hace nada salvo con --dart-define=USE_EMULATOR=true.
+  // Antes de cualquier operación; solo actúa con --dart-define=USE_EMULATOR=true.
   await connectToEmulators();
 
   runApp(

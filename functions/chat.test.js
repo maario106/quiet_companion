@@ -1,9 +1,3 @@
-/**
- * Tests de las reglas puras del chat en vivo (`chat.js`).
- *
- *   cd functions && npm test
- */
-
 const {test, describe} = require("node:test");
 const assert = require("node:assert/strict");
 const {

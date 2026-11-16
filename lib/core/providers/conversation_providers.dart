@@ -8,20 +8,17 @@ final conversationRepositoryProvider = Provider<ConversationRepository>((ref) {
   return ConversationRepository(FirebaseFirestore.instance);
 });
 
-/// Ventana que leen el panel y "Mi semana": el mes reciente. La semana se
-/// calcula dentro; el resto sirve a la lista de conversaciones del panel.
+/// Ventana de lectura del panel y de "Mi semana".
 const Duration kConversationWindow = Duration(days: 30);
 
-/// Conversaciones del mayor [elderId] en la ventana, en vivo. Para el propio
-/// mayor, su uid; para el familiar, el `linkedElderId`.
+/// Conversaciones del mayor [elderId] en la ventana, en vivo.
 final conversationRecordsProvider = StreamProvider.autoDispose
     .family<List<ConversationRecord>, String>((ref, elderId) {
   final since = DateTime.now().subtract(kConversationWindow);
   return ref.watch(conversationRepositoryProvider).watchRecords(elderId, since);
 });
 
-/// Temas y resúmenes del mayor [elderId] en la ventana. Solo debe pedirlo
-/// quien tenga acceso al nivel `full` (ADR-0031).
+/// Temas y resúmenes del mayor [elderId]. Solo con el nivel full.
 final conversationContentsProvider = StreamProvider.autoDispose
     .family<Map<String, ConversationContent>, String>((ref, elderId) {
   final since = DateTime.now().subtract(kConversationWindow);
@@ -30,8 +27,7 @@ final conversationContentsProvider = StreamProvider.autoDispose
       .watchContents(elderId, since);
 });
 
-/// Lo que el asistente recuerda del mayor [elderId] (ADR-0032). Lo lee el panel
-/// con nivel `full`; al modelo se lo inyecta el servidor (`chatTurn`).
+/// Memoria del mayor [elderId]. Solo con el nivel full.
 final elderMemoryProvider =
     StreamProvider.autoDispose.family<ElderMemory?, String>((ref, elderId) {
   return ref.watch(conversationRepositoryProvider).watchMemory(elderId);

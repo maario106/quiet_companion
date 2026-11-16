@@ -12,9 +12,8 @@ class ConsentState {
   final String? errorMessage;
 }
 
-/// Decisiones del mayor sobre sus conversaciones: consentir, retirar y qué ve
-/// su familiar. El resultado no se guarda aquí: vuelve por
-/// `currentUserProvider` cuando el servidor lo escribe.
+/// Decisiones del mayor sobre sus conversaciones. El resultado vuelve por
+/// currentUserProvider.
 class ConsentController extends StateNotifier<ConsentState> {
   ConsentController(this._repository, this._uid, this._deferPrompt)
       : super(const ConsentState());
@@ -23,13 +22,8 @@ class ConsentController extends StateNotifier<ConsentState> {
   final String? _uid;
   final void Function() _deferPrompt;
 
-  /// Responde a la pregunta. Devuelve true si la respuesta quedó guardada.
-  ///
-  /// Si un "Ahora no" no se puede guardar (sin red, o la callable sin
-  /// desplegar), el mayor pasa igual a su pantalla principal y se le vuelve a
-  /// preguntar en el siguiente arranque: encerrarle en esta pantalla por un
-  /// fallo que no es suyo sería peor que preguntar dos veces. Un "Sí" que no
-  /// se guarda, en cambio, no se da por dado.
+  /// Responde a la pregunta; true si quedó guardada. Un "Ahora no" que no se
+  /// guarda deja pasar igual y se vuelve a preguntar en el siguiente arranque.
   Future<bool> answer({required bool granted, bool deferOnFailure = false}) async {
     if (state.saving) return false;
     state = const ConsentState(saving: true);

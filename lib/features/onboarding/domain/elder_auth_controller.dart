@@ -19,16 +19,14 @@ class ElderAuthController extends StateNotifier<AuthState> {
   void _init() {
     _authSubscription = _authRepository.authStateUid().listen((uid) async {
       if (uid == null) {
-        // Un error sin sesión ya está en la bienvenida, y la sesión que se
-        // acaba de cerrar es la que lo causó: no se borra el aviso.
+        // Un error sin sesión ya está en la bienvenida: no se borra el aviso.
         if (state.status == AuthStatus.error && state.user == null) return;
-        // Sin sesión, el mayor elige en la bienvenida: con su cuenta de Google
-        // o sin registrarse. No se entra en anónimo sin preguntárselo.
+        // Sin sesión, el mayor elige en la bienvenida cómo entrar.
         state = const AuthState(status: AuthStatus.nonAuthenticated);
         return;
       }
 
-      // One-time fetch — real-time user data flows through currentUserProvider.
+      // Lectura única; en vivo va por currentUserProvider.
       final existingUser = await _authRepository.getUser(uid);
       // La sesión pudo cambiar mientras llegaba el documento: este ya no vale.
       if (_authRepository.currentUid() != uid) return;
@@ -37,9 +35,7 @@ class ElderAuthController extends StateNotifier<AuthState> {
     });
   }
 
-  /// "Entrar con Google". Si la cuenta ya existía (otro móvil), el
-  /// documento del mayor vuelve tal cual y el enrutador le lleva a su
-  /// pantalla. Cerrar el selector sin elegir no es un error.
+  /// "Entrar con Google". Cerrar el selector sin elegir no es un error.
   Future<void> signInWithGoogle() async {
     state = const AuthState(status: AuthStatus.checking);
     try {
@@ -63,9 +59,7 @@ class ElderAuthController extends StateNotifier<AuthState> {
     }
   }
 
-  /// "Entrar sin registrarme": sesión anónima. La aplicación funciona igual,
-  /// pero la cuenta es la de esta instalación; se puede guardar con Google
-  /// después, desde "Mi cuenta".
+  /// "Entrar sin registrarme": sesión anónima, que se puede guardar con Google después.
   Future<void> continueWithoutAccount() async {
     state = const AuthState(status: AuthStatus.checking);
     try {
@@ -79,10 +73,7 @@ class ElderAuthController extends StateNotifier<AuthState> {
     }
   }
 
-  /// La flecha atrás de "¿Cómo prefieres usar la aplicación?": el mayor se
-  /// equivocó al elegir cómo entrar. Al cerrarse la sesión, [_init] lleva a
-  /// la bienvenida; mientras, la rueda de espera impide elegir modo en una
-  /// cuenta que se está borrando.
+  /// Flecha atrás de "¿Cómo prefieres usar la aplicación?": vuelve a la bienvenida.
   Future<void> backToAccessChoice() async {
     final previous = state;
     state = const AuthState(status: AuthStatus.checking);

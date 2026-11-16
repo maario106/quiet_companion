@@ -16,8 +16,7 @@ import '../../helpers/fake_speech_service.dart';
 import '../../helpers/fake_tts_service.dart';
 import '../../helpers/manual_timer.dart';
 
-// Sin consentimiento: "Mi semana" ni se consulta, y la pantalla no necesita
-// Firestore.
+// Sin consentimiento, "Mi semana" no se consulta y no hace falta Firestore.
 const _elder = UserModel(
   id: 'elder-1',
   role: UserRole.elder,
@@ -102,8 +101,7 @@ void main() {
 
   testWidgets('con la letra más grande, la pantalla cabe en un teléfono '
       'estrecho: el saludo no se corta y el micrófono mengua', (tester) async {
-    // Teléfono de gama media, 360 × 800 dp, y con "Mi semana" visible: el
-    // caso con menos sitio.
+    // 360 × 800 dp con "Mi semana" visible: el caso con menos sitio.
     tester.view.devicePixelRatio = 3.0;
     tester.view.physicalSize = const Size(1080, 2400);
     addTearDown(tester.view.reset);

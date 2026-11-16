@@ -1,13 +1,3 @@
-/**
- * Tests de las reglas puras de vinculación (`pairing.js`).
- *
- * Sustituyen a `test/features/onboarding/auth_repository_pairing_test.dart`:
- * la lógica se mudó al servidor con `validateAndLink`, y el test se mudó con
- * ella. Los casos son los mismos que había en Dart, más los del código.
- *
- *   cd functions && npm test
- */
-
 const {test, describe} = require("node:test");
 const assert = require("node:assert/strict");
 const {resolveEmergencyContact} = require("./pairing");

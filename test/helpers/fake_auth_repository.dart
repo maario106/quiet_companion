@@ -6,11 +6,8 @@ import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/repositories/auth_repository.dart';
 
-/// Registra las escrituras por campo del panel (ADR-0027). `saveUser` lanza a
-/// propósito: el panel ya no debe reescribir el documento entero del mayor.
-///
-/// Simula además la sesión: [signInAs] emite por [authStateUid], y entrar con
-/// Google sigue el contrato del repositorio real, cuenta de familiar incluida.
+/// Registra las escrituras por campo del panel; saveUser lanza a propósito.
+/// Simula también la sesión y la entrada con Google.
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({this.shouldThrow = false});
 

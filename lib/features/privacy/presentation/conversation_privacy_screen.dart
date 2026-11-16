@@ -12,15 +12,8 @@ import 'package:quiet_companion/features/privacy/domain/consent_controller.dart'
 import 'package:quiet_companion/features/privacy/domain/consent_text.dart';
 import 'package:quiet_companion/features/privacy/presentation/consent_sections.dart';
 
-/// El detalle de lo que se guarda de las conversaciones.
-///
-/// Dos entradas, una pantalla:
-/// - "Saber más" desde la pregunta del consentimiento ([manage] = false): solo
-///   el texto completo.
-/// - La fila "Guardar mis conversaciones" de Ajustes ([manage] = true): el
-///   estado actual y el botón para activarlo o retirarlo, con un paso de
-///   confirmación para retirar (ADR-0030: tan fácil como darlo, pero no por un
-///   toque perdido).
+/// Lo que se guarda de las conversaciones. Con [manage], además el estado y
+/// el botón para activarlo o retirarlo (con confirmación).
 class ConversationPrivacyScreen extends ConsumerStatefulWidget {
   const ConversationPrivacyScreen({super.key, required this.manage});
 

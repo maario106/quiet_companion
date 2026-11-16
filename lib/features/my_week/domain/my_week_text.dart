@@ -9,12 +9,8 @@ String joinSpanish(List<String> items) {
   return '${items.sublist(0, items.length - 1).join(', ')} y ${items.last}';
 }
 
-/// Lo que "Mi semana" le cuenta al mayor, frase a frase (ADR-0033).
-///
-/// En segunda persona y en tono de refuerzo. Sin etiquetas clínicas: las
-/// señales de soledad, tristeza o riesgo **no** se nombran aquí. De ellas solo
-/// sale, suavizado, "lo que te ha rondado la cabeza" (temas con preocupación).
-/// El apoyo en un momento difícil es cosa del chat en vivo, no de un resumen.
+/// Lo que "Mi semana" le cuenta al mayor, en segunda persona y sin etiquetas
+/// clínicas.
 List<String> myWeekSentences(WeekSummary week, DateTime now) {
   final sentences = <String>[];
 

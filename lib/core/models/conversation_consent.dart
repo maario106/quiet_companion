@@ -1,15 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 
-/// Respuesta del mayor a "¿guardo un resumen de nuestras conversaciones?"
-/// (ADR-0030).
-///
-/// **Solo lo escribe el servidor** (`setConversationConsent`, con la hora del
-/// servidor como prueba) y las reglas impiden que ningún cliente lo toque. Por
-/// eso no tiene `toMap`: el cliente lo lee, nunca lo escribe.
-///
-/// `null` en el `UserModel` significa "nunca ha respondido", y es lo que hace
-/// que el enrutador enseñe la pregunta. "Ahora no" es una respuesta: se guarda
-/// con `granted: false` para no volver a preguntar.
+/// Respuesta del mayor al consentimiento sobre sus conversaciones. Solo la
+/// escribe el servidor; null en [UserModel] significa que nunca ha respondido.
 class ConversationConsent {
   const ConversationConsent({
     required this.granted,
@@ -28,9 +20,7 @@ class ConversationConsent {
   /// Solo si lo concedió y después lo retiró.
   final DateTime? revokedAt;
 
-  /// Fecha a partir de la cual lo guardado se borra, si retiró el
-  /// consentimiento y no ha vuelto a darlo. La calcula el servidor al retirar
-  /// (mitad del plazo de conservación, ADR-0030) y el mayor la ve en Ajustes.
+  /// Fecha de borrado de lo guardado tras retirar el consentimiento.
   final DateTime? deleteAfter;
 
   /// Retirado, con datos congelados a la espera de borrarse.

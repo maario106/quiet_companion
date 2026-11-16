@@ -1,17 +1,3 @@
-/**
- * Tests de `firestore.rules`.
- *
- * Cada caso reproduce una operación real del cliente (el fichero y la línea
- * están citados) o un abuso concreto que las reglas deben frenar. Corren
- * contra el emulador, sin nube y sin coste:
- *
- *   cd firestore-tests && npm test
- *
- * Se agrupan por sujeto (el dueño, el familiar vinculado, un autenticado
- * cualquiera) y por garantía (lo que solo escribe el servidor y lo que el
- * mayor deja ver a su familiar).
- */
-
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import {
@@ -95,8 +81,6 @@ beforeEach(async () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────
-
 describe('el dueño gobierna su documento', () => {
   it('lee su propio documento (getUser / watchUser)', async () => {
     await assertSucceeds(getDoc(userRef(ELDER_LIBRE, ELDER_LIBRE)));
@@ -155,8 +139,6 @@ describe('un autenticado cualquiera frente a datos ajenos', () => {
   });
 });
 
-// ─── HU-5/HU-6: consentimiento (ADR-0030) ─────────────────────────────────
-
 describe('el consentimiento solo lo escribe el servidor', () => {
   const consentido = {
     granted: true, answeredAt: new Date('2026-09-26'), textVersion: 1,
@@ -182,8 +164,6 @@ describe('el consentimiento solo lo escribe el servidor', () => {
     }));
   });
 });
-
-// ─── HU-5/HU-6: conversaciones analizadas (ADR-0029) ──────────────────────
 
 describe('las conversaciones analizadas las escribe solo el servidor', () => {
   const analizada = {
@@ -214,8 +194,6 @@ describe('las conversaciones analizadas las escribe solo el servidor', () => {
     await assertFails(deleteDoc(sub(ELDER_VINCULADO, 'conversationContents', 'c1')));
   });
 });
-
-// ─── HU-6: qué ve el familiar (ADR-0031) ──────────────────────────────────
 
 describe('el familiar ve lo que el mayor elige, y solo con consentimiento', () => {
   const setElder = (fields) => testEnv.withSecurityRulesDisabled(async (ctx) => {

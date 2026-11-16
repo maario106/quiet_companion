@@ -13,11 +13,7 @@ import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/core/widgets/stop_speaking_on_exit.dart';
 import 'package:quiet_companion/features/my_week/domain/my_week_text.dart';
 
-/// "Mi semana": el mayor ve su propio análisis (ADR-0033). Todo mayor con el
-/// consentimiento activo, independiente o vinculado.
-///
-/// Frases y no gráficas, un botón para escucharlo y, si tiene familiar, qué ve
-/// este y cómo cambiarlo: es también su ventana a lo que se guarda de él.
+/// "Mi semana": el mayor ve su propio análisis, si tiene el consentimiento activo.
 class MyWeekScreen extends ConsumerWidget {
   const MyWeekScreen({super.key});
 
@@ -129,8 +125,7 @@ class MyWeekScreen extends ConsumerWidget {
   }
 }
 
-/// Los siete días, con una marca en los que hemos hablado. Refuerzo, no
-/// evaluación: no se pinta el ánimo de cada día.
+/// Los siete días, marcando en los que hemos hablado; sin el ánimo de cada día.
 class _DaysRow extends StatelessWidget {
   const _DaysRow({required this.week, required this.textScale});
 

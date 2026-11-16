@@ -5,13 +5,7 @@ import 'package:quiet_companion/core/providers/current_user_provider.dart';
 import 'package:quiet_companion/core/repositories/auth_repository.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_state.dart';
 
-/// Escrituras del panel del familiar sobre el documento del mayor.
-///
-/// Cada una toca **un solo campo** con `update()` (ADR-0027). Ya no hay
-/// actualización optimista ni *rollback* manual (ADR-0010): el panel pinta
-/// desde `linkedElderProvider`, y la compensación de latencia de Firestore
-/// enseña el valor escrito al instante y lo revierte sola si el servidor lo
-/// rechaza. Aquí solo queda contar el error.
+/// Escrituras del panel del familiar sobre el documento del mayor, un campo cada vez.
 class DashboardController extends StateNotifier<DashboardState> {
   DashboardController(this._repository, this._elderId)
       : super(const DashboardState());
@@ -45,8 +39,7 @@ class DashboardController extends StateNotifier<DashboardState> {
     }
   }
 
-  /// La voz del mayor: una clave de `ttsVoices`. Se escribe sola, como las
-  /// escalas, para no pisar lo que el mayor cambie a la vez.
+  /// La voz del mayor: una clave de ttsVoices.
   Future<void> updateElderVoice(String voice) async {
     final elderId = _elderId;
     if (elderId == null) return;
@@ -60,8 +53,7 @@ class DashboardController extends StateNotifier<DashboardState> {
     }
   }
 
-  /// Un plazo de la conversación del mayor (ADR-0034). [field] es una clave
-  /// de `ConversationSettings`.
+  /// Un plazo de la conversación. [field] es una clave de ConversationSettings.
   Future<void> updateConversationSetting(String field, int value) async {
     final elderId = _elderId;
     if (elderId == null) return;

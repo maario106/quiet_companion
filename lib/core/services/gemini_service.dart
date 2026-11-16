@@ -4,25 +4,18 @@ import 'package:quiet_companion/core/config/conversation_config.dart';
 import 'package:quiet_companion/core/config/functions_config.dart';
 import 'package:quiet_companion/core/services/conversation_closer.dart';
 
-/// Result of a single Gemini turn.
-///
-/// [text] is the text reply to speak/display.
+/// Resultado de un turno de Gemini.
 class GeminiResponse {
   final String? text;
 
-  /// La respuesta es un mensaje de error de la app, no del modelo. No es
-  /// conversación: no entra en el búfer que se analiza al cerrar (ADR-0028).
+  /// Mensaje de error de la app, no del modelo; no entra en lo que se analiza.
   final bool failed;
 
   const GeminiResponse({this.text, this.failed = false});
 }
 
-/// El chat con el mayor, a través de la callable `chatTurn` (ADR-0014).
-///
-/// El servidor llama a Gemini con sus propias credenciales: la app no lleva
-/// ninguna clave. También pone allí el prompt, el nombre y la memoria del
-/// mayor, y guarda el nombre cuando el modelo llama a `guardarNombre`; aquí
-/// solo viajan el mensaje y los turnos de la conversación en curso.
+/// Chat con el mayor a través de la callable chatTurn. Prompt, nombre y memoria
+/// los pone el servidor; aquí solo viajan el mensaje y los turnos en curso.
 class GeminiService {
   GeminiService({FirebaseFunctions? functions})
       : _functions =
@@ -30,13 +23,11 @@ class GeminiService {
 
   final FirebaseFunctions _functions;
 
-  /// Lo que se espera antes de dar el turno por fallido. Con `guardarNombre`
-  /// son dos llamadas al modelo.
+  /// Con guardarNombre son dos llamadas al modelo.
   static const Duration _timeout = Duration(seconds: 30);
 
-  /// Envía lo que ha dicho el mayor con [history], los turnos anteriores de
-  /// esta conversación, y devuelve la respuesta del modelo. Nunca lanza: un
-  /// fallo vuelve como respuesta con [GeminiResponse.failed].
+  /// Envía el mensaje con [history] y devuelve la respuesta. Nunca lanza: un
+  /// fallo vuelve con [GeminiResponse.failed].
   Future<GeminiResponse> sendMessage(
     String text, {
     List<ConversationTurn> history = const [],
@@ -56,13 +47,11 @@ class GeminiService {
         'history': [
           for (final turn in recent) {'role': turn.role.name, 'text': turn.text},
         ],
-        // El servidor corre en UTC: con esto dice "ayer a las 18:30" en la
-        // hora del teléfono al recordar conversaciones anteriores.
+        // Para decir las fechas en la hora del teléfono.
         'utcOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
       });
 
-      // El canal de plataforma entrega mapas sin tipar; se lee
-      // defensivamente en vez de castear, que falla en Android.
+      // El canal de plataforma entrega mapas sin tipar.
       final data = result.data;
       final reply = data is Map ? data['text'] : null;
       if (reply is! String || reply.trim().isEmpty) {

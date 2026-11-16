@@ -3,17 +3,14 @@ import 'dart:async';
 import 'package:quiet_companion/core/models/user_preferences.dart';
 import 'package:quiet_companion/core/services/tts_service.dart';
 
-/// Doble de [TtsService] compartido por los tests. Registra lo que se dice y
-/// permite controlar cuándo termina una locución, para poder simular
-/// interrupciones y locuciones largas sin esperas reales.
+/// Doble de [TtsService]: registra lo que se dice y controla cuándo termina.
 class FakeTtsService implements TtsService {
   final List<String> spoken = [];
   int stopCalls = 0;
   int disposeCalls = 0;
   UserPreferences? appliedPreferences;
 
-  /// Con `true`, [speak] no completa hasta llamar a [finishSpeaking]: así el
-  /// test puede interrumpir a mitad de locución.
+  /// Con true, [speak] no completa hasta [finishSpeaking].
   bool blockUntilFinished = false;
 
   Completer<void>? _pending;

@@ -83,7 +83,7 @@ class _EnterPairingCodeScreenState
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
-                    // Code input keeps elder-sized text — it displays elder content
+                    // Letra del mayor: el código es contenido suyo.
                     TextFormField(
                       controller: _codeController,
                       enabled: !isLoading,

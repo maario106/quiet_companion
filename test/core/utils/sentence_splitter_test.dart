@@ -25,8 +25,7 @@ void main() {
     });
 
     test('ningún fragmento supera el tope de la Function', () {
-      // Monólogo sin puntuación: si se colara entero, el servidor lo
-      // rechazaría por longitud y la locución caería al respaldo.
+      // Monólogo sin puntuación: el servidor lo rechazaría entero.
       final monologue = List.filled(400, 'palabra').join(' ');
       final chunks = splitIntoSentences(monologue);
 

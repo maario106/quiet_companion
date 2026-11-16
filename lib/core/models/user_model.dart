@@ -17,26 +17,19 @@ class UserModel {
   final String? linkedElderId;
   final UserPreferences preferences;
 
-  /// Teléfono propio del usuario en E.164. Hoy solo lo rellena el familiar
-  /// en su registro; es la fuente de la desnormalización de [emergencyContact]
-  /// en el documento del mayor al vincular.
+  /// Teléfono del familiar en E.164; al vincular se copia como contacto de emergencia.
   final String? phoneNumber;
 
-  /// Contacto de emergencia del mayor. null es un estado legal y permanente:
-  /// mayor que aún no ha configurado nada, o documento anterior a esta
-  /// feature. El camino null-safe es el mismo en ambos casos.
+  /// null si el mayor no ha configurado contacto.
   final EmergencyContact? emergencyContact;
 
-  /// Respuesta del mayor a guardar sus conversaciones. null = nunca ha
-  /// respondido, y el enrutador le enseña la pregunta (ADR-0030). Lo escribe
-  /// solo el servidor: [toMap] no lo incluye nunca.
+  /// null si nunca ha respondido. Solo lo escribe el servidor.
   final ConversationConsent? conversationConsent;
 
-  /// Qué ve el familiar del análisis (ADR-0031). Lo escribe solo el mayor.
+  /// Qué ve el familiar del análisis. Solo lo escribe el mayor.
   final CompanionSharing? companionSharing;
 
-  /// Plazos de la conversación (ADR-0034). null = valores por defecto; léase
-  /// siempre por [effectiveConversationSettings].
+  /// null = valores por defecto; usar [effectiveConversationSettings].
   final ConversationSettings? conversationSettings;
 
   const UserModel({
@@ -119,16 +112,12 @@ class UserModel {
       'linkedElderId': linkedElderId,
       'preferences': preferences.toMap(),
       'phoneNumber': phoneNumber,
-      // Se omite la clave cuando es null para no crear el campo en los
-      // documentos que no lo necesitan.
       if (emergencyContact != null)
         'emergencyContact': emergencyContact!.toMap(),
       if (companionSharing != null) 'companionSharing': companionSharing!.name,
       if (conversationSettings != null)
         'conversationSettings': conversationSettings!.toMap(),
-      // `conversationConsent` no se escribe nunca desde aquí: es un registro
-      // del servidor y las reglas deniegan que un cliente lo toque. Los únicos
-      // `set()` completos que quedan (onboarding) ocurren antes de que exista.
+      // conversationConsent nunca se escribe desde el cliente.
     };
   }
 

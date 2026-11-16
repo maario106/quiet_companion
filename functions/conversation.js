@@ -1,15 +1,8 @@
-/**
- * Reglas puras de las conversaciones del mayor: consentimiento, plazos de
- * conservación y análisis (ADR-0029, ADR-0030, ADR-0034).
- *
- * Como `pairing.js`, viven fuera de `index.js` para poder testearlas sin
- * Firestore, sin emulador y sin Gemini: son la parte con criterio, y la que
- * decide cuándo se borran datos de una persona mayor.
- */
+/** Lógica pura de las conversaciones: consentimiento, conservación y análisis. */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Colecciones bajo `users/{elderId}`. Espejo de `FirestorePaths` del cliente. */
+/** Subcolecciones de users/{elderId}; mismas rutas que FirestorePaths. */
 const COLLECTIONS = {
   users: "users",
   conversations: "conversations",
@@ -18,20 +11,11 @@ const COLLECTIONS = {
 };
 const MEMORY_PROFILE_DOC = "profile";
 
-/**
- * Plazos de conservación admitidos (ADR-0034). El tope lo pone el servidor:
- * diga lo que diga el documento, nada se guarda más de seis meses.
- */
+/** Plazos de conservación admitidos, en días (máximo seis meses). */
 const RETENTION_DAYS_STEPS = [30, 60, 90, 180];
 const DEFAULT_RETENTION_DAYS = 90;
 
-/**
- * Peldaño más cercano; en empate, el más bajo (lo más conservador).
- *
- * @param {number[]} steps peldaños en orden ascendente.
- * @param {number} value valor pedido.
- * @return {number} peldaño elegido.
- */
+/** Peldaño más cercano; en empate, el más bajo. */
 function nearestStep(steps, value) {
   let best = steps[0];
   for (const step of steps) {
@@ -40,12 +24,7 @@ function nearestStep(steps, value) {
   return best;
 }
 
-/**
- * Plazo de conservación vigente para un mayor.
- *
- * @param {object|undefined} conversationSettings campo del documento.
- * @return {number} días, siempre dentro de [30, 180].
- */
+/** Plazo de conservación vigente, en días. */
 function effectiveRetentionDays(conversationSettings) {
   const raw = conversationSettings?.retentionDays;
   if (typeof raw !== "number" || !Number.isFinite(raw)) {
@@ -54,49 +33,22 @@ function effectiveRetentionDays(conversationSettings) {
   return nearestStep(RETENTION_DAYS_STEPS, raw);
 }
 
-/**
- * Caducidad normal de lo analizado en una conversación.
- *
- * @param {number} endedAtMs fin de la conversación, en milisegundos.
- * @param {number} retentionDays plazo vigente.
- * @return {number} milisegundos de `expireAt`.
- */
 function expireAtMs(endedAtMs, retentionDays) {
   return endedAtMs + retentionDays * DAY_MS;
 }
 
-/**
- * Fecha de borrado tras retirar el consentimiento: la mitad del plazo de
- * conservación vigente (ADR-0030, epílogo). 45 días con el plazo por defecto.
- *
- * @param {number} revokedAtMs momento de la retirada.
- * @param {number} retentionDays plazo vigente al retirar.
- * @return {number} milisegundos a partir de los que se borra.
- */
+/** Fecha de borrado tras retirar el consentimiento: la mitad del plazo. */
 function graceDeadlineMs(revokedAtMs, retentionDays) {
   return revokedAtMs + Math.floor(retentionDays / 2) * DAY_MS;
 }
 
-/**
- * Caducidad de un documento congelado por una retirada: la que ocurra antes
- * de la suya normal y el fin del periodo de gracia. Retirar el consentimiento
- * nunca alarga la vida de un dato.
- *
- * @param {number|null} currentMs `expireAt` actual, o null si no tiene.
- * @param {number} deadlineMs fin del periodo de gracia.
- * @return {number} nueva caducidad.
- */
+/** Caducidad de un documento congelado: la más temprana de las dos. */
 function frozenExpireAtMs(currentMs, deadlineMs) {
   if (typeof currentMs !== "number") return deadlineMs;
   return Math.min(currentMs, deadlineMs);
 }
 
-/**
- * Valida la petición de `setConversationConsent`.
- *
- * @param {*} data `request.data`.
- * @return {{granted: boolean, textVersion: number}|null} null si no es válida.
- */
+/** Valida la petición de setConversationConsent; null si no es válida. */
 function parseConsentRequest(data) {
   if (typeof data?.granted !== "boolean") return null;
   const version = data?.textVersion;
@@ -104,22 +56,17 @@ function parseConsentRequest(data) {
   return {granted: data.granted, textVersion: version};
 }
 
-// ─── Análisis al cierre (ADR-0029) ────────────────────────────────────────
-
-/** Espejo de `kMinElderTurnsForAnalysis` del cliente (ADR-0028). */
+/** Mismo valor que kMinElderTurnsForAnalysis en el cliente. */
 const MIN_ELDER_TURNS_FOR_ANALYSIS = 3;
 
-/**
- * Versión del prompt de análisis. Se guarda en cada conversación para poder
- * distinguir registros producidos por versiones distintas.
- */
-const ANALYSIS_PROMPT_VERSION = 2; // v2: la misma llamada extrae la memoria.
+/** Versión del prompt de análisis; se guarda con cada conversación. */
+const ANALYSIS_PROMPT_VERSION = 2;
 
 const END_REASONS = ["inactivity", "background"];
 const ROLES = ["elder", "assistant"];
 const SENTIMENTS = ["positive", "neutral", "negative"];
 
-/** Lista cerrada de señales (ADR-0029). */
+/** Lista cerrada de señales. */
 const SIGNALS = [
   "loneliness",
   "sadness",
@@ -129,17 +76,13 @@ const SIGNALS = [
   "risk",
 ];
 
-/**
- * Topes de tamaño: una conversación de voz real queda muy por debajo. El chat
- * en vivo (`chat.js`) aplica los mismos a su historial.
- */
+/** Topes de tamaño; chat.js aplica los mismos al historial. */
 const MAX_TURNS = 200;
 const MAX_TURN_CHARS = 2000;
 const MAX_TOPICS = 5;
 const MAX_TOPIC_CHARS = 40;
 const MAX_SUMMARY_CHARS = 400;
 
-/** Memoria del mayor (ADR-0032). */
 const MAX_MEMORY_FACTS = 30;
 const MAX_MEMORY_CHANGES = 10;
 const MAX_MEMORY_KEY_CHARS = 30;
@@ -150,13 +93,7 @@ const RECENT_SUMMARIES = 3;
 const CLOCK_SKEW_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Valida y normaliza la petición de `closeConversation`.
- *
- * @param {*} data `request.data`.
- * @param {number} nowMs hora del servidor.
- * @return {object|null} petición normalizada, o null si no es válida.
- */
+/** Valida y normaliza la petición de closeConversation; null si no es válida. */
 function parseCloseRequest(data, nowMs) {
   const startedAtMs = data?.startedAt;
   const endedAtMs = data?.endedAt;
@@ -184,8 +121,7 @@ function parseCloseRequest(data, nowMs) {
     }
   }
 
-  // El número de turnos del mayor lo cuenta el servidor si tiene el texto: no
-  // se fía del que declara el cliente.
+  // El número de turnos lo cuenta el servidor, no el cliente.
   const elderTurns = turns ?
     turns.filter((t) => t.role === "elder").length :
     data.elderTurns;
@@ -199,25 +135,14 @@ function parseCloseRequest(data, nowMs) {
   };
 }
 
-/**
- * Transcripción para el modelo. "M:" es la persona mayor y "A:" el asistente.
- *
- * @param {{role: string, text: string}[]} turns turnos validados.
- * @return {string} una línea por turno.
- */
+/** Transcripción para el modelo: "M:" es el mayor y "A:" el asistente. */
 function buildTranscript(turns) {
   return turns
       .map((t) => `${t.role === "elder" ? "M" : "A"}: ${t.text}`)
       .join("\n");
 }
 
-/**
- * Mensaje para el modelo: lo que ya se sabe de M y la conversación.
- *
- * @param {{role: string, text: string}[]} turns turnos validados.
- * @param {Object<string, string>} facts memoria actual.
- * @return {string} contenido del mensaje.
- */
+/** Mensaje para el modelo: la memoria actual y la conversación. */
 function buildAnalysisInput(turns, facts) {
   const known = Object.entries(facts ?? {});
   const memory = known.length === 0 ?
@@ -227,7 +152,7 @@ function buildAnalysisInput(turns, facts) {
     buildTranscript(turns);
 }
 
-/** Instrucción de sistema del análisis. Versionada con ANALYSIS_PROMPT_VERSION. */
+/** Instrucción de sistema del análisis (ver ANALYSIS_PROMPT_VERSION). */
 const ANALYSIS_SYSTEM_PROMPT = [
   "Analizas conversaciones entre una persona mayor (M) y un asistente de " +
     "compañía por voz (A). Lo que escribas lo leerá la propia persona y, si " +
@@ -297,13 +222,7 @@ const ANALYSIS_RESPONSE_SCHEMA = {
   propertyOrdering: ["sentiment", "signals", "topics", "summary", "memory"],
 };
 
-/**
- * Sanea la respuesta del modelo. El esquema estructurado la hace casi siempre
- * válida, pero lo que se escribe en la base de datos no depende de "casi".
- *
- * @param {*} raw JSON ya parseado.
- * @return {object|null} análisis utilizable, o null si no lo es.
- */
+/** Sanea la respuesta del modelo; null si no es utilizable. */
 function normalizeAnalysis(raw) {
   if (raw == null || typeof raw !== "object") return null;
 
@@ -337,12 +256,7 @@ function normalizeAnalysis(raw) {
   };
 }
 
-/**
- * Clave de memoria utilizable: minúsculas, corta, sin símbolos raros.
- *
- * @param {*} raw clave propuesta por el modelo.
- * @return {string} clave limpia, o "" si no sirve.
- */
+/** Clave de memoria limpia (minúsculas, corta), o "" si no sirve. */
 function cleanMemoryKey(raw) {
   if (typeof raw !== "string") return "";
   const key = raw.trim().toLowerCase().replace(/\s+/g, " ");
@@ -350,12 +264,7 @@ function cleanMemoryKey(raw) {
   return /^[a-z0-9áéíóúüñ _-]+$/.test(key) ? key : "";
 }
 
-/**
- * Sanea los cambios de memoria que propone el modelo.
- *
- * @param {*} raw campo `memory` de la respuesta.
- * @return {{upsert: Object<string, string>, remove: string[]}} cambios.
- */
+/** Sanea los cambios de memoria que propone el modelo. */
 function normalizeMemoryChanges(raw) {
   const upsert = {};
   if (Array.isArray(raw?.upsert)) {
@@ -375,14 +284,8 @@ function normalizeMemoryChanges(raw) {
 }
 
 /**
- * Aplica los cambios a la memoria actual respetando el tope: las altas que no
- * caben se descartan (y se cuentan), las correcciones de datos ya conocidos
- * siempre entran. Primero se borra y después se añade, para que corregir una
- * clave no la pierda.
- *
- * @param {Object<string, string>} facts memoria actual.
- * @param {{upsert: Object<string, string>, remove: string[]}} changes cambios.
- * @return {{facts: Object<string, string>, dropped: number}} resultado.
+ * Aplica los cambios respetando el tope: las altas que no caben se descartan
+ * y las correcciones siempre entran. Se borra antes de añadir.
  */
 function applyMemoryChanges(facts, changes) {
   const next = {...(facts ?? {})};
@@ -399,26 +302,14 @@ function applyMemoryChanges(facts, changes) {
   return {facts: next, dropped};
 }
 
-/**
- * Resúmenes recientes que se inyectan al empezar la siguiente conversación.
- *
- * @param {{endedAtMs: number, summary: string}[]} recent los que había.
- * @param {{endedAtMs: number, summary: string}} latest el de esta.
- * @return {{endedAtMs: number, summary: string}[]} los 3 más recientes.
- */
+/** Últimos 3 resúmenes, que se inyectan en la siguiente conversación. */
 function pushRecentSummary(recent, latest) {
   return [latest, ...(recent ?? [])]
       .sort((a, b) => b.endedAtMs - a.endedAtMs)
       .slice(0, RECENT_SUMMARIES);
 }
 
-/**
- * Límite inferior de `endedAt` para lo que aún está dentro del plazo.
- *
- * @param {number} nowMs hora del servidor.
- * @param {number} retentionDays plazo vigente.
- * @return {number} milisegundos: lo que terminó antes se borra.
- */
+/** Límite de endedAt: lo que terminó antes se borra. */
 function retentionCutoffMs(nowMs, retentionDays) {
   return nowMs - retentionDays * DAY_MS;
 }

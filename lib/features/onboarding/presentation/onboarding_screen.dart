@@ -69,8 +69,7 @@ class OnboardingScreen extends ConsumerWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 60),
-                  // Las dos vías tienen el mismo peso: entrar sin registrarse
-                  // es una opción legítima, no un camino escondido.
+                  // Las dos vías con el mismo peso.
                   if (choosingAccess) ...[
                     _ModeButton(
                       label: 'Entrar con Google',
@@ -101,8 +100,7 @@ class OnboardingScreen extends ConsumerWidget {
                       child: const Text('Soy el acompañante'),
                     ),
                   ],
-                  // Aquí ya ha entrado como mayor: el acceso del familiar se
-                  // queda en el paso anterior, al que lleva la flecha.
+                  // Ya ha entrado como mayor: el acceso del familiar queda en el paso anterior.
                   if (choosingMode) ...[
                     _ModeButton(
                       label: 'Usar por mi cuenta',
@@ -130,9 +128,7 @@ class OnboardingScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
-                    // Sin botón de "Continuar": al vincular, el servidor borra
-                    // el linkCode, currentUserProvider emite y el router
-                    // navega solo.
+                    // Sin "Continuar": al vincular, el router navega solo.
                     const Text(
                       'Tu familiar deberá introducir este código en su aplicación. '
                       'Cuando lo haga, esta pantalla cambiará sola.',
@@ -169,9 +165,7 @@ class OnboardingScreen extends ConsumerWidget {
       ),
     );
 
-    // Al elegir modo ya se ha entrado: la flecha, y también el botón atrás
-    // del sistema, deshacen esa entrada por si el mayor se equivocó (quería
-    // Google, o es el familiar) en vez de salir de la aplicación.
+    // Atrás deshace la entrada, por si el mayor se equivocó, en vez de salir de la app.
     return PopScope(
       canPop: !choosingMode,
       onPopInvokedWithResult: (didPop, _) {
@@ -182,8 +176,7 @@ class OnboardingScreen extends ConsumerWidget {
   }
 }
 
-/// Centrada mientras quepa y desplazable cuando no: con los botones del mayor,
-/// la bienvenida no cabe entera en un móvil de 360×800.
+/// Centrada si cabe y desplazable si no.
 class _CenteredScroll extends StatelessWidget {
   const _CenteredScroll({required this.padding, required this.child});
 

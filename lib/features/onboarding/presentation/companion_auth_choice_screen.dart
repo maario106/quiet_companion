@@ -12,10 +12,7 @@ class CompanionAuthChoiceScreen extends ConsumerWidget {
     final maxWidth = AppTheme.contentMaxWidth(context);
 
     return Scaffold(
-      // Registro y acceso se apilan encima (`push`) y vuelven con `pop`: así
-      // la flecha y el botón atrás del sistema deshacen los pasos en orden.
-      // Con `go`, la pila se quedaría solo con la pantalla de destino y la
-      // flecha no tendría adónde volver.
+      // push/pop, para que la flecha deshaga los pasos en orden.
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

@@ -8,16 +8,8 @@ import 'package:quiet_companion/core/providers/tts_service_provider.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 
-/// Subpantalla única para todas las escalas de accesibilidad del mayor. No hay
-/// una pantalla por ajuste: la [PreferenceScale] que llega por la ruta lleva
-/// título, pregunta, peldaños y nombres, así que añadir un cuarto ajuste no
-/// añade una pantalla (ADR-0021).
-///
-/// Dos botones enormes, "Más"/"Menos", y el nombre del peldaño en grande. Sin
-/// deslizador (exige arrastre, prohibido por `CLAUDE.md` §Accessibility) y sin
-/// botón de guardar: cada pulsación se persiste sola. Un mayor que sube la
-/// letra ya ha visto el resultado — pedirle que además confirme es pedirle que
-/// confirme algo que ya está mirando.
+/// Subpantalla de todas las escalas de accesibilidad: "Más"/"Menos" y el
+/// nombre del peldaño. Cada pulsación se guarda sola.
 class PreferenceStepperScreen extends ConsumerStatefulWidget {
   const PreferenceStepperScreen({super.key, required this.scale});
 
@@ -30,9 +22,7 @@ class PreferenceStepperScreen extends ConsumerStatefulWidget {
 
 class _PreferenceStepperScreenState
     extends ConsumerState<PreferenceStepperScreen> {
-  /// Peldaño elegido aquí, mientras la pantalla está abierta. Manda sobre el
-  /// valor de Firestore: si el familiar mueve su deslizador a la vez, el mayor
-  /// que tiene el dedo en la pantalla no ve saltar su propia elección.
+  /// Peldaño elegido aquí; manda sobre Firestore mientras la pantalla está abierta.
   int? _pendingIndex;
 
   bool _saving = false;
@@ -63,8 +53,7 @@ class _PreferenceStepperScreenState
       if (mounted) setState(() => _saving = false);
     } catch (_) {
       if (!mounted) return;
-      // Retroceso honesto (mismo criterio que DashboardController): nunca dejar
-      // en pantalla una letra más grande que no ha llegado a guardarse.
+      // Si no se guarda, se vuelve atrás.
       setState(() {
         _pendingIndex = previousIndex;
         _saving = false;
@@ -73,10 +62,7 @@ class _PreferenceStepperScreenState
     }
   }
 
-  /// Habla con las preferencias ya guardadas: `ttsServiceProvider` las recoge
-  /// de `currentUserProvider`, de modo que lo que suena es exactamente lo que
-  /// el mayor acaba de elegir. El servicio se lee en la pulsación, no en el
-  /// build, para no construir la voz de nube al abrir la pantalla.
+  /// Habla con las preferencias ya guardadas; el servicio se lee al pulsar.
   Future<void> _preview() async {
     final phrase = widget.scale.previewPhrase;
     if (phrase == null) return;
@@ -93,9 +79,7 @@ class _PreferenceStepperScreenState
     }
 
     final index = _indexFor(user.preferences);
-    // Preferencias "como quedarían": el tamaño de esta misma pantalla sale de
-    // aquí, así que subir la letra la agranda en el acto. La vista previa del
-    // tamaño es la pantalla entera, no un párrafo de muestra.
+    // La pantalla entera se pinta con el valor elegido: es la vista previa.
     final previewPrefs = scale.atIndex(user.preferences, index);
     final textScale = previewPrefs.textSizeMultiplier;
 
@@ -143,9 +127,7 @@ class _PreferenceStepperScreenState
                     label: 'Más',
                     icon: Icons.add,
                     textScale: textScale,
-                    // Deshabilitado en el extremo, nunca oculto: una fila de
-                    // botones que cambia de tamaño desorienta más que un botón
-                    // que no responde.
+                    // Deshabilitado en el extremo, nunca oculto.
                     onPressed:
                         index < scale.steps.length - 1 ? () => _step(1) : null,
                   ),
@@ -167,8 +149,7 @@ class _PreferenceStepperScreenState
                   ],
                   if (_saveError != null) ...[
                     const SizedBox(height: 24),
-                    // Texto fijo en la pantalla, no SnackBar: un aviso que se
-                    // va solo es un aviso que el mayor no llega a leer.
+                    // Texto fijo y no SnackBar, que se va antes de leerlo.
                     Text(
                       _saveError!,
                       style: TextStyle(
@@ -219,8 +200,7 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-/// Pantalla de un `slug` de preferencia que no existe. Solo se alcanza por un
-/// enlace profundo escrito a mano; existe para que eso no sea un crash.
+/// Slug de preferencia inexistente (enlace profundo escrito a mano).
 class UnknownPreferenceScreen extends StatelessWidget {
   const UnknownPreferenceScreen({super.key});
 

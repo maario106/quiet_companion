@@ -3,13 +3,8 @@ import 'package:quiet_companion/core/constants/firestore_paths.dart';
 import 'package:quiet_companion/core/models/conversation_record.dart';
 import 'package:quiet_companion/core/models/elder_memory.dart';
 
-/// Lectura de las conversaciones analizadas de un mayor. Solo lectura: las
-/// escribe `closeConversation` (ADR-0029).
-///
-/// En `core/` porque la leen dos *features* que no pueden acoplarse: el panel
-/// del familiar y "Mi semana" del mayor (ADR-0033). Qué puede leer cada uno lo
-/// deciden las reglas (ADR-0031); quien llama no debe pedir lo que su nivel no
-/// le permite, o el stream acabará en error de permisos.
+/// Lectura de las conversaciones analizadas de un mayor. Pedir solo lo que
+/// permita su companionSharing, o el stream falla por permisos.
 class ConversationRepository {
   const ConversationRepository(this._firestore);
 

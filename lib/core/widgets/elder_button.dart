@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
-/// Botón de la interfaz del mayor: ancho completo, al menos 88 px de alto,
-/// texto escalado por su preferencia de tamaño. Mismo aspecto que los de la
-/// pantalla de emergencia y los de las escalas de Ajustes.
-///
-/// [secondary] lo pinta con borde en vez de relleno, para la opción que no es
-/// la principal ("Ahora no"): las dos se ven igual de grandes y de tocables,
-/// pero no igual de destacadas.
+/// Botón del mayor: ancho completo, al menos 88 px de alto y texto escalado.
+/// [secondary] lo pinta con borde para la opción no principal.
 class ElderButton extends StatelessWidget {
   const ElderButton({
     super.key,

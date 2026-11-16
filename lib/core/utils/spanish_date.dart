@@ -1,5 +1,4 @@
-/// Fechas en castellano sin depender de `intl`: la app solo necesita un par
-/// de formatos y todos sus textos son es-ES.
+/// Fechas en castellano sin depender de intl.
 library;
 
 const List<String> _months = [

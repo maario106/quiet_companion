@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // ── ELDER PALETTE ─────────────────────────────────────────────
+  // Paleta del mayor
   static const Color elderPrimary       = Color(0xFFA0522D);
   static const Color elderBackground    = Color(0xFFFFF8F0);
   static const Color elderSurface       = Color(0xFFFFFFFF);
@@ -9,33 +9,25 @@ class AppTheme {
   static const Color elderTextPrimary   = Color(0xFF1A1A2E);
   static const Color elderTextSecondary = Color(0xFF4A4A6A);
 
-  // Legacy aliases — keep so existing references compile unchanged
+  // Alias de compatibilidad
   static const Color primaryColor    = elderPrimary;
   static const Color backgroundColor = elderBackground;
   static const Color emergencyColor  = elderEmergency;
   static const Color textPrimary     = elderTextPrimary;
   static const Color textSecondary   = elderTextSecondary;
 
-  // ── EMERGENCY SCREEN TOKENS ───────────────────────────────────
-  // Contraste comprobado sobre elderBackground (#FFF8F0), criterio AAA ≥ 7:1:
-  // emergency112 7.6:1 · emergencyContactCall 7.5:1. Blanco sobre ambos ≥ 7:1.
-  // Visualmente distintos entre sí: 112 rojo profundo, contacto verde
-  // (convención universal de "llamar"), ambos coherentes con elderPrimary.
+  // Pantalla de emergencia: contraste AAA (≥ 7:1) sobre elderBackground.
   static const Color emergency112        = Color(0xFFA4031F);
   static const Color emergencyContactCall = Color(0xFF1B5E20);
 
-  // ── MIC STATE TOKENS ──────────────────────────────────────────
-  // Anillo e icono del micrófono, nunca texto: WCAG 1.4.11 pide ≥ 3:1.
-  // Sobre elderBackground y sobre el relleno del 8 % del propio color:
-  // elderThinking 3.76:1 / 3.44:1 · elderTalking 4.10:1 / 3.72:1.
+  // Micrófono: contraste ≥ 3:1 (WCAG 1.4.11) sobre el fondo.
   static const Color elderThinking = Color(0xFFC1691B);
   static const Color elderTalking  = Color(0xFF2D8A4E);
 
-  /// Altura mínima de los botones de llamada (doble del mínimo WCAG) y de
-  /// las filas de la lista de ajustes del mayor.
+  /// Altura mínima de los botones de llamada y de las filas de ajustes del mayor.
   static const double emergencyButtonMinHeight = 88.0;
 
-  // ── COMPANION PALETTE ─────────────────────────────────────────
+  // Paleta del familiar
   static const Color companionPrimary       = Color(0xFF8B5A2B);
   static const Color companionBackground    = Color(0xFFF5F7FA);
   static const Color companionSurface       = Color(0xFFFFFFFF);
@@ -43,18 +35,18 @@ class AppTheme {
   static const Color companionTextPrimary   = Color(0xFF1C1B1F);
   static const Color companionTextSecondary = Color(0xFF49454F);
 
-  // ── ELDER FONT SIZES (WCAG — do not go below these) ──────────
+  // Tamaños de letra del mayor (mínimos WCAG)
   static const double fontHuge   = 40.0;
   static const double fontLarge  = 32.0;
   static const double fontMedium = 24.0;
   static const double fontButton = 20.0;
 
-  // ── COMPANION FONT SIZES ──────────────────────────────────────
+  // Tamaños de letra del familiar
   static const double companionFontTitle = 22.0;
   static const double companionFontBody  = 16.0;
   static const double companionFontLabel = 14.0;
 
-  // ── RESPONSIVE HELPERS ────────────────────────────────────────
+  // Adaptación al ancho de pantalla
   static bool isTablet(BuildContext context) =>
       MediaQuery.of(context).size.shortestSide >= 600;
 
@@ -65,10 +57,7 @@ class AppTheme {
   static double contentMaxWidth(BuildContext context) =>
       isTablet(context) ? 560.0 : double.infinity;
 
-  /// El micrófono mengua al crecer la letra: quien la amplía necesita sitio
-  /// para leer la respuesta más que un botón aún mayor. Mide lo mismo hasta
-  /// "Normal" (1,2) y baja al 70 % con "La más grande" (2,0): 140 px en
-  /// teléfono, casi el doble del mínimo de 80 y aún el control más grande.
+  /// El micrófono mengua al crecer la letra, hasta el 70 % con la más grande.
   static double micButtonSize(BuildContext context, double textScale) {
     final base = isTablet(context) ? 260.0 : 200.0;
     final shrink = ((textScale - 1.2) / 0.8).clamp(0.0, 1.0);
@@ -78,7 +67,7 @@ class AppTheme {
   static double micIconSize(BuildContext context, double textScale) =>
       micButtonSize(context, textScale) / 2;
 
-  // ── ELDER THEME ───────────────────────────────────────────────
+  // Tema del mayor
   static ThemeData get elderTheme {
     return ThemeData(
       useMaterial3: false,
@@ -124,7 +113,7 @@ class AppTheme {
     );
   }
 
-  // ── COMPANION THEME (Material 3) ──────────────────────────────
+  // Tema del familiar (Material 3)
   static ThemeData get companionTheme {
     const shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -208,6 +197,6 @@ class AppTheme {
     );
   }
 
-  /// Used by main.dart — maps to elderTheme for backward compatibility.
+  /// Alias de [elderTheme].
   static ThemeData get lightTheme => elderTheme;
 }

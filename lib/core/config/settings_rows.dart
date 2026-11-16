@@ -4,8 +4,7 @@ import 'package:quiet_companion/core/models/companion_sharing.dart';
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
-/// Una entrada de una pantalla de ajustes: una fila que abre su ajuste, o un
-/// grupo que abre otra lista de filas. La pantalla pinta las dos igual.
+/// Entrada de ajustes: una fila o un grupo de filas.
 sealed class SettingsEntry {
   const SettingsEntry();
 
@@ -20,8 +19,7 @@ sealed class SettingsEntry {
   String get route;
 }
 
-/// Fila de ajustes del mayor, modelada de forma declarativa: cada fila lleva
-/// su propio predicado de visibilidad sobre el [UserModel].
+/// Fila de ajustes del mayor con su propio predicado de visibilidad.
 class SettingsRow extends SettingsEntry {
   const SettingsRow({
     required this.title,
@@ -36,12 +34,10 @@ class SettingsRow extends SettingsEntry {
   /// Valor actual mostrado bajo el título (p. ej. el nombre del contacto).
   final String Function(UserModel user) value;
 
-  /// Predicado de visibilidad por fila, NO por pantalla: la pantalla se
-  /// muestra si al menos una fila es visible.
+  /// La pantalla se muestra si al menos una fila es visible.
   final bool Function(UserModel user) visible;
 
-  /// Subpantalla a la que navega la fila. Todo ajuste se edita en su propia
-  /// subpantalla; nada de edición inline.
+  /// Subpantalla donde se edita el ajuste.
   @override
   final String route;
 
@@ -52,10 +48,7 @@ class SettingsRow extends SettingsEntry {
   bool isVisibleFor(UserModel user) => visible(user);
 }
 
-/// Varias filas detrás de una sola entrada del menú de Ajustes. Existe para
-/// que el menú quepa en una pantalla sin desplazarse: con la voz eran hasta
-/// diez filas seguidas. Se agrupa por lo que el mayor quiere cambiar ("cómo
-/// hablamos", "lo que se guarda"), no por dónde se guarda cada valor.
+/// Varias filas detrás de una entrada del menú, para que quepa sin desplazarse.
 class SettingsGroup extends SettingsEntry {
   const SettingsGroup({
     required this.slug,
@@ -70,9 +63,7 @@ class SettingsGroup extends SettingsEntry {
   @override
   final String title;
 
-  /// Qué hay dentro. Va bajo el título porque un grupo no tiene un valor
-  /// propio que enseñar. Depende del usuario porque no todas las filas se
-  /// ven siempre, y no debe anunciar una que no está.
+  /// Resumen de lo que hay dentro, solo con las filas visibles.
   final String Function(UserModel user) description;
 
   final List<SettingsRow> rows;
@@ -83,8 +74,7 @@ class SettingsGroup extends SettingsEntry {
   @override
   String subtitleFor(UserModel user) => description(user);
 
-  /// Visible si lo es alguna de sus filas: un grupo sin filas llevaría a una
-  /// pantalla vacía.
+  /// Visible si lo es alguna de sus filas.
   @override
   bool isVisibleFor(UserModel user) => rows.any((row) => row.visible(user));
 
@@ -92,17 +82,8 @@ class SettingsGroup extends SettingsEntry {
       rows.where((row) => row.visible(user)).toList();
 }
 
-// Accesibilidad local del mayor (ADR-0013, CU-05/RF-5): las tres magnitudes
-// que el familiar mueve con deslizadores, aquí como escalas de peldaños con
-// nombre, más la pausa de escucha (ADR-0036).
-//
-// Visibles para TODO mayor, vinculado o independiente. La alternativa
-// (limitarlas al independiente, que es la letra de CU-05) dejaba sin ninguna
-// fila —y por tanto sin botón de ajustes en HomeScreen— al mayor
-// vinculado cuyo contacto de emergencia fija el familiar. Que dos personas
-// puedan tocar el mismo valor no necesita arbitraje: a diferencia del
-// contacto de emergencia, aquí no hay autoridad que proteger, y gana la última
-// escritura.
+// Escalas de accesibilidad, visibles para todo mayor. Si el familiar toca el
+// mismo valor, gana la última escritura.
 SettingsRow _scaleRow(PreferenceScale scale) => SettingsRow(
       title: scale.title,
       value: (user) => scale.labelFor(user.preferences),
@@ -110,17 +91,9 @@ SettingsRow _scaleRow(PreferenceScale scale) => SettingsRow(
       route: scale.route,
     );
 
-/// Menú de Ajustes, en orden: lo personal (a quién se llama en una emergencia
-/// y cómo se entra), lo que se ve, lo que se oye y lo que se guarda. Única
-/// fuente de verdad de las filas.
-/// Vive en core/ porque la consumen dos features que no pueden acoplarse
-/// entre sí: conversation (visibilidad del botón de ajustes de HomeScreen) y
-/// settings (render de las listas). Si botón y pantalla calcularan su
-/// visibilidad por separado, acabarían divergiendo.
+/// Menú de Ajustes. Vive en core/ porque lo usan conversation y settings.
 final List<SettingsEntry> settingsMenu = [
-  // Va primero porque el contacto de emergencia es lo que urge. Siempre está,
-  // aunque el familiar haya fijado el contacto y solo quede la cuenta: el
-  // menú no cambia de forma según el estado del mayor.
+  // Primero, porque el contacto de emergencia es lo que urge.
   SettingsGroup(
     slug: 'personal',
     title: 'Mis datos',
@@ -132,9 +105,7 @@ final List<SettingsEntry> settingsMenu = [
             : 'Tu contacto de emergencia y tu cuenta',
     rows: [
       _emergencyContactRow,
-      // Guardar con Google la cuenta anónima, o cerrar la sesión. Si la
-      // cuenta es anónima o de Google lo dice la sesión de Firebase, no el
-      // documento, así que la fila no lo enseña: lo resuelve su pantalla.
+      // Guardar con Google la cuenta anónima o cerrar sesión; lo resuelve su pantalla.
       SettingsRow(
         title: 'Mi cuenta',
         value: (user) => 'Cómo entras en la aplicación',
@@ -166,18 +137,14 @@ final List<SettingsEntry> settingsMenu = [
     title: 'Mis conversaciones',
     description: (user) => 'Qué se guarda de lo que hablamos',
     rows: [
-      // El consentimiento sobre las conversaciones (ADR-0030). Visible para
-      // todo mayor, vinculado o no: es suyo, y retirarlo tiene que ser tan
-      // fácil como darlo. También sirve a quien dijo "Ahora no" y cambia de
-      // idea.
+      // Visible para todo mayor: retirar el consentimiento es tan fácil como darlo.
       SettingsRow(
         title: 'Guardar mis conversaciones',
         value: (user) => user.hasConversationConsent ? 'Sí' : 'No',
         visible: (user) => true,
         route: '/settings/conversations',
       ),
-      // Lo decide solo el mayor, y solo tiene sentido si hay familiar y algo
-      // que ver (ADR-0031).
+      // Solo si hay familiar; lo decide el mayor.
       SettingsRow(
         title: 'Qué ve mi familiar',
         value: (user) =>
@@ -186,9 +153,7 @@ final List<SettingsEntry> settingsMenu = [
             user.linkedCompanionId != null && user.hasConversationConsent,
         route: '/settings/companion-sharing',
       ),
-      // Los plazos los fija el propio mayor solo en modo independiente; en
-      // modo vinculado los gestiona su familiar desde el panel (ADR-0034,
-      // ADR-0007).
+      // Solo en modo independiente; en vinculado los fija el familiar.
       SettingsRow(
         title: 'Cuándo termina una conversación',
         value: (user) =>
@@ -210,9 +175,7 @@ final List<SettingsEntry> settingsMenu = [
 final SettingsRow _emergencyContactRow = SettingsRow(
   title: 'Contacto de emergencia',
   value: (user) => user.emergencyContact?.name ?? 'Sin configurar',
-  // Oculta exactamente cuando el contacto no es editable: viene impuesto
-  // por la vinculación. Deriva del mismo `source` que gobierna la
-  // precedencia de escritura, sin criterios paralelos (role, companionId).
+  // Oculta cuando el contacto viene impuesto por la vinculación.
   visible: (user) =>
       user.emergencyContact?.source != EmergencyContactSource.companion,
   route: '/settings/emergency-contact',
@@ -225,8 +188,7 @@ bool _independentWithConsent(UserModel user) =>
 List<SettingsEntry> visibleSettingsEntries(UserModel user) =>
     settingsMenu.where((entry) => entry.isVisibleFor(user)).toList();
 
-/// Todas las filas visibles para [user], estén en el menú o dentro de un
-/// grupo. HomeScreen enseña el botón de ajustes si hay al menos una.
+/// Filas visibles para [user], también las de dentro de grupos.
 List<SettingsRow> visibleSettingsRows(UserModel user) => [
       for (final entry in settingsMenu)
         ...switch (entry) {
@@ -235,9 +197,7 @@ List<SettingsRow> visibleSettingsRows(UserModel user) => [
         },
     ].where((row) => row.visible(user)).toList();
 
-/// Resuelve el segmento `:id` de la ruta de un grupo. `null` en un slug
-/// desconocido, como [preferenceScaleBySlug]: la ruta es tecleable desde un
-/// enlace profundo.
+/// Grupo del segmento `:id` de la ruta; null si el slug no existe.
 SettingsGroup? settingsGroupBySlug(String? slug) {
   for (final entry in settingsMenu) {
     if (entry is SettingsGroup && entry.slug == slug) return entry;

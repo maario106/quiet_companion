@@ -1,9 +1,7 @@
 import 'package:quiet_companion/core/models/emergency_contact.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
-/// Versión del texto que lee el mayor. Se guarda con su respuesta
-/// (`textVersion`): si el texto cambia de forma que afecte a lo que se
-/// consiente, se sube este número.
+/// Versión del texto del consentimiento; sube si cambia lo que se consiente.
 const int kConsentTextVersion = 1;
 
 class ConsentSection {
@@ -13,12 +11,8 @@ class ConsentSection {
   final String body;
 }
 
-/// Lo que se le dice al mayor antes de que decida (ADR-0030).
-///
-/// Un solo consentimiento para dos cosas, explicadas **por separado**: el
-/// análisis (resumen y cómo se ha sentido) y la memoria (lo que el asistente
-/// recuerda de él). Lo que ve el familiar se dice aquí y se ajusta después en
-/// Ajustes (ADR-0031).
+/// Lo que se le dice al mayor antes de que decida: el análisis y la memoria,
+/// por separado.
 class ConsentText {
   const ConsentText({
     required this.isLinked,
@@ -32,8 +26,7 @@ class ConsentText {
     final settings = user.effectiveConversationSettings;
     return ConsentText(
       isLinked: user.linkedCompanionId != null,
-      // El documento del mayor no guarda el nombre de su familiar, pero la
-      // vinculación sí se lo copia como contacto de emergencia.
+      // El nombre del familiar sale del contacto de emergencia que copió la vinculación.
       companionName: contact?.source == EmergencyContactSource.companion
           ? contact!.name
           : null,

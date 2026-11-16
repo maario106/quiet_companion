@@ -7,24 +7,12 @@ import 'package:quiet_companion/core/services/tts_synthesizer.dart';
 import 'package:quiet_companion/core/utils/sentence_splitter.dart';
 
 /// Velocidad de reproductor equivalente a la preferencia [speechRate].
-///
-/// Función pura y pública: es la traducción entre la escala del deslizador
-/// del familiar (la de `flutter_tts`) y la del reproductor, y el único punto
-/// donde esa equivalencia se decide (ADR-0019).
 double playerSpeedFor(double speechRate) =>
     (speechRate * kTtsRateToPlayerSpeed)
         .clamp(kTtsMinPlayerSpeed, kTtsMaxPlayerSpeed);
 
-/// Voz de nube (Chirp 3: HD) con respaldo automático al motor del
-/// dispositivo. Implementación de producción de [TtsService].
-///
-/// La locución se trocea en frases y se reproduce en orden mientras se
-/// sintetiza la siguiente: el mayor empieza a oír la respuesta tras un solo
-/// viaje de red, no tras el de la respuesta entera.
-///
-/// Nunca reintenta (ADR-0017). Un fallo o un timeout se resuelve hablando con
-/// la voz del dispositivo, que es peor pero inmediata; un silencio de varios
-/// segundos sería ininterpretable para esta población.
+/// Voz de nube (Chirp 3: HD) troceada por frases, con respaldo a la voz del
+/// dispositivo ante cualquier fallo o timeout, sin reintentos.
 class CloudTtsService implements TtsService {
   CloudTtsService({
     required TtsSynthesizer synthesizer,
@@ -40,13 +28,10 @@ class CloudTtsService implements TtsService {
   final TtsAudioPlayer _player;
   final TtsService _fallback;
 
-  /// Inyectable solo para que los tests no esperen segundos reales; en la app
-  /// siempre vale [kTtsChunkTimeout].
+  /// Inyectable para los tests.
   final Duration _chunkTimeout;
 
-  /// Identifica la locución en curso. Las callables no se pueden abortar, así
-  /// que la cancelación consiste en invalidar la generación: cualquier audio
-  /// que llegue con una generación vieja se tira.
+  /// Generación de la locución en curso; el audio de una generación vieja se tira.
   int _generation = 0;
   bool _speaking = false;
 
@@ -61,8 +46,7 @@ class CloudTtsService implements TtsService {
     // Hablar mientras se habla interrumpe: nunca dos voces a la vez.
     await stop();
     final generation = _generation;
-    // Se fija al empezar: si el mayor cambia de voz a mitad de una respuesta,
-    // la respuesta no cambia de voz entre dos frases.
+    // Fijada al empezar, para no cambiar de voz a mitad de respuesta.
     final voice = _voice;
 
     final spoken = sanitizeForSpeech(text);
@@ -71,9 +55,7 @@ class CloudTtsService implements TtsService {
 
     _speaking = true;
     try {
-      // Prefetch de exactamente uno: se sintetiza el siguiente fragmento
-      // mientras suena el actual. Lanzarlos todos a la vez multiplicaría el
-      // coste y el ancho de banda por una respuesta que puede cortarse.
+      // Se sintetiza el siguiente fragmento mientras suena el actual.
       var pending = _synthesize(chunks.first, voice, generation);
 
       for (var i = 0; i < chunks.length; i++) {
@@ -89,9 +71,8 @@ class CloudTtsService implements TtsService {
           if (generation != _generation) return; // Interrumpida al reproducir.
         }
 
-        // Este fragmento no se ha oído: o no se sintetizó, o no sonó. Primer
-        // fragmento: se repite la locución entera con la voz del dispositivo.
-        // Fragmento posterior: solo lo que falta, sin repetir lo ya escuchado.
+        // Fragmento no oído: si es el primero, se repite todo con la voz del
+        // dispositivo; si no, solo lo que falta.
         if (kDebugMode) {
           debugPrint('[TTS] Respaldo al dispositivo en el fragmento $i.');
         }
@@ -115,10 +96,7 @@ class CloudTtsService implements TtsService {
 
   @override
   Future<void> applyPreferences(UserPreferences prefs) async {
-    // La voz se sintetiza siempre a ritmo neutro; la preferencia del mayor se
-    // aplica en la reproducción. Así el cliente no envía parámetros de
-    // síntesis al servidor y el deslizador del familiar sigue significando lo
-    // mismo en ambas voces. De la voz solo viaja la clave.
+    // Se sintetiza a ritmo neutro; la velocidad se aplica al reproducir.
     _voice = prefs.voice;
     await _player.setSpeed(playerSpeedFor(prefs.speechRate));
     await _player.setVolume(prefs.volume);
@@ -133,10 +111,7 @@ class CloudTtsService implements TtsService {
     await _fallback.dispose();
   }
 
-  /// Reproduce un fragmento. Devuelve false si el reproductor falla — una
-  /// interrupción a mitad de `setAudioSource` o un MP3 que no decodifica no
-  /// pueden salir como excepción hacia el flujo de conversación, que las
-  /// mostraría al mayor como un error de conexión.
+  /// Reproduce un fragmento; false si el reproductor falla, sin lanzar.
   Future<bool> _play(Uint8List audio) async {
     try {
       await _player.play(audio);
@@ -147,8 +122,7 @@ class CloudTtsService implements TtsService {
     }
   }
 
-  /// Sintetiza un fragmento. Devuelve null si falla, vence el plazo o la
-  /// locución ya ha sido cancelada: el llamante trata los tres casos igual.
+  /// Sintetiza un fragmento; null si falla, vence el plazo o se canceló.
   Future<Uint8List?> _synthesize(
       String chunk, String voice, int generation) async {
     try {

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
-/// Una opción de una lista corta de opciones grandes, de las que el mayor
-/// elige una ("Qué ve mi familiar", "Voz"). La elegida se marca con borde,
-/// icono y texto, no solo con color.
+/// Opción grande de una lista corta. La elegida se marca con borde, icono y
+/// texto, no solo con color.
 class ChoiceOptionTile extends StatelessWidget {
   const ChoiceOptionTile({
     super.key,
@@ -14,8 +13,7 @@ class ChoiceOptionTile extends StatelessWidget {
     required this.onTap,
   });
 
-  /// Texto completo de la opción. Si va elegida, quien la usa le añade
-  /// "(elegido)" o "(elegida)": la concordancia depende de lo que se elige.
+  /// Texto de la opción; quien la usa añade "(elegido)" o "(elegida)".
   final String label;
   final String? description;
   final bool selected;

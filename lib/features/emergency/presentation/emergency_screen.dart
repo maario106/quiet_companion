@@ -7,11 +7,7 @@ import 'package:quiet_companion/core/services/emergency_call_service.dart';
 import 'package:quiet_companion/core/services/speech_service.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 
-/// Pantalla de llamada de emergencia del mayor. Se presenta como fullscreen
-/// dialog desde el botón rojo de HomeScreen. Siempre ofrece el 112; el botón
-/// de contacto solo aparece si hay contacto configurado. El render es
-/// idéntico venga el contacto de la vinculación o de configuración manual:
-/// `source` solo afecta a la escritura, nunca a esta pantalla.
+/// Pantalla de llamada de emergencia. Siempre ofrece el 112; el contacto, si lo hay.
 class EmergencyScreen extends ConsumerStatefulWidget {
   const EmergencyScreen({super.key});
 
@@ -21,9 +17,7 @@ class EmergencyScreen extends ConsumerStatefulWidget {
 
 class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
     with WidgetsBindingObserver {
-  // Estado de vista puro (no de negocio): si el último intento de marcar
-  // falló, se muestra un aviso persistente — nunca un SnackBar, que
-  // desaparece solo y es inútil para esta población.
+  // Aviso persistente si falló el último intento de marcar (nunca un SnackBar).
   bool _dialFailed = false;
 
   static const String _dialErrorText = 'Este dispositivo no puede hacer llamadas';
@@ -33,11 +27,7 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Obligatorio al abrir: el marcador nativo compite por el AudioSession
-      // y el TTS seguiría hablando encima. La conversación deja de tener
-      // sentido en cuanto se abre esta UI, así que se para aquí, no al marcar.
-      // Cancelar y no cerrar el turno: cerrarlo enviaría lo dicho al
-      // asistente, y su respuesta sonaría encima de esta pantalla.
+      // Se cancela la escucha sin enviar lo dicho: su respuesta sonaría encima.
       ref.read(speechServiceProvider).cancelListening();
       _announce();
     });
@@ -45,7 +35,7 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
 
   Future<void> _announce() async {
     final tts = ref.read(ttsServiceProvider);
-    // Primero parar la locución en curso, luego hablar — nunca simultáneo.
+    // Primero parar la locución en curso, luego hablar.
     await tts.stop();
     await tts.speak('Elige a quién llamar');
   }
@@ -64,8 +54,7 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
   }
 
   Future<void> _dial(String phoneE164) async {
-    // Señal para el futuro disparador de fin de sesión (pending.md §4):
-    // salir al marcador es una salida deliberada, no un abandono.
+    // Salir al marcador es una salida deliberada, no un abandono.
     ref.read(intentionalBackgroundExitProvider.notifier).state = true;
     final launched =
         await ref.read(emergencyCallServiceProvider).dial(phoneE164);
@@ -89,8 +78,7 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
     final contact = user?.emergencyContact;
     final textScale = user?.preferences.textSizeMultiplier ?? 1.0;
 
-    // El botón atrás del sistema se comporta exactamente igual que
-    // "Cancelar", de forma explícita (no comportamiento por defecto).
+    // Atrás hace lo mismo que "Cancelar".
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -140,9 +128,7 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
                         textScale: textScale,
                         onPressed: () => _dial(contact.phone),
                       ),
-                      // Separación grande: son acciones no equivalentes y no
-                      // revocables; un fallo de puntería no puede convertir
-                      // una en la otra.
+                      // Separación grande entre las dos llamadas.
                       const SizedBox(height: 40),
                     ],
                     _CallButton(
@@ -154,9 +140,7 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen>
                       onPressed: () => _dial(kEmergencyNumber),
                     ),
                     const Spacer(),
-                    // Zona visualmente distinta: inferior, menor tamaño y
-                    // peso, sin relleno de color, nunca adyacente a los
-                    // botones de llamada.
+                    // Zona inferior, menos destacada y lejos de los botones de llamada.
                     Semantics(
                       button: true,
                       label: 'Cancelar',
@@ -195,8 +179,7 @@ class _CallButton extends StatelessWidget {
 
   final String label;
 
-  /// Etiqueta para TalkBack cuando el texto visible no se debe leer tal cual
-  /// (p. ej. que "112" no se lea "ciento doce").
+  /// Etiqueta para TalkBack (que "112" no se lea "ciento doce").
   final String? semanticsLabel;
   final Color color;
   final IconData icon;
@@ -221,8 +204,6 @@ class _CallButton extends StatelessWidget {
             ),
           ),
           onPressed: onPressed,
-          // El color del icono/texto viene del foregroundColor blanco del
-          // ElevatedButtonTheme de elderTheme.
           icon: Icon(icon, size: 40 * textScale),
           label: ExcludeSemantics(
             child: Text(

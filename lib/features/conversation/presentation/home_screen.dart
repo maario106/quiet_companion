@@ -34,9 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _closeKeyboard() => _inputFocus.unfocus();
 
-  /// Envía lo escrito (ADR-0035). El campo se vacía al enviar y el teclado del
-  /// sistema se cierra para que la respuesta se lea a pantalla completa. Si el
-  /// turno falla, el texto vuelve al campo: no hay que escribirlo otra vez.
+  /// Envía lo escrito y cierra el teclado; si falla, el texto vuelve al campo.
   Future<void> _sendTyped() async {
     final text = _textController.text.trim();
     if (text.isEmpty || !ref.read(chatControllerProvider).acceptsTypedTurn) {
@@ -81,15 +79,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final currentUser = ref.watch(currentUserProvider).valueOrNull;
     final elderName = currentUser?.name;
-    // Misma función pura que decide qué renderiza SettingsScreen: el botón
-    // solo se muestra si hay al menos una fila de ajustes visible. Un botón
-    // que abre una pantalla vacía es tan malo como uno que no responde.
+    // El botón solo aparece si hay alguna fila de ajustes visible.
     final showSettings =
         currentUser != null && visibleSettingsRows(currentUser).isNotEmpty;
     final textScale = currentUser?.preferences.textSizeMultiplier ?? 1.0;
-    // "Mi semana" solo aparece cuando hay algo que enseñar: consentimiento y
-    // al menos una conversación analizada (ADR-0033). Sin consentimiento ni
-    // siquiera se abre la consulta.
+    // Solo con consentimiento y al menos una conversación analizada.
     final showMyWeek = currentUser != null &&
         currentUser.hasConversationConsent &&
         (ref
@@ -99,8 +93,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             false);
 
     final typing = chatState.inputMode == InputMode.keyboard;
-    // Con el teclado del sistema abierto el mayor está escribiendo: se aparta
-    // lo que no sirve para eso y la respuesta conserva el sitio.
+    // Con el teclado del sistema abierto se aparta lo que no sirve para escribir.
     final composing = typing && MediaQuery.viewInsetsOf(context).bottom > 0;
 
     final padding = AppTheme.screenPadding(context);
@@ -158,9 +151,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Arriba, el saludo en reposo y el estado durante un turno.
-                  // Los dos a la vez le quitarían a la respuesta el sitio que
-                  // más le falta con la letra grande.
+                  // Arriba, el saludo en reposo o el estado durante un turno, nunca los dos.
                   if (statusLabel == null)
                     ElderScreenTitle(
                       elderName != null ? 'Hola, $elderName' : 'Hola',
@@ -206,13 +197,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  // Mic button, or the text field in keyboard mode
+                  // Micrófono, o el campo de texto en modo teclado
                   if (typing)
                     _TypedInput(
-                      // Con clave porque al abrirse y cerrarse el teclado se
-                      // quitan y se ponen botones a su alrededor: sin ella,
-                      // Flutter rehace el campo cada vez, que pierde el foco
-                      // y la conexión con el teclado del sistema.
+                      // Con clave, para no perder el foco al cambiar los botones de alrededor.
                       key: const ValueKey('typed-input'),
                       controller: _textController,
                       focusNode: _inputFocus,
@@ -274,20 +262,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 20),
                   ],
 
-                  // Bottom action row: emergency | keyboard or voice | settings
+                  // Fila inferior: emergencia | teclado o voz | ajustes
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _ActionButton(
                         icon: Icons.phone_in_talk,
                         color: AppTheme.elderEmergency,
-                        // Siempre visible: el 112 está disponible aunque no
-                        // haya contacto configurado, así que la pantalla de
-                        // emergencia nunca está vacía.
+                        // Siempre visible: el 112 está aunque no haya contacto.
                         onPressed: () => context.push('/emergency'),
                       ),
-                      // Flexible: con la letra más grande la etiqueta no cabe
-                      // entre los otros dos botones en un teléfono estrecho.
+                      // Flexible: con la letra más grande la etiqueta no cabe en un teléfono estrecho.
                       Flexible(
                         child: _InputModeButton(
                           typing: typing,
@@ -299,9 +284,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   : InputMode.keyboard),
                         ),
                       ),
-                      // Mientras se escribe, Ajustes no hace falta y su sitio,
-                      // justo encima del teclado, es para cerrarlo. Mismo
-                      // tamaño: la fila no se ensancha con la letra grande.
+                      // Mientras se escribe, en el sitio de Ajustes va el botón de cerrar el teclado.
                       if (composing)
                         _ActionButton(
                           icon: Icons.keyboard_hide_outlined,
@@ -381,9 +364,7 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-/// Cambia entre hablar y escribir (ADR-0035). Enseña el modo al que lleva, no
-/// el que está activo: "¿Teclado?" mientras se habla, "¿Hablar?" mientras se
-/// escribe.
+/// Cambia entre hablar y escribir; enseña el modo al que lleva.
 class _InputModeButton extends StatelessWidget {
   const _InputModeButton({
     required this.typing,
@@ -440,8 +421,7 @@ class _InputModeButton extends StatelessWidget {
   }
 }
 
-/// "Escuchar" del modo teclado: la respuesta a un turno escrito no se lee
-/// sola, se lee si el mayor lo pide. Mientras suena, el mismo botón la para.
+/// "Escuchar" del modo teclado; mientras suena, el mismo botón la para.
 class _ReadAloudButton extends StatelessWidget {
   const _ReadAloudButton({
     required this.status,
@@ -472,8 +452,7 @@ class _ReadAloudButton extends StatelessWidget {
   }
 }
 
-/// Campo de texto y botón de enviar del modo teclado (ADR-0035), con la letra
-/// y los mínimos de toque del resto de la interfaz del mayor.
+/// Campo de texto y botón de enviar del modo teclado.
 class _TypedInput extends StatelessWidget {
   const _TypedInput({
     super.key,
@@ -502,11 +481,9 @@ class _TypedInput extends StatelessWidget {
           child: TextField(
             controller: controller,
             focusNode: focusNode,
-            // Quien pulsa "¿Teclado?" quiere escribir ya: el teclado del
-            // sistema se abre sin un toque más.
+            // El teclado del sistema se abre sin un toque más.
             autofocus: true,
-            // Tocar fuera del campo cierra el teclado, también al arrastrar
-            // para leer la respuesta. En el móvil Flutter no lo hace solo.
+            // Tocar fuera cierra el teclado; en el móvil Flutter no lo hace solo.
             onTapOutside: (_) => focusNode.unfocus(),
             minLines: 1,
             maxLines: 3,
@@ -535,9 +512,7 @@ class _TypedInput extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // Sin texto no hay nada que enviar: el botón se apaga en vez de no
-        // responder. Cuenta como parte del campo: tocarlo no es tocar fuera,
-        // y el teclado no se cierra si no se envía nada.
+        // Sin texto el botón se apaga; tocarlo no cuenta como tocar fuera.
         TextFieldTapRegion(
           child: ValueListenableBuilder<TextEditingValue>(
             valueListenable: controller,

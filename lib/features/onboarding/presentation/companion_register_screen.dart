@@ -129,8 +129,7 @@ class _CompanionRegisterScreenState
                       },
                     ),
                     const SizedBox(height: 16),
-                    // Al vincular, este teléfono se convierte en el contacto
-                    // de emergencia del mayor (desnormalizado en su doc).
+                    // Al vincular, este teléfono pasa a ser el contacto de emergencia del mayor.
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,

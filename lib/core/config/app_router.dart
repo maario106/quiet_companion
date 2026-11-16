@@ -74,12 +74,9 @@ class RouterNotifier extends ChangeNotifier {
   UserModel? _elderUser;
   bool _consentDeferred = false;
 
-  /// La lógica vive en [routeRedirect], una función pura con sus tests; aquí
-  /// solo se reúnen sus entradas.
+  /// Reúne las entradas de [routeRedirect].
   String? redirect(BuildContext context, GoRouterState routerState) {
-    // Se prefiere el dato en vivo de Firestore; en el hueco antes de que el
-    // stream emita, el del controlador. La guarda de rol impide usar el
-    // documento de un familiar para decidir rutas de mayor.
+    // Dato en vivo o, mientras no llega, el del controlador; solo si es de un mayor.
     final elderSource =
         (_elderUser?.role == UserRole.elder) ? _elderUser : _elderState.user;
 
@@ -119,9 +116,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/home',
         builder: (context, state) => const HomeScreen(),
       ),
-      // La pregunta del consentimiento (ADR-0030). Solo se llega por el
-      // enrutador, una vez; su detalle cuelga de ella para que el paso del
-      // alta lo deje pasar (`startsWith('/consent')`).
+      // El detalle cuelga de /consent para que el redirect lo deje pasar.
       GoRoute(
         path: '/consent',
         builder: (context, state) => const ConsentScreen(),
@@ -139,8 +134,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/emergency',
-        // Fullscreen dialog: ruta completa, sin barrera de diálogo que sea
-        // superficie de error en mitad de una emergencia.
+        // Página completa, sin barrera de diálogo.
         pageBuilder: (context, state) => const MaterialPage(
           fullscreenDialog: true,
           child: EmergencyScreen(),
@@ -150,8 +144,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
         routes: [
-          // Los grupos del menú ("Cómo hablamos") son la misma pantalla con
-          // otras filas; un slug desconocido enseña el error, no un crash.
+          // Grupos del menú; un slug desconocido muestra error.
           GoRoute(
             path: 'group/:id',
             builder: (context, state) {
@@ -165,9 +158,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'voice',
             builder: (context, state) => const VoiceChoiceScreen(),
           ),
-          // Anidada bajo /settings aunque el widget viva en features/emergency:
-          // la jerarquía de rutas refleja la navegación del usuario, no el
-          // sistema de ficheros.
           GoRoute(
             path: 'emergency-contact',
             builder: (context, state) => const EmergencyContactSetupScreen(),
@@ -196,8 +186,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'account',
             builder: (context, state) => const AccountScreen(),
           ),
-          // Una sola ruta paramétrica para todas las escalas de accesibilidad:
-          // añadir un ajuste es añadir una PreferenceScale, sin tocar aquí.
+          // Una ruta para todas las escalas de accesibilidad.
           GoRoute(
             path: 'preference/:id',
             builder: (context, state) {
@@ -245,8 +234,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: const DashboardScreen(),
         ),
         routes: [
-          // Subpantallas del familiar: el enrutador le deja pasar por prefijo
-          // (`startsWith('/dashboard')`, ADR-0033).
           GoRoute(
             path: 'conversation/:id',
             builder: (context, state) => Theme(

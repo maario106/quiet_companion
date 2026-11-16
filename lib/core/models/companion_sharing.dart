@@ -1,9 +1,5 @@
-/// Lo que el familiar vinculado puede ver del análisis de las conversaciones
-/// (ADR-0031). Lo elige solo el mayor, y lo hacen cumplir las reglas de
-/// Firestore, no el panel: `wellbeing` abre `conversations`, `full` abre
-/// además `conversationContents` y `memory`.
-///
-/// Ordenado de menos a más: el índice sirve como peldaño en Ajustes.
+/// Qué ve el familiar del análisis. Lo elige el mayor y lo aplican las reglas.
+/// Ordenado de menos a más.
 enum CompanionSharing {
   none(
     label: 'Nada',
@@ -28,9 +24,7 @@ enum CompanionSharing {
   /// Qué significa, en segunda persona y sin tecnicismos.
   final String description;
 
-  /// Nivel que se aplica cuando el mayor vinculado consiente (decisión del
-  /// autor, ADR-0031): el que más aporta a la familia, dicho en la pantalla de
-  /// consentimiento y ajustable después.
+  /// Nivel por defecto cuando consiente un mayor vinculado.
   static const CompanionSharing byDefault = CompanionSharing.full;
 
   static CompanionSharing? fromNameOrNull(Object? raw) =>

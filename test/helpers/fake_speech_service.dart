@@ -20,8 +20,7 @@ class FakeSpeechService implements SpeechService {
     _onFinal = onFinal;
   }
 
-  /// Como el servicio real, no envía en el acto: el turno se cierra cuando el
-  /// test entrega el final con [deliverFinal].
+  /// No envía en el acto: el turno se cierra con [deliverFinal].
   @override
   bool finishListening() {
     finishCalls++;

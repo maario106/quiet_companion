@@ -13,7 +13,7 @@ class SignOutButton extends ConsumerWidget {
         try {
           await ref.read(authRepositoryProvider).signOut();
         } catch (_) {
-          // Router handles the redirect reactively via firebaseAuthUserProvider.
+          // La redirección la hace el router.
         }
       },
     );

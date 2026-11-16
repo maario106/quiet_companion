@@ -1,28 +1,14 @@
 import 'package:quiet_companion/core/models/user_model.dart';
 
-/// Rutas del familiar antes de estar vinculado: se dejan pasar aunque el
-/// dispositivo tenga sesión anónima de mayor.
+/// Rutas del familiar sin vincular; se dejan pasar aunque haya sesión de mayor.
 const Set<String> companionEntryPaths = {
   '/companion/choice',
   '/companion/register',
   '/companion/login',
 };
 
-/// Decisión de redirección de la app, como función pura.
-///
-/// Vive fuera de `RouterNotifier` para que el test pruebe **esta** lógica y no
-/// una copia: antes, `router_redirect_test.dart` reimplementaba las
-/// condiciones a mano, y cualquier cambio del enrutador podía dejar el test en
-/// verde probando una versión antigua.
-///
-/// [elderUser] es el documento del mayor ya resuelto (el dato en vivo o, en el
-/// hueco antes de que llegue, el del controlador). Si no es de rol mayor, se
-/// ignora.
-///
-/// [consentPromptDeferred] es true si en esta sesión no se pudo guardar la
-/// respuesta a la pregunta del consentimiento (sin red o sin la callable
-/// desplegada): se deja pasar al mayor y se le vuelve a preguntar en el
-/// siguiente arranque, en vez de encerrarlo en esa pantalla.
+/// Decisión de redirección, como función pura. [consentPromptDeferred] deja
+/// pasar al mayor si en esta sesión no se pudo guardar su consentimiento.
 String? routeRedirect({
   required bool elderCheckingAuth,
   required bool companionLinked,
@@ -35,8 +21,7 @@ String? routeRedirect({
   // La app está arrancando (login anónimo del mayor): se espera.
   if (elderCheckingAuth) return null;
 
-  // --- FAMILIAR ---
-  // Vinculado: su sitio es el panel y sus subpantallas (ADR-0033).
+  // Familiar vinculado: el panel y sus subpantallas.
   if (companionLinked) {
     return location.startsWith('/dashboard') ? null : '/dashboard';
   }
@@ -45,7 +30,7 @@ String? routeRedirect({
     return location == '/companion/pairing' ? null : '/companion/pairing';
   }
 
-  // --- MAYOR ---
+  // Mayor
   if (companionEntryPaths.contains(location)) return null;
 
   final elder = elderUser?.role == UserRole.elder ? elderUser : null;
@@ -54,8 +39,7 @@ String? routeRedirect({
       (autonomy == AutonomyStatus.dependent && elder?.linkCode == null);
 
   if (elderAuthenticated && isFullyOnboarded) {
-    // Una sola vez, al terminar de elegir modo o de vincularse: la pregunta
-    // del consentimiento (ADR-0030). "Ahora no" también cuenta como respuesta.
+    // Una sola vez: la pregunta del consentimiento ("Ahora no" también cuenta).
     final mustAskConsent =
         elder?.conversationConsent == null && !consentPromptDeferred;
     if (mustAskConsent) {

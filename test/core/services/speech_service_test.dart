@@ -5,12 +5,8 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-/// Reconocedor nativo de mentira. El test decide qué avisa y en qué orden,
-/// que es justo lo que Android no garantiza.
-///
-/// Imita lo que hace el paquete 7.3.0 encima del plugin: `notListening` pasa
-/// en el acto, pero `done` se retiene hasta que se ha entregado el final, salvo
-/// que la sesión no oyera nada (`doneNoResult`).
+/// Reconocedor nativo de mentira: notListening en el acto y done retenido hasta
+/// el final, como el paquete 7.3.0.
 class FakeRecognizer extends Fake implements stt.SpeechToText {
   late stt.SpeechStatusListener _onStatus;
   late stt.SpeechErrorListener _onError;
@@ -24,8 +20,7 @@ class FakeRecognizer extends Fake implements stt.SpeechToText {
   @override
   bool get isListening => _listening;
 
-  // `initialize` y `listen` tienen firmas largas con tipos de paquetes
-  // transitivos; se interceptan aquí para no tener que repetirlas.
+  // Se interceptan initialize y listen para no repetir sus firmas.
   @override
   dynamic noSuchMethod(Invocation invocation) {
     if (invocation.memberName == #initialize) {

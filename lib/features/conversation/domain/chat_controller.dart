@@ -47,13 +47,8 @@ class ChatController extends StateNotifier<ChatState> {
         _startTimer = startTimer ?? Timer.new,
         super(const ChatState());
 
-  // ── Conversación en curso (ADR-0028) ────────────────────────────────────
-  //
-  // Una conversación empieza con el primer turno tras un cierre y termina
-  // tras [ConversationSettings.inactivity] sin turnos o al salir la app a
-  // segundo plano. Sus turnos viven solo aquí, en memoria: viajan con cada
-  // mensaje a `chatTurn`, que no los guarda, y al cerrarse se entregan a
-  // [_closer] y se olvidan.
+  // Conversación en curso: sus turnos solo viven aquí, en memoria, y al cerrarse
+  // se entregan a [_closer] y se olvidan.
 
   final List<ConversationTurn> _turns = [];
   DateTime? _startedAt;
@@ -63,33 +58,24 @@ class ChatController extends StateNotifier<ChatState> {
   bool _consentGranted;
   ConversationSettings _settings;
 
-  /// Silencio tras el que se da por terminado lo que dice el mayor. Lo elige
-  /// él en Ajustes (ADR-0036).
+  /// Silencio tras el que se da por terminado lo que dice el mayor.
   Duration _listenPause;
 
-  /// Número de lo último que ha tomado la pantalla: un turno, una escucha o
-  /// una lectura en voz alta. Una voz cortada termina tarde, cuando ya ha
-  /// empezado otra cosa, y solo devuelve la pantalla a reposo si lo que la
-  /// lanzó sigue siendo lo último (ADR-0035).
+  /// Número de lo último que ha tomado la pantalla; una voz cortada que termina
+  /// tarde solo vuelve a reposo si sigue siendo lo último.
   int _epoch = 0;
 
-  /// Consentimiento vigente, entregado en vivo (ADR-0023). Sin él, una
-  /// conversación se cierra igual pero no se envía nada (ADR-0030). La
-  /// memoria la inyecta el servidor, que comprueba el consentimiento por su
-  /// cuenta en cada turno.
+  /// Consentimiento vigente. Sin él, la conversación se cierra sin enviar nada.
   void updateConsent(bool granted) => _consentGranted = granted;
 
-  /// Plazos vigentes, entregados en vivo. El nuevo plazo de inactividad se
-  /// aplica en el siguiente temporizador.
+  /// Plazos vigentes; se aplican en el siguiente temporizador.
   void updateSettings(ConversationSettings settings) => _settings = settings;
 
-  /// Pausa de escucha vigente, entregada en vivo. Se aplica en el siguiente
-  /// turno: cambiarla a mitad de uno no lo acorta ni lo alarga.
+  /// Pausa de escucha vigente; se aplica en el siguiente turno.
   void updateListenPause(Duration pause) => _listenPause = pause;
 
-  /// Envía un turno del mayor y enseña la respuesta. Con [speakReply], además
-  /// la lee en voz alta; un turno escrito no la lee (ADR-0035). Devuelve si
-  /// el modelo respondió de verdad, y no con un mensaje de error de la app.
+  /// Envía un turno y enseña la respuesta; con [speakReply], además la lee.
+  /// Devuelve si respondió el modelo y no un error de la app.
   Future<bool> sendMessage(String message, {bool speakReply = true}) async {
     if (message.trim().isEmpty) return false;
 
@@ -102,8 +88,7 @@ class ChatController extends StateNotifier<ChatState> {
       userMessage: '',
     );
 
-    // La respuesta anterior aún puede estar sonando si el mayor escribe sin
-    // esperar a que acabe: ya no viene a cuento y se corta.
+    // Si la respuesta anterior aún suena, se corta.
     if (_ttsService.isSpeaking) await _silence();
     if (!mounted) return false;
 
@@ -118,8 +103,7 @@ class ChatController extends StateNotifier<ChatState> {
           geminiResponse.text ?? 'No se ha podido generar una respuesta.';
       final answered = !geminiResponse.failed;
 
-      // Una respuesta de error de la app no es conversación: sesgaría el
-      // análisis hacia lo negativo, y el modelo no la ha dicho.
+      // Un error de la app no es conversación: no entra en el análisis.
       if (answered) {
         _recordTurn(ConversationRole.elder, message);
         _recordTurn(ConversationRole.assistant, replyText);
@@ -146,8 +130,7 @@ class ChatController extends StateNotifier<ChatState> {
       _armInactivity();
       return answered;
     } catch (e) {
-      // Asignar `state` en un notifier ya desechado lanza, y lanzaría otra vez
-      // dentro de este mismo catch: el error saldría del turno sin recoger.
+      // En un notifier desechado, asignar state lanzaría.
       if (!mounted) return false;
       state = state.copyWith(
         status: ChatStatus.error,
@@ -158,20 +141,15 @@ class ChatController extends StateNotifier<ChatState> {
     }
   }
 
-  // ── Modo teclado (ADR-0035) ─────────────────────────────────────────────
+  // Modo teclado
 
-  /// Turno escrito. Sigue el mismo camino que uno hablado, también para el
-  /// análisis al cierre, pero la respuesta se enseña sin leerla: quien escribe
-  /// puede estar donde no quiere que la app hable. Devuelve si el modelo
-  /// respondió, para que la pantalla devuelva el texto al campo si no.
+  /// Turno escrito: igual que uno hablado, pero la respuesta no se lee en voz alta.
   Future<bool> sendTypedMessage(String text) async {
     if (!state.acceptsTypedTurn) return false;
     return sendMessage(text, speakReply: false);
   }
 
-  /// Cambia entre hablar y escribir. Pasar al teclado con el micrófono
-  /// abierto descarta lo que se estuviera oyendo: quien pide el teclado ha
-  /// decidido no hablar, y enviarlo sería mandar algo que no ha confirmado.
+  /// Cambia entre hablar y escribir. Pasar al teclado descarta lo que se estaba oyendo.
   void setInputMode(InputMode mode) {
     if (mode == state.inputMode) return;
     if (state.status == ChatStatus.listening) {
@@ -187,8 +165,7 @@ class ChatController extends StateNotifier<ChatState> {
     state = state.copyWith(inputMode: mode);
   }
 
-  /// "Escuchar": lee en voz alta lo que hay en pantalla. Con él, el modo
-  /// teclado recupera la voz cuando el mayor la quiere.
+  /// "Escuchar": lee en voz alta la respuesta en pantalla.
   Future<void> readReplyAloud() async {
     final previous = state.status;
     if (previous != ChatStatus.initial && previous != ChatStatus.error) return;
@@ -206,16 +183,13 @@ class ChatController extends StateNotifier<ChatState> {
     _armInactivity();
   }
 
-  /// "Parar": corta la voz en curso. Lo que la lanzó vuelve a reposo por su
-  /// cuenta en cuanto `speak` termina.
+  /// "Parar": corta la voz en curso.
   void stopSpeaking() {
     if (state.status != ChatStatus.talking) return;
     unawaited(_silence());
   }
 
-  /// Calla la voz de la app con tope y sin propagar errores: callarla ayuda,
-  /// pero ni el micrófono ni un turno pueden quedar a merced de una llamada a
-  /// la plataforma. Si no se pudo a tiempo, se sigue igual.
+  /// Calla la voz de la app con tope y sin propagar errores.
   Future<void> _silence() async {
     try {
       await _ttsService.stop().timeout(const Duration(seconds: 1));
@@ -228,9 +202,7 @@ class ChatController extends StateNotifier<ChatState> {
     // El mayor empieza a hablar: la conversación sigue viva.
     _cancelInactivity();
     ++_epoch;
-    // Nunca se abre el micrófono con la voz de la app sonando: el reconocedor
-    // la oiría a ella y no al mayor. Puede venir de otra pantalla ("Escuchar"
-    // del consentimiento o de "Mi semana"), que no pasa por este controlador.
+    // Nunca se abre el micrófono con la voz de la app sonando.
     await _silence();
     if (!mounted) return;
     final available = await _speechService.initiate();
@@ -248,8 +220,7 @@ class ChatController extends StateNotifier<ChatState> {
 
     _speechService.beginListening(
       onPartial: (text) {
-        // Los dos callbacks llegan desde temporizadores: el controlador puede
-        // haberse reconstruido (currentUserProvider) mientras el mayor hablaba.
+        // Vienen de temporizadores: el controlador puede haberse reconstruido.
         if (!mounted || state.status != ChatStatus.listening) return;
         state = state.copyWith(userMessage: text);
       },
@@ -261,17 +232,11 @@ class ChatController extends StateNotifier<ChatState> {
     );
   }
 
-  /// Cierre manual del turno: el mayor pulsa el botón sin esperar a la pausa.
-  /// El envío llega por el mismo `onFinal` que el cierre por silencio, en
-  /// cuanto el reconocedor entrega lo último que oyó: enviar en el acto
-  /// dejaba fuera la última palabra (ADR-0036).
+  /// Cierre manual del turno. Envía por el mismo onFinal que el cierre por silencio.
   void stopListeningAndSend() {
-    // Si el silencio ya cerró el turno, `status` ya no es `listening` y este
-    // camino no debe enviar por segunda vez.
+    // Si el silencio ya cerró el turno, no se envía dos veces.
     if (state.status != ChatStatus.listening) return;
-    // Sin turno abierto no llegará `onFinal`: la escucha la canceló otra
-    // pantalla (emergencia) y la de aquí se quedó esperándolo. Se vuelve a
-    // reposo sin enviar nada.
+    // Sin turno abierto (lo canceló otra pantalla) no llegará onFinal: vuelve a reposo.
     if (!_speechService.finishListening()) _submit('');
   }
 
@@ -279,8 +244,7 @@ class ChatController extends StateNotifier<ChatState> {
   void _submit(String text) {
     final message = text.trim();
     if (message.isEmpty) {
-      // Turno en vacío (nadie habló): se vuelve a reposo sin molestar al LLM
-      // ni enseñar un error, que no lo hay.
+      // Turno vacío: vuelve a reposo sin llamar al modelo.
       state = state.copyWith(status: ChatStatus.initial, userMessage: '');
       _armInactivity();
       return;
@@ -289,19 +253,16 @@ class ChatController extends StateNotifier<ChatState> {
     sendMessage(message);
   }
 
-  // ── Ciclo de vida de la app ─────────────────────────────────────────────
+  // Ciclo de vida de la app
 
-  /// La app pasa a segundo plano. Cierra la conversación mientras el proceso
-  /// sigue vivo, que es cuando el envío tiene opciones de salir, salvo que el
-  /// mayor haya ido al marcador de emergencia: entonces la conversación sigue
-  /// y, si tarda en volver, la cierra el temporizador.
+  /// La app pasa a segundo plano: cierra la conversación, salvo si el mayor ha
+  /// ido al marcador de emergencia.
   void onAppPaused() {
     if (_isIntentionalExit()) return;
     endConversation(ConversationEndReason.background);
   }
 
-  /// La app vuelve. Si el temporizador no pudo vencer mientras estaba fuera
-  /// (proceso congelado), se comprueba aquí.
+  /// La app vuelve; comprueba el temporizador por si no pudo vencer fuera.
   void onAppResumed() {
     final last = _lastActivityAt;
     if (last == null || _startedAt == null) return;
@@ -310,8 +271,7 @@ class ChatController extends StateNotifier<ChatState> {
     }
   }
 
-  /// Cierra la conversación en curso, si la hay. No espera ni avisa de nada:
-  /// el mayor no debe notar el cierre.
+  /// Cierra la conversación en curso, si la hay, sin que el mayor lo note.
   void endConversation(ConversationEndReason reason) {
     _cancelInactivity();
     final startedAt = _startedAt;
@@ -325,8 +285,7 @@ class ChatController extends StateNotifier<ChatState> {
     _startedAt = null;
     _lastActivityAt = null;
 
-    // Sin consentimiento no sale nada del teléfono, ni siquiera la actividad
-    // (ADR-0030). El servidor lo comprueba otra vez por su cuenta.
+    // Sin consentimiento no sale nada del teléfono.
     if (!_consentGranted) return;
 
     final conversation = ClosedConversation(
@@ -337,7 +296,7 @@ class ChatController extends StateNotifier<ChatState> {
       turns: elderTurns >= kMinElderTurnsForAnalysis ? turns : null,
     );
     unawaited(_closer.close(conversation).catchError((Object _) {
-      // Se pierde un análisis, no datos del mayor (aceptado en ADR-0015).
+      // Se pierde el análisis, no datos del mayor.
     }));
   }
 
@@ -366,8 +325,7 @@ class ChatController extends StateNotifier<ChatState> {
   @override
   void dispose() {
     _cancelInactivity();
-    // Nunca dejar el reconocedor abierto detrás de un controlador muerto: es
-    // el micrófono del mayor y el provider es de toda la app.
+    // Nunca dejar el micrófono abierto detrás de un controlador muerto.
     _speechService.cancelListening();
     super.dispose();
   }
@@ -375,23 +333,9 @@ class ChatController extends StateNotifier<ChatState> {
 
 final chatControllerProvider =
     StateNotifierProvider<ChatController, ChatState>((ref) {
-  // `select` sobre el uid, no `watch` del UserModel entero.
-  //
-  // Observar el modelo completo ataba la vida del controlador a CUALQUIER
-  // cambio del documento del mayor. Y el turno que enseña su nombre cambia el
-  // documento: `guardarNombre` escribe `name`, Firestore emite y el provider
-  // destruía el controlador **en mitad de `sendMessage`**. La respuesta de ese
-  // turno moría con él y la pantalla se reiniciaba con el estado nuevo: el
-  // nombre se guardaba, pero el turno que lo guardó no llegaba nunca a la
-  // interfaz.
-  //
-  // Con `select`, solo un cambio de identidad reconstruye: los turnos de una
-  // cuenta nunca viajan con los de otra. El nombre y la memoria no hacen falta
-  // aquí, los pone `chatTurn` en cada turno; la cabecera lee el nombre de
-  // `currentUserProvider` por su cuenta. De paso, mover un ajuste de
-  // accesibilidad tampoco tumba la conversación.
+  // Solo un cambio de cuenta reconstruye el controlador; el resto llega por listen.
   ref.watch(currentUserProvider.select((u) => u.valueOrNull?.id));
-  // `read`, no `watch`: solo siembran el estado inicial del controlador.
+  // read: solo siembran el estado inicial.
   final user = ref.read(currentUserProvider).valueOrNull;
 
   final controller = ChatController(
@@ -405,10 +349,7 @@ final chatControllerProvider =
     isIntentionalExit: () => ref.read(intentionalBackgroundExitProvider),
   );
 
-  // Nada del documento reconstruye el controlador, así que se le entrega en
-  // vivo (ADR-0023): el consentimiento y los plazos, que pueden cambiar en
-  // mitad de una conversación (ADR-0030, ADR-0034), y la pausa de escucha que
-  // el mayor elige en Ajustes (ADR-0036).
+  // Consentimiento, plazos y pausa de escucha pueden cambiar a mitad de conversación.
   ref.listen<AsyncValue<UserModel?>>(currentUserProvider, (previous, next) {
     final user = next.valueOrNull;
     controller.updateConsent(user?.hasConversationConsent ?? false);
@@ -418,8 +359,7 @@ final chatControllerProvider =
         (user?.preferences ?? const UserPreferences()).listenPause);
   });
 
-  // El ciclo de vida se escucha aquí y no en una pantalla: la conversación
-  // debe cerrarse aunque el mayor esté en Ajustes cuando sale de la app.
+  // Aquí y no en una pantalla: la conversación se cierra aunque el mayor esté en Ajustes.
   final lifecycle = AppLifecycleListener(
     onPause: controller.onAppPaused,
     onResume: controller.onAppResumed,

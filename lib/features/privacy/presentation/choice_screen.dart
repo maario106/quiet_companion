@@ -9,12 +9,8 @@ import 'package:quiet_companion/core/widgets/choice_option_tile.dart';
 import 'package:quiet_companion/core/widgets/elder_screen_title.dart';
 import 'package:quiet_companion/features/privacy/domain/consent_controller.dart';
 
-/// Una de las decisiones del mayor sobre sus conversaciones, como lista corta
-/// de opciones grandes. Un toque elige y guarda; la elegida se marca con
-/// borde, icono y texto, no solo con color.
-///
-/// Opciones y no escala de "Más/Menos" (ADR-0021): son tres o cuatro, cada una
-/// con su nombre, y ver todas a la vez es más claro que recorrerlas.
+/// Una decisión del mayor sobre sus conversaciones, como lista corta de opciones
+/// grandes. Un toque elige y guarda.
 enum PrivacyChoice {
   companionSharing(
     title: 'Qué ve mi familiar',

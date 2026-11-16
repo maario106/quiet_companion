@@ -11,12 +11,8 @@ import 'package:quiet_companion/features/privacy/domain/consent_controller.dart'
 import 'package:quiet_companion/features/privacy/domain/consent_text.dart';
 import 'package:quiet_companion/features/privacy/presentation/consent_sections.dart';
 
-/// La pregunta del consentimiento (ADR-0030). La enseña el enrutador **una
-/// vez**: tras elegir el modo independiente o tras vincularse, que suele ser
-/// en persona y con el familiar al lado para explicarla. Decide el mayor.
-///
-/// Sin flecha atrás: es un paso del alta, no una pantalla de la que se sale.
-/// Las dos respuestas son igual de grandes y ninguna está preseleccionada.
+/// La pregunta del consentimiento. El router la enseña una vez, sin flecha
+/// atrás; las dos respuestas pesan igual.
 class ConsentScreen extends ConsumerWidget {
   const ConsentScreen({super.key});
 
@@ -80,8 +76,7 @@ class ConsentScreen extends ConsumerWidget {
                       label: 'Sí, quiero',
                       icon: Icons.check,
                       textScale: textScale,
-                      // El enrutador lleva a la pantalla principal en cuanto el
-                      // servidor guarda la respuesta; aquí no se navega.
+                      // El router navega cuando el servidor guarda la respuesta.
                       onPressed: consent.saving
                           ? null
                           : () => controller.answer(granted: true),

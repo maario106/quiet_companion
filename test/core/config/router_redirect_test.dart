@@ -3,13 +3,10 @@ import 'package:quiet_companion/core/config/route_redirect.dart';
 import 'package:quiet_companion/core/models/conversation_consent.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 
-/// Ya respondió a la pregunta del consentimiento (sea cual sea la respuesta):
-/// el enrutador no vuelve a enseñársela.
+/// Ya respondió al consentimiento, sea cual sea la respuesta.
 const _answered = ConversationConsent(granted: false);
 
-/// Envuelve la función real del enrutador ([routeRedirect]). Antes este test
-/// reimplementaba las condiciones a mano y podía seguir en verde probando una
-/// versión antigua de la lógica.
+/// Envuelve la función real del enrutador ([routeRedirect]).
 class RouterRedirectTestHelper {
   static String? computeRedirect({
     required bool elderCheckingAuth,

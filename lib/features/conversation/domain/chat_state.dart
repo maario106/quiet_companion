@@ -6,8 +6,7 @@ enum ChatStatus {
   error
 }
 
-/// Cómo dice el mayor sus turnos (ADR-0035). La voz es el modo de partida;
-/// el teclado es para quien no quiere o no puede hablar en ese momento.
+/// Cómo dice el mayor sus turnos; la voz es el modo de partida.
 enum InputMode { voice, keyboard }
 
 class ChatState {
@@ -23,10 +22,7 @@ class ChatState {
     this.inputMode = InputMode.voice,
   });
 
-  /// Si se puede enviar ahora un turno escrito: no con otro turno esperando
-  /// respuesta ni con el micrófono abierto. Con la voz de la app sonando sí,
-  /// porque el turno nuevo la calla. La pantalla y el controlador preguntan
-  /// lo mismo aquí para no acabar decidiéndolo de dos maneras.
+  /// Si se puede enviar un turno escrito: no con otro en vuelo ni con el micrófono abierto.
   bool get acceptsTypedTurn =>
       status != ChatStatus.thinking && status != ChatStatus.listening;
 

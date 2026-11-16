@@ -1,9 +1,5 @@
-/// Plazos de la conversación del mayor (ADR-0034): cuándo se da por
-/// terminada una conversación y cuánto se conserva lo analizado.
-///
-/// Los fija el familiar en modo vinculado y el propio mayor en modo
-/// independiente. Solo existen estos peldaños; un valor que no caiga en
-/// ninguno se redondea al más cercano, como en `PreferenceScale` (ADR-0021).
+/// Plazos de la conversación: inactividad que la cierra y conservación de lo
+/// analizado. Los valores se redondean al peldaño más cercano.
 class ConversationSettings {
   const ConversationSettings({
     this.inactivityMinutes = defaultInactivityMinutes,
@@ -18,9 +14,6 @@ class ConversationSettings {
 
   static const List<int> inactivityMinutesSteps = [2, 5, 10, 15];
 
-  /// Minutos concretos y no nombres vagos ("Un rato"): a diferencia del
-  /// volumen o la velocidad (ADR-0021), aquí el número sí significa algo para
-  /// quien lo lee.
   static const List<String> inactivityMinutesLabels = [
     '2 minutos',
     '5 minutos',
@@ -28,8 +21,7 @@ class ConversationSettings {
     '15 minutos',
   ];
 
-  /// El servidor aplica el mismo tope (`closeConversation`,
-  /// `setConversationConsent`): el cliente no es quien protege los datos.
+  /// El servidor aplica el mismo tope.
   static const List<int> retentionDaysSteps = [30, 60, 90, 180];
   static const List<String> retentionDaysLabels = [
     'Un mes',
@@ -43,8 +35,7 @@ class ConversationSettings {
 
   Duration get inactivity => Duration(minutes: inactivityMinutes);
 
-  /// Tras retirar el consentimiento, lo guardado se borra pasada la mitad del
-  /// plazo de conservación (ADR-0030, epílogo).
+  /// Días hasta el borrado tras retirar el consentimiento.
   int get gracePeriodDays => retentionDays ~/ 2;
 
   String get inactivityLabel => inactivityMinutesLabels[inactivityMinutesSteps
@@ -69,8 +60,7 @@ class ConversationSettings {
         retentionDaysKey: retentionDays,
       };
 
-  /// null es un estado legal: documento anterior a esta función, o mayor que
-  /// nunca los ha tocado. Quien lee usa entonces los valores por defecto.
+  /// null si el documento no tiene plazos; se usan los valores por defecto.
   static ConversationSettings? fromMapOrNull(Object? raw) {
     if (raw is! Map) return null;
     final inactivity = raw[inactivityMinutesKey];
@@ -87,7 +77,7 @@ class ConversationSettings {
     );
   }
 
-  /// Peldaño más cercano; en empate, el más bajo (lo más conservador).
+  /// Peldaño más cercano; en empate, el más bajo.
   static int _nearest(List<int> steps, int value) {
     var best = steps.first;
     for (final step in steps) {

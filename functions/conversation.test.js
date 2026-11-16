@@ -1,9 +1,3 @@
-/**
- * Tests de las reglas puras de las conversaciones (`conversation.js`).
- *
- *   cd functions && npm test
- */
-
 const {test, describe} = require("node:test");
 const assert = require("node:assert/strict");
 const {

@@ -18,8 +18,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Los datos del mayor, en vivo: lo que él cambie desde su móvil aparece
-    // aquí sin recargar (ADR-0027).
+    // Datos del mayor en vivo.
     final elder = ref.watch(linkedElderProvider);
 
     ref.listen<DashboardState>(dashboardControllerProvider, (previous, next) {
@@ -311,17 +310,13 @@ class _ElderNameCardState extends ConsumerState<_ElderNameCard> {
   }
 }
 
-/// La voz con la que la app habla al mayor. Cada opción se puede escuchar en
-/// este móvil antes de elegirla: el familiar elige cómo va a oír otra persona
-/// todo lo que la app le diga, y eso no se elige por el nombre.
+/// La voz con la que la app habla al mayor; cada opción se puede escuchar antes.
 class _VoiceSelector extends ConsumerWidget {
   const _VoiceSelector({required this.prefs});
 
   final UserPreferences prefs;
 
-  /// Suena con el volumen y la velocidad del mayor, como en su móvil. El
-  /// servicio se lee en la pulsación, no en el build, para no construir la
-  /// voz de nube al abrir el panel.
+  /// Suena con el volumen y la velocidad del mayor.
   Future<void> _listen(WidgetRef ref, TtsVoice voice) async {
     final tts = ref.read(ttsServiceProvider);
     await tts.applyPreferences(prefs.copyWith(voice: voice.id));

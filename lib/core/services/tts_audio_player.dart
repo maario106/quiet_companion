@@ -2,17 +2,10 @@ import 'dart:typed_data';
 
 import 'package:just_audio/just_audio.dart';
 
-/// Costura de reproducción de audio. Igual que [TtsSynthesizer], existe para
-/// que la lógica de [CloudTtsService] se pueda testear sin plugins.
+/// Reproducción de audio, separada para testear [CloudTtsService] sin plugins.
 abstract interface class TtsAudioPlayer {
-  /// Reproduce [mp3] y completa cuando termina de sonar (o cuando [stop] lo
-  /// interrumpe). Esta es la señal que mantiene los fragmentos en orden.
-  ///
-  /// **El contrato crítico es "cuando termina de sonar"**: si una
-  /// implementación completa antes, el fragmento siguiente pisa al actual y la
-  /// respuesta se oye a trozos. Ningún test puede detectarlo —el doble de
-  /// test cumple el contrato por construcción—, así que se verifica en
-  /// dispositivo.
+  /// Reproduce [mp3] y completa cuando termina de sonar (o lo para [stop]). Si
+  /// completara antes, los fragmentos se pisarían.
   Future<void> play(Uint8List mp3);
 
   /// Detiene la reproducción en curso. Idempotente.
@@ -21,41 +14,31 @@ abstract interface class TtsAudioPlayer {
   /// Velocidad de reproducción (1.0 = ritmo sintetizado).
   Future<void> setSpeed(double speed);
 
-  /// Volumen de reproducción (0.0 – 1.0).
+  /// Volumen de reproducción (0.0 a 1.0).
   Future<void> setVolume(double volume);
 
   Future<void> dispose();
 }
 
-/// Implementación sobre `just_audio`. Reproduce desde memoria: los fragmentos
-/// llegan como bytes de la callable y no se escriben nunca a disco (el
-/// contenido es conversación de una persona mayor — política de minimización
-/// de datos del proyecto).
+/// Sobre just_audio. Reproduce desde memoria: el audio nunca se escribe a disco.
 class JustAudioTtsPlayer implements TtsAudioPlayer {
   JustAudioTtsPlayer({AudioPlayer? player})
       : _player = player ?? AudioPlayer();
 
   final AudioPlayer _player;
 
-  /// Margen sobre la duración de la pista antes de darla por terminada sin
-  /// haber recibido el evento de fin.
+  /// Margen sobre la duración de la pista si no llega el evento de fin.
   static const Duration _completionGrace = Duration(seconds: 2);
 
-  /// Espera máxima cuando el reproductor no sabe cuánto dura el audio. Un
-  /// fragmento son una o dos frases: nunca se acerca a este techo.
+  /// Espera máxima si no se conoce la duración.
   static const Duration _completionFallback = Duration(seconds: 30);
 
   @override
   Future<void> play(Uint8List mp3) async {
     await _player.setAudioSource(_Mp3BytesSource(mp3));
 
-    // El futuro de play() NO sirve para saber cuándo acaba la pista: la propia
-    // documentación de just_audio dice que "si el reproductor ya está
-    // reproduciendo, este método completa de inmediato", y `playing` sigue
-    // siendo true después de cada pista (solo pause() o stop() lo bajan). Con
-    // varias frases seguidas eso hacía que el fragmento i+1 cortara al i: se
-    // oía la primera frase y la última. La señal fiable es el estado del
-    // reproductor.
+    // play() completa enseguida si ya está reproduciendo; el fin de la pista se
+    // sabe por processingState.
     final finished = _player.processingStateStream.firstWhere(
       (state) =>
           state == ProcessingState.completed || state == ProcessingState.idle,
@@ -63,9 +46,7 @@ class JustAudioTtsPlayer implements TtsAudioPlayer {
 
     await _player.play();
 
-    // Red de seguridad: si el evento de fin se perdiera, la conversación se
-    // quedaría congelada en "hablando" para siempre. Se espera como mucho lo
-    // que dura el audio a la velocidad actual, más un margen.
+    // Por si se pierde el evento de fin: como mucho, la duración más un margen.
     final duration = _player.duration;
     final speed = _player.speed;
     await finished.timeout(
@@ -89,12 +70,10 @@ class JustAudioTtsPlayer implements TtsAudioPlayer {
   Future<void> dispose() => _player.dispose();
 }
 
-// StreamAudioSource sigue marcada como experimental en just_audio, pero es la
-// única vía del paquete para reproducir desde memoria el MP3 de la callable.
+// StreamAudioSource es experimental, pero es la única vía de reproducir desde memoria.
 // ignore_for_file: experimental_member_use
 
-/// Fuente de audio en memoria. `just_audio` no acepta bytes directamente:
-/// exige un [StreamAudioSource] que sirva el rango pedido.
+/// Fuente de audio en memoria: just_audio exige un [StreamAudioSource].
 class _Mp3BytesSource extends StreamAudioSource {
   _Mp3BytesSource(this._bytes);
 

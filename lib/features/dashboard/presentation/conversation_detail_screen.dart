@@ -8,8 +8,7 @@ import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/core/utils/spanish_date.dart';
 import 'package:quiet_companion/features/dashboard/presentation/wellbeing_section.dart';
 
-/// Una conversación, vista por el familiar. Lee de los mismos providers que el
-/// panel: no hace lecturas nuevas, y respeta el mismo nivel (ADR-0031).
+/// Una conversación, vista por el familiar, con los mismos providers del panel.
 class ConversationDetailScreen extends ConsumerWidget {
   const ConversationDetailScreen({super.key, required this.conversationId});
 

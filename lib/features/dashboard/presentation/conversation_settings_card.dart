@@ -5,9 +5,7 @@ import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/theme/app_theme.dart';
 import 'package:quiet_companion/features/dashboard/domain/dashboard_controller.dart';
 
-/// Plazos de las conversaciones del mayor vinculado, que gestiona su familiar
-/// (ADR-0034). El mayor los ve en su móvil pero no los cambia; lo que sí
-/// decide él es si se guardan y qué ve su familiar.
+/// Plazos de las conversaciones del mayor vinculado, que gestiona su familiar.
 class ConversationSettingsCard extends ConsumerWidget {
   const ConversationSettingsCard({super.key, required this.elder});
 
