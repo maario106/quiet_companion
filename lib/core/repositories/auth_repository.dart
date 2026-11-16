@@ -44,6 +44,29 @@ class CompanionAccountException implements Exception {
   const CompanionAccountException();
 }
 
+/// Por qué no se ha podido vincular, ya redactado para el familiar.
+class PairingException implements Exception {
+  const PairingException(this.message);
+
+  /// Solo los códigos de validateAndLink traen un mensaje para el familiar; los
+  /// del plugin (sin red, tiempo agotado) vienen en inglés.
+  factory PairingException.fromFunctions(FirebaseFunctionsException error) {
+    const fromServer = {
+      'invalid-argument',
+      'not-found',
+      'permission-denied',
+      'unauthenticated',
+    };
+    final message = error.message;
+    return PairingException(fromServer.contains(error.code) && message != null
+        ? message
+        : 'No se ha podido vincular. '
+            'Comprueba la conexión e inténtalo otra vez.');
+  }
+
+  final String message;
+}
+
 class AuthRepository {
   const AuthRepository({
     required FirebaseAuth auth,
@@ -262,12 +285,11 @@ class AuthRepository {
       final data = result.data;
       final elderId = data is Map ? data['elderId'] : null;
       if (elderId is! String || elderId.isEmpty) {
-        throw Exception('No se ha podido vincular.');
+        throw const PairingException('No se ha podido vincular.');
       }
       return elderId;
     } on FirebaseFunctionsException catch (error) {
-      // El mensaje de la Function ya viene redactado para el familiar.
-      throw Exception(error.message ?? 'No se ha podido vincular.');
+      throw PairingException.fromFunctions(error);
     }
   }
 }

@@ -100,10 +100,10 @@ class ElderAuthController extends StateNotifier<AuthState> {
     state = state.copyWith(user: updatedUser);
     try {
       await _authRepository.saveUser(updatedUser);
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: _saveModeError,
       );
     }
   }
@@ -118,10 +118,10 @@ class ElderAuthController extends StateNotifier<AuthState> {
     state = state.copyWith(user: updatedUser);
     try {
       await _authRepository.saveUser(updatedUser);
-    } catch (e) {
+    } catch (_) {
       state = state.copyWith(
         status: AuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: _saveModeError,
       );
     }
   }
@@ -135,8 +135,8 @@ class ElderAuthController extends StateNotifier<AuthState> {
     state = state.copyWith(user: updatedUser);
     try {
       await _authRepository.saveUser(updatedUser);
-    } catch (e) {
-      state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+    } catch (_) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: _saveModeError);
     }
   }
 
@@ -148,6 +148,9 @@ class ElderAuthController extends StateNotifier<AuthState> {
     );
   }
 }
+
+const _saveModeError =
+    'No se ha podido guardar. Comprueba la conexión e inténtalo otra vez.';
 
 final elderAuthControllerProvider =
 StateNotifierProvider<ElderAuthController, AuthState>((ref) {

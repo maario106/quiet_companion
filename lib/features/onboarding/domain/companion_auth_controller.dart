@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuthException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:quiet_companion/core/models/user_model.dart';
 import 'package:quiet_companion/core/providers/auth_repository_provider.dart';
@@ -44,7 +45,7 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
     } catch (e) {
       state = state.copyWith(
         status: CompanionAuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: _signInError(e),
       );
     }
   }
@@ -71,7 +72,7 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
     } catch (e) {
       state = state.copyWith(
         status: CompanionAuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: _registerError(e),
       );
     }
   }
@@ -93,11 +94,47 @@ class CompanionAuthController extends StateNotifier<CompanionAuthState> {
     } catch (e) {
       state = state.copyWith(
         status: CompanionAuthStatus.error,
-        errorMessage: e.toString(),
+        errorMessage: e is PairingException
+            ? e.message
+            : 'No se ha podido vincular. Inténtalo otra vez.',
       );
     }
   }
 }
+
+// Firebase Auth da sus errores en inglés; al familiar se le dicen en español.
+
+String _signInError(Object error) => switch (_authCode(error)) {
+      // No se distingue un correo sin cuenta de una contraseña equivocada.
+      'invalid-credential' ||
+      'wrong-password' ||
+      'user-not-found' ||
+      'invalid-email' =>
+        'Correo o contraseña incorrectos. Inténtalo otra vez.',
+      final code => _commonAuthError(code) ??
+          'No se ha podido iniciar sesión. Inténtalo otra vez.',
+    };
+
+String _registerError(Object error) => switch (_authCode(error)) {
+      'email-already-in-use' =>
+        'Ya hay una cuenta con ese correo. Si es tuya, inicia sesión.',
+      'invalid-email' => 'Ese correo no es válido.',
+      'weak-password' =>
+        'La contraseña es demasiado débil. Prueba con otra más larga.',
+      final code => _commonAuthError(code) ??
+          'No se ha podido crear la cuenta. Inténtalo otra vez.',
+    };
+
+String? _authCode(Object error) =>
+    error is FirebaseAuthException ? error.code : null;
+
+String? _commonAuthError(String? code) => switch (code) {
+      'network-request-failed' =>
+        'No hay conexión. Compruébala e inténtalo otra vez.',
+      'too-many-requests' =>
+        'Demasiados intentos seguidos. Espera unos minutos y vuelve a probar.',
+      _ => null,
+    };
 
 final companionAuthControllerProvider =
     StateNotifierProvider<CompanionAuthController, CompanionAuthState>((ref) {
