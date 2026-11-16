@@ -1,0 +1,148 @@
+% Los preliminares no llevan cabecera ni numero, tampoco las paginas de relleno
+\pagestyle{empty}
+
+\chapter*{}
+
+\thispagestyle{empty}
+
+\begin{center}
+{\large\bfseries \thetitle}\\
+\end{center}
+\begin{center}
+\theauthor\\
+\end{center}
+
+\vspace{0.5cm}
+\noindent{\textbf{Resumen}}\par\vspace{\baselineskip}
+
+Este trabajo presenta el desarrollo de \textbf{Quiet Companion}, una aplicación móvil para Android que acompaña a las personas mayores en situación de soledad no deseada mediante un asistente conversacional por voz basado en inteligencia artificial generativa. La aplicación está construida en Flutter, siguiendo los principios de Clean Architecture y Feature-Sliced Design, sobre Firebase para la autenticación y la sincronización de datos en tiempo real. La lógica que no puede confiarse al teléfono se ejecuta en Cloud Functions: la conversación con el modelo Gemini a través de Vertex AI, la síntesis de voz, la vinculación entre usuarios y el análisis de cada conversación.
+
+La herramienta ofrece dos experiencias. El mayor conversa con el asistente pulsando un único botón, o escribiendo si lo prefiere, en una interfaz accesible, con textos grandes, áreas táctiles amplias y la pulsación simple como único gesto, y con la llamada de emergencia siempre a un toque. El asistente recuerda lo que el mayor le cuenta de una conversación a otra, y el propio mayor puede consultar en <<Mi semana>> cómo se ha encontrado. Puede usar la aplicación por su cuenta o vincularla con un familiar, que desde su móvil ajusta la voz, la velocidad y el tamaño del texto, con cambios que llegan al instante al dispositivo del mayor, y sigue en un panel su actividad y su estado de ánimo. Lo que ve el familiar lo decide siempre el mayor: el análisis requiere su consentimiento conforme al RGPD, la transcripción no se guarda nunca y las reglas de seguridad de la base de datos limitan el acceso al nivel que él autoriza.
+
+La validación técnica combina pruebas automáticas en tres niveles, sobre la lógica de la aplicación, sobre las reglas de seguridad contra el emulador de Firestore y sobre las funciones del servidor, con el recorrido manual de cada historia de usuario en un teléfono Android. El objetivo del proyecto es ofrecer compañía accesible en un teléfono de uso común y a un coste asumible, de modo que la tecnología complemente el vínculo con la familia en lugar de sustituirlo.
+
+\vspace{0.4cm}
+\noindent{\textbf{Palabras clave}: Soledad no deseada, Personas mayores, Accesibilidad, Asistente conversacional por voz, Inteligencia artificial generativa}\par\vspace{\baselineskip}
+
+\chapter*{}
+
+\thispagestyle{empty}
+
+\begin{center}
+{\large\bfseries \thetitleen}\\
+\end{center}
+\begin{center}
+\theauthor\\
+\end{center}
+
+\vspace{0.5cm}
+\noindent{\textbf{Abstract}}\par\vspace{\baselineskip}
+\begin{otherlanguage}{english}
+\setlength{\emergencystretch}{1em}% «Feature-Sliced» solo se parte por el guion
+
+This work presents the development of \textbf{Quiet Companion}, an Android mobile application that accompanies older people experiencing unwanted loneliness through a voice-based conversational assistant powered by generative artificial intelligence. The application is built in Flutter, following the principles of Clean Architecture and Feature-Sliced Design, on Firebase for authentication and real-time data synchronisation. The logic that cannot be entrusted to the phone runs on Cloud Functions: the conversation with the Gemini model through Vertex AI, speech synthesis, the linking between users and the analysis of each conversation.
+
+The tool offers two experiences. The older person talks to the assistant by pressing a single button, or by typing if they prefer, in an accessible interface, with large text, wide touch targets and a single tap as the only gesture, and with the emergency call always one tap away. The assistant remembers what the older person tells it from one conversation to the next, and they can see how they have been feeling over the week on the ``Mi semana'' screen. They can use the application on their own or link it with a relative, who adjusts the voice, the speech rate and the text size from their own phone, with changes that reach the older person's device instantly, and follows their activity and mood on a dashboard. What the relative sees is always decided by the older person: the analysis requires their consent under the GDPR, the transcript is never stored, and the database security rules restrict access to the level they authorise.
+
+Technical validation combines automated tests at three levels, covering the application logic, the security rules against the Firestore emulator and the server functions, with a manual walkthrough of every user story on an Android phone. The goal of the project is to offer accessible companionship on an everyday phone and at an affordable cost, so that technology complements the bond with the family instead of replacing it.
+
+\vspace{0.4cm}
+\noindent{\textbf{Keywords}: Unwanted loneliness, Older adults, Accessibility, Voice conversational assistant, Generative artificial intelligence}\par\vspace
+ {\baselineskip}
+\end{otherlanguage}
+
+
+\chapter*{}
+\thispagestyle{empty}
+
+\noindent\rule[-1ex]{\textwidth}{2pt}\par\vspace{\dimexpr4.5ex+\baselineskip\relax}
+
+D. \director, Profesor del Departamento Lenguajes y Sistemas de la Universidad de Granada.\par\vspace{\baselineskip}
+
+D. \otrodirector, Profesor del Departamento Lenguajes y Sistemas de la Universidad de Granada.\par\vspace{\baselineskip}
+
+\vspace{0.5cm}
+
+\textbf{Informa:}\par\vspace{\baselineskip}
+
+Que el presente trabajo, titulado \thetitle, ha sido realizado bajo su supervisión por \theauthor, y autorizamos la defensa de dicho trabajo ante el tribunal que corresponda.
+
+\vspace{1cm}
+
+Y para que conste, expiden el presente informe en \myLocation
+
+\chapter*{}
+\thispagestyle{empty}
+
+\noindent\rule[-1ex]{\textwidth}{2pt}\par\vspace{\dimexpr4.5ex+\baselineskip\relax}
+
+\textbf{Declaración de Originalidad}\par\vspace{\baselineskip}
+
+Yo, \textbf{\theauthor}, alumno de la titulación \grado \ de la \myFacultyShort \ de la \myUni, con DNI \dni, declaro explícitamente que el trabajo presentado, correspondiente al curso académico \curso, es original, entendida esta, en el sentido de que no ha utilizado para la elaboración del trabajo fuentes sin citarlas debidamente.
+
+\vspace{4cm}
+
+\noindent Fdo: \theauthor
+
+\vspace{1cm}
+
+\begin{flushright}
+\myLocation
+\end{flushright}
+
+\chapter*{}
+\thispagestyle{empty}
+
+\noindent\rule[-1ex]{\textwidth}{2pt}\par\vspace{\dimexpr4.5ex+\baselineskip\relax}
+
+\phantomsection
+\addcontentsline{toc}{chapter}{Buenas prácticas y uso de inteligencia artificial}
+\textbf{Buenas prácticas y uso de inteligencia artificial}\par\vspace{\baselineskip}
+
+La redacción de esta memoria sigue las recomendaciones de la guía que el profesorado del Grado en Ingeniería Informática de la Universidad de Granada ha elaborado para este fin \citep{GuillenPerales2025}. En cuanto al código, todo el proyecto se ha gestionado con Git y alojado en GitHub\footnote{\url{https://github.com/maario106/quiet_companion}}.
+
+La inteligencia artificial interviene en este trabajo de dos formas. Forma parte del producto: el modelo Gemini conversa con la persona mayor y analiza cada conversación al cerrarse. Y se ha empleado como herramienta de apoyo: el asistente Claude, en la programación y en la documentación (apoyo en la documentación técnica, revisión ortográfica y de estilo de esta memoria y corrección de errores en \LaTeX).
+
+La herramienta ha actuado como apoyo, no como autora. Las decisiones de diseño y de arquitectura, el código integrado y el planteamiento del trabajo son obra del autor, que ha revisado todo lo producido con su asistencia y responde de su validez.
+
+\chapter*{}
+\thispagestyle{empty}
+
+\noindent\rule[-1ex]{\textwidth}{2pt}\par\vspace{\dimexpr4.5ex+\baselineskip\relax}
+
+Yo, \textbf{\theauthor}, alumno de la titulación \grado \ de la \myFacultyShort \ de la \myUni, con DNI \dni, autorizo la ubicación de la siguiente copia de mi Trabajo Fin de Grado en la biblioteca del centro para que pueda ser consultada por las personas que lo deseen.
+
+\vspace{4cm}
+
+\noindent Fdo: \theauthor
+
+\vspace{1cm}
+
+\begin{flushright}
+\myLocation
+\end{flushright}
+
+\vspace{3cm}
+
+\doclicenseThis El código fuente de este documento y de los programas desarrollados está disponible en el repositorio de GitHub \url{https://github.com/maario106/quiet_companion}
+
+
+\chapter*{Agradecimientos}
+\thispagestyle{empty}
+
+       \vspace{1cm}
+
+Este trabajo no habría sido posible sin todas las personas que me han apoyado durante su realización.
+
+Antes de nada, me gustaría expresar mi agradecimiento a mis dos tutores, cuya orientación a lo largo de la etapa de diseño y definición del proyecto me ayudó a discernir la luz al final del camino, y me ahorró muchas horas de trabajo en vano; es de agradecer también su infinita paciencia conmigo.
+
+A mis amigos: si menciono a uno, tendría que mencionarlos a todos y haría de la longitud de este Trabajo algo inédito\ldots Muchísimas gracias. Por escucharme cuando descargaba mi frustración con vosotros, por orientarme cuando estaba perdido, y por animarme cuando más lo he necesitado. Sin vosotros esto tampoco tendría sentido.
+
+Javier y Alicia: gracias por estar ahí cuando lo necesito, por ser esa vía de escape en una nueva ciudad, y dejarme visitar a Duque para animarme.
+
+Papá, Mamá: gracias por estar orgullosos de mí y demostrármelo siempre. Significa mucho más de lo que pensáis. Vuestra confianza me empuja a trabajar cada día en ser la versión que vosotros veis en mí. 
+
+Por último, no puedo cerrar estos agradecimientos sin acordarme de mis abuelos. Tanto de los que ya no están, a quienes echo de menos cada día; como de mi abuela, a la que enseñaré, lleno de orgullo, el proyecto terminado. Gracias por vuestro amor incondicional y por inspirarme a acercar la tecnología a una figura tan importante como son los abuelos.
+
+Gracias.
+\pagestyle{fancy}

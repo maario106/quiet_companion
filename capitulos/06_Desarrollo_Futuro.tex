@@ -1,0 +1,57 @@
+\chapter{Conclusiones y trabajo futuro}
+\label{cap:desarrollo-futuro}
+
+\section{Conclusiones}
+\label{sec:conclusiones}
+
+El objetivo general del trabajo era desarrollar un prototipo funcional de aplicación móvil que acompañe por voz a personas mayores en situación de soledad no deseada y que resulte accesible para ese perfil de usuario. El prototipo existe y cumple los objetivos específicos comprometidos; la tabla~\ref{tab:cumplimiento-oe} recoge, para cada uno, dónde se documenta la evidencia.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Cumplimiento de los objetivos específicos y apartado donde se documenta.}
+    \label{tab:cumplimiento-oe}
+    \small
+    \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X@{}}
+        \toprule
+        \textbf{Objetivo} & \textbf{Evidencia} \\
+        \midrule
+        OE-1 & Onboarding dual con revelación progresiva y vinculación atómica ejecutada en el servidor (apartado~\ref{sec:seguridad}). \\
+        \addlinespace
+        OE-2 & Ciclo completo de voz con respaldo al motor del dispositivo, y conversación por escrito como vía alternativa (apartado~\ref{sec:teclado}). \\
+        \addlinespace
+        OE-3 & Pisos tipográficos, áreas táctiles de al menos $80\times80$~px, pulsación simple y una paleta que supera los umbrales de contraste de WCAG~2.2 en toda la interfaz del mayor (apartado~\ref{sec:color}). \\
+        \addlinespace
+        OE-4 & Configuración local y remota, propagada en tiempo real en ambas direcciones (apartado~\ref{sec:ssot}). \\
+        \addlinespace
+        OE-5 & Memoria, análisis al cierre, panel de bienestar y «Mi semana» bajo consentimiento del propio mayor, sin almacenar la transcripción (apartados~\ref{sec:conversacion} y~\ref{sec:privacidad}); cubiertos por pruebas automáticas y verificados en dispositivo. \\
+        \addlinespace
+        OE-6 & Arquitectura Clean Feature-Sliced sin acoplamiento horizontal (apartado~\ref{sec:arquitectura}) y gestión Kanban (apartado~\ref{sec:tablero}). \\
+        \bottomrule
+    \end{tabularx}
+
+\end{table}
+
+Más allá del balance por objetivos, el desarrollo deja tres conclusiones que trascienden a este proyecto concreto.
+
+La primera es que la accesibilidad funciona mejor como restricción de diseño que como capa de acabado. Las decisiones más reconocibles de la aplicación no se tomaron para cumplir una norma después de diseñar, sino que se derivaron de ella: un único control grande en la pantalla principal, escalas con nombre en lugar de deslizadores, un consentimiento recogido con dos botones del mismo tamaño y no con una casilla, y una semana contada con frases y no con gráficas. Centralizar esas reglas en el sistema de diseño hizo además que cada pantalla nueva las heredara sin esfuerzo adicional.
+
+La segunda es que la privacidad solo es una propiedad del sistema cuando la hace cumplir el servidor. Lo que el mayor decide que ve su familiar no depende de que la aplicación del familiar se comporte bien, sino de unas reglas verificadas contra el emulador y de un reparto del almacenamiento pensado para que esas reglas puedan aplicarse; y la transcripción no se protege prometiendo no mirarla, sino no guardándola nunca. La plataforma de funciones gestionadas fue la que hizo viable ese planteamiento para un único desarrollador: permitió tener lógica de servidor de confianza sin operar servidor alguno.
+
+La tercera es metodológica: la verificación necesita varios niveles, y ninguno sustituye a los otros. Las pruebas de la lógica protegen de los errores propios; las de las reglas contra el emulador comprueban que el sistema niega lo que no debe permitir, algo que ninguna prueba de la aplicación puede ver; y solo el dispositivo confirma las suposiciones sobre lo que el proyecto no controla, como el momento en que el reconocedor de voz entrega su último resultado. Probar cada pieza en el nivel que le corresponde es lo que permite defender el resto de afirmaciones de esta memoria.
+
+Queda, por último, la premisa con la que se planteó el trabajo: la tecnología debe complementar el vínculo humano y no sustituirlo. El resultado la respeta en su diseño, porque el familiar forma parte del circuito y es el mayor quien decide qué sabe de él, pero no puede afirmar que la herramienta reduzca la soledad de nadie. Esa pregunta, que es la que de verdad importa, es la primera de las líneas que siguen.
+
+\section{Líneas de trabajo futuro}
+\label{sec:lineas-futuras}
+
+Las ocho Historias de Usuario del catálogo están implementadas, y las líneas que siguen quedan fuera de él. Se ordenan de mayor a menor alcance, que no coincide con el orden de dificultad técnica.
+
+La limitación más relevante del trabajo, señalada ya en el capítulo~\ref{cap:marco-teorico}, es la \textbf{ausencia de validación con usuarios reales}. Un estudio de campo con personas mayores, con instrumentos validados como la Escala de Soledad de De Jong Gierveld \citep{DeJongGierveld2010}, permitiría contrastar si la herramienta produce algún efecto medible sobre la dimensión social de la soledad, que es la única que la propuesta aspira a abordar. Ese estudio permitiría además contrastar las etiquetas del análisis emocional con la percepción del propio mayor y de su familiar, que el sistema presenta solo como orientación.
+
+La segunda es de protección de datos, y es condición para cualquier despliegue fuera del ámbito académico: una \textbf{evaluación de impacto relativa a la protección de datos} (art.~35 del RGPD), obligada en un tratamiento de datos de salud de personas vulnerables. Junto a ella, tres mejoras en el diseño del consentimiento: una opción «Borrarlo ya» que suprima de inmediato lo guardado al retirarlo, y resuelva así la tensión con el artículo~17; la posibilidad de que el familiar \emph{solicite} el consentimiento a distancia para que el mayor lo confirme en su propio dispositivo; y la corrección de la memoria, porque un dato mal transcrito («Paulo» por «Pablo») solo se corrige si el mayor lo aclara en una conversación posterior.
+
+En el terreno funcional quedan dos extensiones de alcance acotado. La primera es un \textbf{sistema de notificaciones \textit{push}} al familiar. El familiar solo conoce la señal de riesgo al abrir el panel (apartado~\ref{sec:conversacion}), y el valor de un seguimiento reside justamente en no tener que consultarlo. Firebase Cloud Messaging encaja de forma natural en una arquitectura construida sobre Firebase: la misma función que analiza la conversación al cerrarse podría avisar al dispositivo del familiar. El aviso tendría que obedecer el nivel de compartición elegido por el mayor, de modo que nadie reciba por notificación lo que no podría leer en el panel, y limitarse a invitar a abrirlo, sin mostrar en la pantalla de bloqueo nada de lo hablado. Ni siquiera así la aplicación se convertiría en un sistema de emergencias, porque una notificación no garantiza que alguien la atienda a tiempo.
+
+La segunda es admitir \textbf{varios familiares por mayor} a la vez que \textbf{varios mayores por familiar}, ampliando a $0..*$ la cardinalidad que el modelo conceptual del capítulo~\ref{cap:analisis} fija en $0..1$. Esa restricción simplifica el modelo, pero no cubre los casos frecuentes de varios hijos que se reparten el cuidado, o la existencia de varias personas de edad avanzada en la familia o entorno cercano. Ampliarla obligaría a decidir si cada uno ve lo mismo.
+
+Por último, dos líneas de naturaleza técnica. La evolución hacia una \textbf{conversación de audio nativa}, sustituyendo la cadena de transcripción, generación y síntesis por un modelo multimodal que reciba y devuelva voz, atacaría directamente la latencia percibida que fija RNF-7 y eliminaría la pérdida de matiz que supone convertir el habla en texto antes de interpretarla, aunque obligaría a revisar el modelo de privacidad, porque el análisis dejaría de trabajar sobre texto. Y una \textbf{integración continua} que ejecute de forma automática las tres suites de pruebas en cada cambio, sin la cual la cobertura conseguida se degrada con el tiempo sin que nadie lo advierta.

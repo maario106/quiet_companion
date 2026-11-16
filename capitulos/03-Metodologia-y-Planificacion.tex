@@ -1,0 +1,373 @@
+\chapter{Metodología y Planificación del Proyecto}
+\label{cap:metodologia}
+
+Este proyecto sigue las pautas que la Universidad de Granada y la Escuela Técnica Superior de Ingenierías Informática y de Telecomunicación establecen para los Trabajos Fin de Grado \citep{GuiaTFG, GuillenPerales2025}. El capítulo analiza las metodologías de desarrollo disponibles y justifica la elegida, describe cómo se ha aplicado al proyecto (actores, unidades de trabajo y plan de hitos) y termina con un estudio de costes que cuantifica lo que este desarrollo habría supuesto en un entorno profesional.
+
+\section{Análisis de metodologías de desarrollo}
+
+La elección de una metodología condiciona la planificación, el seguimiento y la entrega del proyecto. Dado que este Trabajo Fin de Grado se desarrolla de forma individual y en un plazo semicerrado, la metodología debe priorizar la simplicidad operativa y la adaptación al cambio por encima de la coordinación de equipos.
+
+\subsection{Metodologías tradicionales frente a ágiles}
+
+Las \textit{metodologías tradicionales} (modelo en cascada, modelo en V) dividen el desarrollo en fases secuenciales (requisitos, diseño, implementación y pruebas), y cada una debe completarse antes de empezar la siguiente \citep{Sommerville2016}. Exigen una especificación cerrada desde el inicio y penalizan los cambios tardíos, cuyo coste crece a lo largo del ciclo. Paradójicamente, \textcite{Royce1970}, a quien se atribuye la cascada, la describió para advertir de que aplicarla de forma estricta era arriesgado y proponía recorrer el ciclo más de una vez, matiz que la práctica posterior olvidó.
+
+Las \textit{metodologías ágiles} sustituyen esa secuencia rígida por un desarrollo iterativo e incremental: el producto se construye en ciclos cortos que entregan funcionalidad utilizable y permiten incorporar cambios de forma continua. Priorizan el software funcionando, la colaboración y la respuesta al cambio sobre la documentación exhaustiva y la planificación cerrada \citep{AgileManifesto2001}.
+
+Para este proyecto el enfoque tradicional no sirve, por dos motivos: el alcance no estaba cerrado al inicio, porque las funcionalidades se priorizaron y reordenaron durante el desarrollo, y un único desarrollador no obtiene beneficio alguno del control formal entre fases que justifica la cascada.
+
+\subsection{Comparación de los enfoques considerados}
+
+Dentro de las metodologías ágiles se han considerado tres enfoques que no están al mismo nivel: Scrum y Kanban son marcos de gestión, y Lean, un conjunto de principios.
+
+\textit{Scrum} organiza el trabajo en \textit{sprints} de duración fija, con tres roles (Product Owner, Scrum Master y desarrolladores) y cuatro eventos periódicos: la planificación del \textit{sprint}, el scrum diario, la revisión y la retrospectiva \citep{ScrumGuide2020}. Está pensado para coordinar equipos.
+
+\textit{Kanban} gestiona el trabajo como un flujo continuo sobre un tablero de columnas (por ejemplo, \textit{Por hacer}, \textit{En curso} y \textit{Hecho}) y limita el trabajo en curso (WIP) para evitar la sobrecarga y los cuellos de botella \citep{Anderson2010}. No impone roles, eventos ni iteraciones de duración fija.
+
+\textit{Lean} es un conjunto de principios para maximizar el valor eliminando el desperdicio, es decir, todo lo que no aporta valor al producto final. Promueve construir solo lo necesario, validar pronto y posponer las decisiones hasta el último momento responsable \citep{Poppendieck2003}. Lean y Kanban no son mutuamente excluyentes: el tablero Kanban, con su flujo tirado por la demanda y su límite de trabajo en curso, nace del sistema de producción de Toyota \citep{Ohno1988} y es la forma práctica de aplicar esos principios. La tabla~\ref{tab:comparacion-agiles} resume las diferencias entre los tres enfoques.
+
+
+\begin{table}[htbp]
+    \centering
+    \caption{Comparación de los enfoques de gestión considerados.}
+    \label{tab:comparacion-agiles}
+    \begin{tabularx}{\textwidth}{@{}l *{3}{>{\RaggedRight\arraybackslash}X}@{}}
+        \toprule
+        \textbf{Criterio} & \textbf{Scrum} & \textbf{Kanban} & \textbf{Lean} \\
+        \midrule
+        Unidad de planificación      & Sprint (fijo)            & Flujo continuo & Flujo de valor \\
+        Responsabilidades definidas  & Sí (3)                   & No             & No \\
+        Eventos periódicos           & Sí (4)                   & No             & No \\
+        Idóneo para 1 desarrollador  & Bajo                     & Alto           & Alto \\
+        Adaptación al cambio         & Media (intra-sprint rígido) & Alta        & Alta \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia.}
+\end{table}
+
+\subsection{Justificación de la elección: Kanban con principios Lean}
+
+Se ha optado por \textit{Kanban con principios Lean}: Kanban aporta el mecanismo de gestión (el tablero, el flujo y el límite de trabajo en curso) y Lean, el criterio para decidir qué entra en ese flujo. La elección responde a cuatro condiciones del proyecto:
+
+\begin{itemize}
+    \item \textbf{Desarrollo individual.} Los roles y eventos de Scrum presuponen un equipo; mantenerlos en solitario añade trabajo sin aportar coordinación. Kanban no impone esa estructura.
+    \item \textbf{Prioridades cambiantes.} El orden de las historias cambió durante el desarrollo, y el flujo continuo de Kanban absorbe esos cambios sin cerrar y replanificar \textit{sprints} de duración fija.
+    \item \textbf{Pocas tareas a la vez.} El límite de trabajo en curso obliga a terminar lo empezado antes de abrir más tareas \citep{Anderson2010}, lo que evita acumular tareas a medio hacer, el fallo más habitual cuando nadie más mira el tablero.
+    \item \textbf{Recursos limitados.} El principio Lean de eliminar el desperdicio encaja con los recursos de un Trabajo Fin de Grado: se construye lo que aporta valor en cada momento y se aplaza lo demás.
+\end{itemize}
+
+
+\section{Aplicación de la metodología al proyecto}
+
+Este apartado describe cómo se ha aplicado la metodología a Quiet Companion.
+
+\subsection{Definición de actores y roles}
+
+Hay dos tipos de actores: los del \textit{proyecto}, que desarrollan y supervisan el trabajo, y los del \textit{sistema}, que usan el producto.
+
+Entre los actores del proyecto, el \textit{desarrollador único} asume todos los roles técnicos, desde la ingeniería de requisitos hasta el despliegue, pasando por el diseño, la implementación, las pruebas y la documentación. Esta concentración de roles es precisamente lo que justifica la elección metodológica anterior. Los \textit{tutores académicos} supervisan el progreso, validan las decisiones de diseño y orientan el alcance, de modo que las sesiones de tutoría actúan como puntos de control externos que sustituyen a las ceremonias de revisión y retrospectiva de Scrum, carentes de sentido en solitario.
+
+
+A estos dos se añade un tercer grupo de carácter informal pero de influencia real sobre el producto. A lo largo del desarrollo se ha mostrado el producto a familiares y conocidos de edad avanzada, que constituyen una muestra aproximada del público objetivo, y a otros compañeros de la rama informática, cuyo criterio técnico ha servido de contraste. No se trata de un grupo de discusión formalizado, y así se declara para no atribuirle un rigor metodológico que no tiene, pero varias decisiones de interfaz, entre ellas los peldaños con nombre en lugar de deslizadores en los ajustes del mayor, nacieron de observar a una persona mayor intentando usar la aplicación.
+
+Los actores del sistema son tres, el mayor independiente, el mayor vinculado y el familiar, y se describen en el capítulo~\ref{cap:analisis}.
+
+\subsection{Historias de Usuario como unidades de trabajo}
+
+Las Historias de Usuario cumplen un doble papel: son la fuente de los requisitos, que se formalizan en el capítulo~\ref{cap:analisis}, y las unidades de trabajo del tablero, que es como se tratan aquí. La tabla~\ref{tab:catalogo-hu} recoge el catálogo completo.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Catálogo de Historias de Usuario gestionadas en el tablero Kanban.}
+    \label{tab:catalogo-hu}
+    \begin{tabularx}{\textwidth}{@{}c >{\RaggedRight\arraybackslash}X c@{}}
+        \toprule
+        \textbf{ID} & \textbf{Título} & \textbf{Prioridad} \\
+        \midrule
+        HU-1 & Selección de autonomía              & Alta  \\
+        HU-2 & Interfaz conversacional             & Alta  \\
+        HU-3 & Interfaz accesible y comprensible   & Alta  \\
+        HU-4 & Configuración adaptativa            & Alta  \\
+        HU-5 & Memoria conversacional básica       & Media \\
+        HU-6 & Seguimiento del estado de ánimo     & Media \\
+        HU-7 & Control del mayor sobre sus conversaciones & Alta \\
+        HU-8 & Conversación por escrito            & Baja \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia.}
+\end{table}
+
+Cada historia es una tarjeta con una plantilla común: identificación, descripción en formato de historia, estimación de tamaño, prioridad y criterios de aceptación. La tabla~\ref{tab:hu1} muestra HU-1 como ejemplo; el resto están en el capítulo~\ref{cap:analisis}, junto a los requisitos que se derivan de ellas.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Historia de Usuario HU-1: Selección de autonomía.}
+    \label{tab:hu1}
+    \begin{tabular}{|>{\raggedright\arraybackslash}p{0.48\textwidth}|>{\raggedright\arraybackslash}p{0.44\textwidth}|}
+        \hline
+        \textbf{Identificación}: HU-1 & Selección de autonomía \\
+        \hline
+        \multicolumn{2}{|>{\raggedright\arraybackslash}p{0.94\textwidth}|}{%
+            \textbf{Descripción}: \newline Como Mayor, quiero poder elegir, al abrir la aplicación por primera vez, si la gestionaré yo mismo o si me ayudará un familiar, para que el sistema me ofrezca la experiencia adecuada a mis capacidades tecnológicas. } \\
+        \hline
+        \textbf{Estimación}: L & \textbf{Prioridad}: 1 \\
+        \hline
+        \multicolumn{2}{|>{\raggedright\arraybackslash}p{0.94\textwidth}|}{%
+            \textbf{Criterios de aceptación}:
+            \begin{itemize}[nosep, leftmargin=*]
+                \item La primera pantalla permite entrar con una cuenta de Google o sin registrarse y, a continuación, muestra dos opciones claras (<<Usar por mi cuenta>> y <<Vincular con un familiar>>).
+                \item Si el usuario elige <<Usar por mi cuenta>>, se habilita un botón de <<Ajustes>> en su pantalla principal.
+                \item Si elige <<Vincular>>, se genera un código corto en pantalla y la interfaz principal se bloquea hasta que el familiar se conecte.
+            \end{itemize}
+        } \\
+        \hline
+    \end{tabular}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia.}
+\end{table}
+
+HU-5 y HU-6, de prioridad media, se abordaron después de HU-1 a HU-4, sobre las que se apoyan (tabla~\ref{tab:plan-hitos}).
+ 
+El catálogo no quedó cerrado al inicio: las seis primeras historias proceden del planteamiento inicial y las dos últimas surgieron durante el desarrollo, algo que el flujo continuo de Kanban admite sin replanificar. HU-7 apareció al diseñar HU-5 y HU-6: el consentimiento sobre las conversaciones no pertenecía a ninguna de las dos, respondía a una necesidad propia del mayor (decidir qué se guarda de él y quién lo ve) y era condición previa de ambas, porque ningún dato de una conversación puede tratarse sin ese consentimiento. HU-8 permite conversar por escrito cuando la voz no es una opción.
+
+
+\subsection{Tarjetas técnicas y desglose de tareas}
+
+Cada historia se descompone en una o varias tarjetas técnicas, que son las unidades reales de trabajo: la historia expresa valor para el usuario y la tarjeta, trabajo concreto de ingeniería. La tabla~\ref{tab:tarjetas-tecnicas} muestra el desglose de HU-4 durante la fase de estabilización, en la que la mayoría de las tarjetas no añaden funcionalidad sino que consolidan la existente.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Desglose de tarjetas técnicas de la HU-4 durante la fase de estabilización.}
+    \label{tab:tarjetas-tecnicas}
+    \begin{tabularx}{\textwidth}{@{}c c >{\RaggedRight\arraybackslash}X c@{}}
+        \toprule
+        \textbf{ID} & \textbf{HU} & \textbf{Título} & \textbf{Tipo} \\
+        \midrule
+        T-201 & HU-4 & Implementar \code{currentUserProvider} como \mbox{\code{StreamProvider}} único & Implementación \\
+        T-202 & HU-4 & Migrar \code{TtsService} a inyección de dependencias vía Riverpod       & Refactor \\
+        T-203 & HU-4 & \raggedright Aplicar \code{textSizeMultiplier} en \code{home\_screen.dart}           & Implementación \\
+        T-204 & HU-4 & Centralizar rutas de Firestore en \code{FirestorePaths}                & Refactor \\
+        T-205 & HU-4 & Migrar \code{GeminiService} y \code{SpeechService} al patrón de DI      & Refactor \\
+        T-206 & HU-4 & Romper el acoplamiento horizontal \mbox{\code{dashboard} $\rightarrow$ \code{onboarding}} & Refactor \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia.}
+\end{table}
+
+\subsection{El tablero Kanban: columnas y flujo}
+\label{sec:tablero}
+
+El flujo de trabajo se organizó en cuatro columnas, \textit{Por hacer}, \textit{En curso}, \textit{En revisión} y \textit{Hecho}. El límite de trabajo en curso se fijó en cinco tarjetas: como mucho tres \textit{En curso} y dos \textit{En revisión}. Kanban no establece un valor obligado \citep{Anderson2010}, y en este proyecto no tenía sentido bajarlo a una: algunas tareas dependen de otras y avanzan mejor a la vez. Con más tarjetas abiertas, en cambio, la atención se dispersa y se acumulan tareas a medio hacer. Una tarjeta pasaba a \textit{En revisión} con el código escrito, y a \textit{Hecho} cuando compilaba, pasaba los tests y el análisis estático sin advertencias, cumplía el funcionamiento esperado, y quedaba registrada en el repositorio.
+
+\subsection{Plan de iteraciones e hitos}
+
+El trabajo se agrupó en los ocho hitos de la tabla~\ref{tab:plan-hitos}: los cinco primeros construyen el núcleo de la aplicación (HU-1 a HU-4) y los tres últimos, HU-5 a HU-8.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Plan de iteraciones e hitos del proyecto.}
+    \label{tab:plan-hitos}
+    \begin{tabularx}{\textwidth}{@{}c >{\RaggedRight\arraybackslash}X c@{}}
+        \toprule
+        \textbf{Hito} & \textbf{Objetivo} & \textbf{HU implicadas} \\
+        \midrule
+        M1 & Cimientos: autenticación, modelo de datos y onboarding dual & HU-1        \\
+        M2 & Pipeline conversacional (STT $\rightarrow$ LLM $\rightarrow$ TTS) & HU-2, HU-3 \\
+        M3 & Panel remoto y configuración adaptativa              & HU-4        \\
+        M4 & Estabilización: refactorización, DI y deuda técnica   & HU-1 a HU-4 \\
+        M5 & Voz en la nube, accesibilidad local y endurecimiento  & HU-2 a HU-4 \\
+        M6 & Consentimiento informado y gobierno de los datos     & HU-7        \\
+        M7 & Análisis al cierre, memoria y seguimiento del bienestar & HU-5, HU-6 \\
+        M8 & Conversación por escrito (modo teclado)              & HU-8        \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia.}
+\end{table}
+
+El reparto de esos hitos en el tiempo se recoge en el cronograma de la figura~\ref{fig:cronograma}.
+
+\begin{figure}[htbp]\centering
+\begingroup\languageshorthands{none}%
+\footnotesize
+\begin{ganttchart}[
+    hgrid, vgrid, x unit             = 0.265cm, y unit title       = 0.52cm, y unit chart       = 0.52cm, title height       = 1, bar height         = 0.55, bar/.append style  = {fill = vizAzul, draw = none}, bar label font     = \footnotesize, title label font   = \footnotesize, group label font   = \footnotesize, canvas/.append style = {fill = none, draw = black!35, line width = 0.4pt} ]{1}{35} \gantttitle{2026}{35} \\
+  \gantttitle{Mar}{4} \gantttitle{Abr}{4} \gantttitle{May}{5} \gantttitle{Jun}{4} \gantttitle{Jul}{5} \gantttitle{Ago}{4} \gantttitle{Sep}{5} \gantttitle{Oct}{4} \\
+  \ganttbar{M1. Cimientos}{1}{9} \\
+  \ganttbar{M2. Pipeline conversacional}{2}{4} \\
+  \ganttbar{M3. Panel remoto y ajustes}{7}{11} \\
+  \ganttbar{M4. Estabilización}{11}{20} \\
+  \ganttbar{M5. Voz en la nube y seguridad}{20}{28} \\
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M6. Consentimiento (RGPD)}{27}{30} \\
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M7. Análisis, memoria y bienestar}{28}{31} \\
+  \ganttbar[bar/.append style={fill=vizNaranja, draw=none}]{M8. Conversación por escrito}{32}{33} \\
+  \ganttbar[bar/.append style={fill=vizVioleta, draw=none}]{Redacción de la memoria}{1}{35}
+\end{ganttchart}
+\endgroup
+
+  \caption[Cronograma del proyecto.]{Cronograma del proyecto. En azul, los hitos de HU-1 a HU-4; en naranja, los de HU-5 a HU-8, y en violeta, la redacción de esta memoria.}
+  \label{fig:cronograma}
+
+  \vspace{2pt}
+  {\footnotesize Fuente: Elaboración propia.}
+\end{figure}
+
+
+El cronograma muestra tres cosas que la tabla no recoge:
+
+\begin{itemize}
+    \item Los tres primeros hitos se solapan en marzo y abril: las historias compartían código, y cerrar el pipeline conversacional obligaba a tocar el modelo de datos que M1 estaba fijando, así que avanzaron en paralelo dentro del límite de trabajo en curso.
+    \item M4 se alarga de mayo a julio porque coincidió con un periodo de mucha carga de trabajo del autor, ajena al proyecto, en el que el avance fue mínimo.
+    \item Los hitos de HU-5 a HU-8 siguen un orden obligado: M6 precede a M7, porque el análisis de una conversación no puede construirse antes que el consentimiento que lo autoriza, y M8 se abordó al cerrar ambos.
+\end{itemize}
+
+La redacción de la memoria acompaña a todos los hitos: empezó con la investigación de mercado y el marco teórico, que fijaron los límites del proyecto, y siguió documentando cada decisión técnica a medida que se tomaba.
+
+El apartado~\ref{sec:cronologia} documenta cómo se ejecutaron estos hitos.
+
+\section{Estudio de costes del proyecto}
+\label{sec:costes}
+
+Este apartado distingue entre lo que ha costado realmente desarrollar Quiet Companion y lo que habría costado en un entorno profesional. La diferencia es grande porque el equipo informático ya estaba disponible y los servicios en la nube se han usado dentro de sus capas gratuitas, de modo que el desembolso real, por sí solo, daría una imagen engañosa del esfuerzo invertido.
+
+\subsection{Criterios de imputación}
+
+Antes de las cifras van los criterios empleados, porque de ellos depende por completo el resultado.
+
+El coste de personal se calcula aplicando las tablas salariales del XIX Convenio colectivo estatal de empresas de consultoría, tecnologías de la información y estudios de mercado, vigente para el periodo 2025-2027 \citep{ConvenioTIC2025}. Las horas imputadas resultan de estimar el tiempo medio dedicado al proyecto por semana, teniendo en cuenta las semanas en las que no pudo dedicársele tiempo por motivos personales y profesionales, y ascienden a unas 370~horas de trabajo.
+
+La amortización de los equipos sigue las tablas del impuesto sobre sociedades, que asignan a los equipos para procesos de información un coeficiente lineal máximo del 25\% y un periodo máximo de ocho años \citep{LIS2014}. Los equipos son personales y anteriores al proyecto, así que se imputa la parte proporcional a los ocho meses de desarrollo, o nada si ya están amortizados.
+
+Los servicios en la nube se imputan por su consumo real. Si ese consumo cabe en la capa gratuita, se indica el coste nulo y también el precio fuera de ella, que es el que decide la viabilidad económica del producto fuera del ámbito académico.
+
+\subsection{Coste de personal}
+
+La categoría aplicable a las funciones desempeñadas, que abarcan análisis, diseño, implementación y pruebas, es la del Grupo~C del Área~3 (desarrollo de software, programación y explotación de sistemas), en su nivel~3, que corresponde a quien posee los conocimientos necesarios pero cuenta con poca experiencia profesional. Sus tablas para 2026 fijan una retribución bruta anual de 24.105,37~euros \citep{ConvenioTIC2025}. Sobre una jornada anual de 1.800~horas, también fijada por el convenio, resulta un salario bruto de 13,39~euros por hora.
+
+A ese salario debe sumarse la cotización empresarial a la Seguridad Social, que para 2026 asciende al 30,65\% del salario bruto, resultado de agregar contingencias comunes (23,60\%), desempleo en contrato indefinido (5,50\%), Fondo de Garantía Salarial (0,20\%), formación profesional (0,60\%) y Mecanismo de Equidad Intergeneracional a cargo de la empresa (0,75\%) \citep{OrdenCotizacion2026}. No se incluye la cotización por accidentes de trabajo y enfermedades profesionales, que depende de la actividad concreta de la empresa. El coste empresarial por hora asciende, por tanto, a 17,49~euros, y el coste total de personal del proyecto a 6.471,30~euros, según recoge la tabla~\ref{tab:coste-personal}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Coste de personal imputado al proyecto.}
+    \label{tab:coste-personal}
+    \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r@{}}
+        \toprule
+        \textbf{Concepto} & \textbf{Importe} \\
+        \midrule
+        Retribución bruta anual (Área 3, Grupo C, nivel 3, tablas 2026) & 24.105,37 € \\
+        Jornada anual de convenio                             & 1.800 h \\
+        Salario bruto por hora                                & 13,39 € \\
+        Cotización empresarial a la Seguridad Social (30,65\%) & 4,10 € \\
+        \midrule
+        Coste empresarial por hora                            & 17,49 € \\
+        Horas imputadas (estimación de dedicación)            & 370 h \\
+        \midrule
+        \textbf{Total coste de personal}                      & \textbf{6.471,30 €} \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia a partir del XIX Convenio colectivo estatal de consultoría y de la Orden de cotización para 2026.}
+\end{table}
+
+\subsection{Recursos materiales}
+
+El desarrollo se ha hecho en un portátil Acer Aspire XV personal, comprado ocho años antes del inicio del proyecto por unos 900~euros. Con el periodo máximo de amortización de ocho años está completamente amortizado, y su imputación es nula. Lo mismo ocurre con los dos terminales Android de pruebas, uno por perfil de usuario, también personales y anteriores al proyecto.
+
+Como un proyecto que partiera de cero sí tendría que comprar ese equipamiento, la tabla~\ref{tab:coste-material} añade un escenario de reposición: la parte proporcional a ocho meses de la amortización a ocho años de un equipamiento equivalente.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Recursos materiales: imputación real y escenario de reposición.}
+    \label{tab:coste-material}
+    \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X c r r@{}}
+        \toprule
+        \textbf{Concepto} & \textbf{Valor} & \textbf{Imputado} & \textbf{Reposición} \\
+        \midrule
+        Portátil de desarrollo (equipo personal, 8 años) & 900,00 € & 0,00 € & 75,00 € \\
+        Terminal Android de pruebas, perfil del mayor    & 150,00 € & 0,00 € & 12,50 € \\
+        Terminal Android de pruebas, perfil del familiar & 150,00 € & 0,00 € & 12,50 € \\
+        \midrule
+        \textbf{Total recursos materiales}               &          & \textbf{0,00 €} & \textbf{100,00 €} \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia. La columna de reposición aplica amortización lineal a ocho años sobre ocho meses de proyecto.}
+\end{table}
+
+\subsection{Servicios en la nube}
+
+El proyecto se apoya en tres servicios en la nube de pago por uso, y ninguno de ellos ha generado desembolso efectivo.
+
+Firebase se contrató en el plan Blaze, de pago por uso, requisito para poder desplegar Cloud Functions. Su consumo se ha mantenido holgadamente dentro de la capa gratuita permanente, que cubre 50.000 lecturas y 20.000 escrituras diarias en Firestore, dos millones de invocaciones mensuales de funciones y 50.000 usuarios activos mensuales de autenticación \citep{FirebasePricing}. El desembolso ha sido, por tanto, nulo, si bien el plan exige una cuenta de facturación activa.
+
+La conversación en vivo y el análisis de cada conversación al cerrarse llaman al modelo \code{gemini-2.5-flash} desde el servidor, a través de Vertex AI y con cargo a la cuenta de facturación del proyecto. Durante el desarrollo, su uso se ha limitado a las pruebas, un volumen de llamadas cuyo importe resulta despreciable frente al resto de partidas. El modelo factura 0,30~dólares por millón de \textit{tokens} de entrada y 2,50~dólares por millón de \textit{tokens} de salida \citep{VertexPricing}.
+
+La API de Cloud Text-to-Speech, que sintetiza las voces Chirp~3:~HD de la aplicación (apartado~\ref{sec:voz}), dispone de una capa gratuita mensual de un millón de caracteres, suficiente para el desarrollo y las pruebas. Superado ese umbral, el precio es de 30~dólares por millón de caracteres \citep{TTSPricing}, cifra determinante para el análisis de coste marginal que cierra este apartado.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Servicios en la nube imputados al proyecto.}
+    \label{tab:coste-servicios}
+    \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X r@{}}
+        \toprule
+        \textbf{Servicio} & \textbf{Régimen durante el proyecto} & \textbf{Imputado} \\
+        \midrule
+        Firebase (plan Blaze)          & Dentro de la capa gratuita permanente & 0,00 € \\
+        Gemini en Vertex AI (chat y análisis) & Consumo de pruebas, despreciable & 0,00 € \\
+        Cloud Text-to-Speech (Chirp 3: HD) & Capa gratuita de 1 M de caracteres al mes & 0,00 € \\
+        \midrule
+        \textbf{Total servicios en la nube} &                                  & \textbf{0,00 €} \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia a partir de las tarifas públicas de los proveedores.}
+\end{table}
+
+\subsection{Consumo eléctrico}
+
+El consumo eléctrico imputable se estima a partir de la potencia media del equipo de desarrollo, en torno a 65~W, y del equipo de red doméstico, unos 10~W, durante las 370~horas de trabajo. Resultan 27,75~kWh que, al precio medio del mercado regulado en 2026, en torno a 0,15~euros por kWh antes de impuestos \citep{PrecioLuz2026}, suponen 4,16~euros. La carga de los terminales de prueba es despreciable a esta escala.
+
+\subsection{Presupuesto total}
+
+La tabla~\ref{tab:presupuesto} agrega las partidas anteriores. El coste total del proyecto asciende a 6.475,46~euros, de los cuales el 99,9\% corresponde a la dedicación del desarrollador.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Presupuesto total del proyecto.}
+    \label{tab:presupuesto}
+    \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
+        \toprule
+        \textbf{Partida} & \textbf{Importe} & \textbf{Peso} \\
+        \midrule
+        Personal (370 h a 17,49 €/h)      & 6.471,30 € & 99,8\% \\
+        Consumo eléctrico                 &     4,16 € &  0,1\% \\
+        Servicios en la nube              &     0,07 € &  0,1\% \\
+        Recursos materiales (amortizados) &     0,00 € &  0,0\% \\
+        \midrule
+        \textbf{Total}                    & \textbf{6.475,46 €} & \textbf{100\%} \\
+        \bottomrule
+    \end{tabularx}
+
+    \vspace{2pt}
+    {\footnotesize Fuente: Elaboración propia.}
+\end{table}
+
+El desembolso real del autor se limita a los 4,16~euros de electricidad, porque ni el equipamiento ni los servicios en la nube han generado factura. Gracias a las capas gratuitas y al hardware de uso común, el único recurso realmente escaso en un desarrollo de este tipo es el tiempo.
+
+\subsection{Coste marginal de explotación}
+
+El capítulo~\ref{cap:marco-teorico} sostiene que una aplicación sobre hardware existente tiene un coste de despliegue marginal frente a los robots sociales. Este apartado lo cuantifica.
+
+Bajo el supuesto de un mayor que mantenga diez intercambios conversacionales al día, repartidos en dos conversaciones, con respuestas de unos 300~caracteres y un consumo aproximado de 500~\textit{tokens} de entrada y 150~de salida por turno, el consumo mensual sería de unos 90.000~caracteres de síntesis de voz y alrededor de 150.000~\textit{tokens} de entrada y 45.000~de salida en el modelo de lenguaje. A ello se suman el contexto de memoria que acompaña a cada turno y una llamada de análisis por conversación: unos 270.000~\textit{tokens} de entrada y 15.000~de salida más al mes. Aplicadas las tarifas anteriores, la síntesis de voz costaría unos 2,70~dólares mensuales por usuario y el modelo de lenguaje en torno a 0,28~dólares, mientras que la persistencia, la autenticación y las invocaciones de funciones permanecerían dentro de las capas gratuitas incluso con varios cientos de usuarios.
+
+De aquí salen dos conclusiones. La primera, que unos tres dólares por usuario y mes son un coste marginal frente a los 249~dólares de alta y los 39~a~59~dólares mensuales de un robot de compañía comercial, o frente a los aproximadamente 6.000~dólares de un robot terapéutico, como sostiene el capítulo~\ref{cap:marco-teorico}. La segunda, que la síntesis de voz supone en torno al 90\% del coste, así que cualquier estrategia de escalado empieza por ella: negociar volumen, o reservar la voz en la nube para las respuestas largas y dejar las breves al motor del dispositivo, que el sistema usa como respaldo.

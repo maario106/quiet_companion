@@ -1,0 +1,36 @@
+\begin{titlepage}
+
+% La longitud la sigue usando portada_2.tex, asi que se declara aqui aunque esta
+% portada centre ya sobre la caja de texto.
+\newlength{\centeroffset}
+\setlength{\centeroffset}{-0.5\oddsidemargin}
+\addtolength{\centeroffset}{0.5\evensidemargin}
+\thispagestyle{empty}
+
+\centering
+
+\vspace*{0.5cm}
+
+\includegraphics[width=0.72\textwidth]{imagenes/logo_ugr.jpg}\\[1.3cm]
+
+\textsc{\Large TRABAJO FIN DE GRADO}\\[0.3cm]
+\textsc{\large \grado}\\[0.2cm]
+\textsc{Curso Académico \curso}\\[1.6cm]
+
+{\huge\bfseries \thetitle \par}
+
+\vfill
+
+\textbf{Autor}\\ {\theauthor}\\[3ex]
+\textbf{Directores}\\ {\director \\ \otrodirector}
+
+\vfill
+
+\includegraphics[width=0.3\textwidth]{imagenes/etsiit_logo.png}\\[0.3cm]
+\textsc{Escuela Técnica Superior de Ingenierías Informática y de Telecomunicación}\\
+\textsc{---}\\
+Granada, a \today
+
+\vspace*{0.5cm}
+
+\end{titlepage}

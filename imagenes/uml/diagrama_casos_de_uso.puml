@@ -1,0 +1,53 @@
+@startuml diagrama_casos_de_uso
+' Casos de uso del sistema (CU-01 a CU-11), figura fig:casos-de-uso del capítulo 4.
+' Regenerar: java -jar plantuml.jar diagrama_casos_de_uso.puml
+' "CU <-- actor" deja al actor a la derecha; [norank] saca <<precedes>> de la colocación.
+left to right direction
+skinparam dpi 150
+
+actor "Mayor\nIndependiente" as MI
+actor "Mayor\nVinculado" as MV
+actor "Mayor" as M
+actor "Familiar" as FA
+actor "API Gemini" as GEM <<external>>
+actor "API Cloud\nText-to-Speech" as TTS <<external>>
+
+MI --|> M
+MV --|> M
+
+rectangle "Quiet Companion" {
+  usecase "CU-01\nSeleccionar modo de uso" as CU01
+  usecase "CU-05\nAjustar preferencias\n(desde el dispositivo del mayor)" as CU05
+  usecase "CU-04\nConversar por voz" as CU04
+  usecase "CU-10\nConversar por escrito" as CU10
+  usecase "CU-11\nLlamar a emergencias" as CU11
+  usecase "CU-08\nCerrar y analizar\nuna conversación" as CU08
+  usecase "CU-07\nOtorgar o retirar\nel consentimiento" as CU07
+  usecase "CU-09\nConsultar el seguimiento\ndel estado de ánimo" as CU09
+  usecase "CU-06\nAjustar preferencias\n(modo remoto)" as CU06
+  usecase "CU-03\nIntroducir código\nde vinculación" as CU03
+  usecase "CU-02\nGenerar código\nde vinculación" as CU02
+}
+
+M --> CU01
+M --> CU05
+M --> CU04
+M --> CU10
+M --> CU11
+M --> CU08
+M --> CU07
+M --> CU09
+MV --> CU02
+
+CU04 ..> GEM : <<include>>
+CU04 ..> TTS : <<include>>
+CU10 ..> GEM : <<include>>
+CU08 ..> GEM : <<include>>
+
+CU09 <-- FA
+CU06 <-- FA
+CU03 <-- FA
+
+CU07 .[norank].> CU08 : <<precedes>>
+CU02 .[norank].> CU03 : <<precedes>>
+@enduml

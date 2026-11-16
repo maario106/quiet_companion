@@ -1,0 +1,301 @@
+\pdfminorversion=7 % admite figuras en PDF 1.7 (arquitectura_sistema.pdf) sin aviso
+\documentclass[a4paper,11pt]{book} % doble cara: cada página de los preliminares va seguida de una en blanco
+%\documentclass[a4paper,twoside,11pt,titlepage]{book}
+
+\usepackage[
+  a4paper,
+  inner=35mm,      % margen interior (libro a doble cara)
+  outer=30mm,      % margen exterior
+  top=25mm,        % margen superior real
+  bottom=30mm,     % margen inferior
+  headheight=14.5pt, % altura de la cabecera para fancyhdr (la que pide con tildes en mayúscula)
+  headsep=10.5pt,  % separación cabecera–texto; con headheight suma 25pt, así el texto no se mueve
+  includehead      % cuenta la cabecera dentro del margen superior
+]{geometry}
+
+
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage[english,spanish]{babel} % english solo para dividir bien las palabras del Abstract
+% « » tecleados, igual que << >>.
+\DeclareUnicodeCharacter{00AB}{\guillemotleft}
+\DeclareUnicodeCharacter{00BB}{\guillemotright}
+\babelhyphenation[spanish]{Func-tions} % no «Fun-ctions» en el índice
+
+\usepackage{csquotes}
+\MakeOuterQuote{"}   % permite usar "" como comillas tipográficas sin conflicto con babel
+
+\usepackage[
+  style = apa,
+  backend = biber,
+  ]
+{biblatex}
+\DeclareLanguageMapping{spanish}{spanish-apa}
+% «et al.» también en español (APA 7), en lugar de «y col.».
+\DefineBibliographyStrings{spanish}{%
+  andothers = {et\addabbrvspace al\adddot},
+  andmore   = {et\addabbrvspace al\adddot},
+}
+\addbibresource{bibliografia.bib}
+%\bibliography{bibliografia/bibliografia}\addcontentsline{toc}{chapter}{Bibliografía}
+
+% \usepackage[style=list, number=none]{glossary} %
+%\usepackage{titlesec}
+%\usepackage{pailatino}
+
+\decimalpoint
+\usepackage{dcolumn}
+\newcolumntype{.}{D{.}{\esperiod}{-1}}
+\makeatletter
+\addto\shorthandsspanish{\let\esperiod\es@period@code}
+\makeatother
+
+%para los colores de las tablas
+\usepackage[table,xcdraw]{xcolor}
+
+%\usepackage[chapter]{algorithm}
+\RequirePackage{verbatim}
+%\RequirePackage[Glenn]{fncychap}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{afterpage}
+\usepackage{caption}
+\usepackage{subcaption} % figuras a dos paneles (boceto junto a mockup, capitulo 5)
+\usepackage{pgfgantt}   % cronograma del proyecto (capitulo 3)
+\usepackage{float}
+\usepackage[section]{placeins} % ningún flotante cruza un \section...
+\makeatletter                  % ...ni un \subsection
+\AtBeginDocument{\expandafter\renewcommand\expandafter\subsection\expandafter{\expandafter\@fb@secFB\subsection}}
+\makeatother
+\usepackage{pdflscape}
+\usepackage{longtable}
+\usepackage{amsmath}
+
+\usepackage{booktabs}   % \toprule, \midrule, \bottomrule
+\usepackage{tabularx}   % columnas que se ajustan al ancho
+\usepackage{array}      % control fino de columnas
+\usepackage{ragged2e}   % \RaggedRight en celdas justificadas
+% Celda alineada a la derecha en un tabularx (tablas del capítulo 2)
+\newcommand{\aladerecha}[1]{\multicolumn{1}{>{\raggedleft\arraybackslash}X}{#1}}
+\usepackage{enumitem}   % nosep, leftmargin=* en listas dentro de tablas
+\usepackage{tikz}       % línea de hitos del capítulo 5 (cronología del desarrollo)
+\usepackage{pgfplots}   % gráficas de datos (capítulo 2: evolución de mayores que viven solos)
+\pgfplotsset{compat=1.16}
+\usepgfplotslibrary{groupplots}
+% Paleta de las gráficas: tonos distinguibles también con daltonismo y en impresión
+\definecolor{vizAzul}{HTML}{2A78D6}
+\definecolor{vizNaranja}{HTML}{EB6834}
+\definecolor{vizVioleta}{HTML}{4A3AA7}
+% Opcional, para zebra striping:
+% \usepackage[table]{xcolor}
+
+\usepackage[pdfborder={0 0 0}]{hyperref} %referencia
+
+% \citep = \parencite de biblatex-apa, con autor siempre visible.
+\DeclareCiteCommand{\citep}[\mkbibparens]
+  {\usebibmacro{cite:init}\usebibmacro{prenote}\toggletrue{apa:inpcite}}
+  {\usebibmacro{citeindex}\usebibmacro{cite}\usebibmacro{cite:post}}
+  {}
+  {\usebibmacro{postnote}\togglefalse{apa:inpcite}}
+
+% ********************************************************************
+% Re-usable information
+% ********************************************************************
+\newcommand{\director}{Daniel Bolaños Martínez}
+\newcommand{\otrodirector}{Alberto Durán López}
+\newcommand{\thetitle}{Quiet Companion: asistente conversacional por voz accesible frente a la soledad no deseada en la tercera edad}
+\newcommand{\thetitleen}{Quiet Companion: an accessible voice conversational assistant to address unwanted loneliness in older adults}
+\newcommand{\theauthor}{Mario Rosas Navarro}
+\newcommand{\curso}{2025-2026}
+\newcommand{\dni}{77650905F}
+\newcommand{\grado}{Doble Grado en Ingeniería Informática - Administración y Dirección de empresas}
+\newcommand{\myFaculty}{Escuela Técnica Superior de Ingenierías Informática y de
+Telecomunicación}
+\newcommand{\myFacultyShort}{E.T.S. de Ingenierías Informática y de
+Telecomunicación}
+\newcommand{\myUni}{\protect{Universidad de Granada}}
+\newcommand{\myLocation}{Granada, a \today.} % con coma, como en la portada
+\newcommand{\myVersion}{Version 0.1}
+
+
+\hypersetup{
+pdfauthor = {\theauthor},
+pdftitle = {\thetitle},
+pdfsubject = {},
+pdfkeywords = {Soledad no deseada, Personas mayores, Accesibilidad, Asistente conversacional por voz, Inteligencia artificial generativa}
+}
+
+%\hyphenation{}
+
+
+%\usepackage{doxygen/doxygen}
+%\usepackage{pdfpages}
+\usepackage{url}
+\usepackage[type={CC}, modifier={by-sa}, version={4.0}]{doclicense}
+\usepackage{hyperref}
+\usepackage{hyperxmp}
+\usepackage{colortbl,longtable}
+\usepackage[stable]{footmisc}
+%\usepackage{index}
+
+\usepackage{soul}
+
+%\makeindex
+%\usepackage[style=long, cols=2,border=plain,toc=true,number=none]{glossary}
+% \makeglossary
+
+% Definición de comandos que me son tiles:
+%\renewcommand{\indexname}{Índice alfabético}
+%\renewcommand{\glossaryname}{Glosario}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LO]{\leftmark}
+\fancyhead[RE]{\rightmark}
+\fancyhead[RO,LE]{\textbf{\thepage}}
+\renewcommand{\chaptermark}[1]{\markboth{\textbf{#1}}{}}
+\renewcommand{\sectionmark}[1]{\markright{\textbf{\thesection. #1}}}
+
+%\setlength{\headheight}{1.5\headheight}
+
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+%Definimos los tipos teorema, ejemplo y definición podremos usar estos tipos
+%simplemente poniendo \begin{teorema} \end{teorema} ...
+\newtheorem{teorema}{Teorema}[chapter]
+\newtheorem{ejemplo}{Ejemplo}[chapter]
+\newtheorem{definicion}{Definición}[chapter]
+
+\addto\captionsspanish{%
+  \renewcommand{\tablename}{Tabla}%
+  \renewcommand{\listtablename}{Índice de Tablas}%
+  \renewcommand{\listfigurename}{Índice de Figuras}%
+}
+
+\definecolor{gray97}{gray}{.97}
+\definecolor{gray75}{gray}{.75}
+\definecolor{gray45}{gray}{.45}
+\definecolor{gray30}{gray}{.94}
+\definecolor{codegray}{RGB}{240,240,240}
+
+\newcommand{\code}[1]{%
+  \sethlcolor{codegray}\hl{\texttt{#1}}%
+}
+
+\lstset{ frame=Ltb,
+     framerule=0.5pt,
+     aboveskip=0.5cm,
+     framextopmargin=3pt,
+     framexbottommargin=3pt,
+     framexleftmargin=0.1cm,
+     framesep=0pt,
+     rulesep=.4pt,
+     backgroundcolor=\color{gray97},
+     rulesepcolor=\color{black},
+     %
+     stringstyle=\ttfamily,
+     showstringspaces = false,
+     basicstyle=\scriptsize\ttfamily,
+     commentstyle=\color{gray45},
+     keywordstyle=\bfseries,
+     %
+     numbers=left,
+     numbersep=6pt,
+     numberstyle=\tiny,
+     numberfirstline = false,
+     breaklines=true,
+   }
+ 
+% Tildes en los listados (listings no lee UTF-8 multibyte).
+\lstset{literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1}
+
+% minimizar fragmentado de listados
+\lstnewenvironment{listing}[1][]
+   {\lstset{#1}\pagebreak[0]}{\pagebreak[0]}
+
+\lstdefinestyle{CodigoC}
+   {
+	basicstyle=\scriptsize,
+	frame=single,
+	language=C,
+	numbers=left
+   }
+\lstdefinestyle{CodigoC++}
+   {
+	basicstyle=\small,
+	frame=single,
+	backgroundcolor=\color{gray30},
+	language=C++,
+	numbers=left
+   }
+
+ 
+\lstdefinestyle{Consola}
+   {basicstyle=\scriptsize\bf\ttfamily,
+    backgroundcolor=\color{gray30},
+    frame=single,
+    numbers=none
+   }
+
+
+\newcommand{\bigrule}{\titlerule[0.5mm]}
+
+
+% Páginas en blanco de \cleardoublepage sin cabecera.
+\makeatletter
+\def\cleardoublepage{\clearpage\if@twoside\ifodd\c@page\else
+  \hbox{}\thispagestyle{empty}\newpage\if@twocolumn\hbox{}\newpage\fi\fi\fi}
+\makeatother
+\usepackage{pdfpages}
+% Rótulo de los listados en español, también en las referencias con \autoref
+\renewcommand{\lstlistingname}{Listado}
+% \autoref en minúscula («la figura 2.1»); también en \extrasspanish, que se repone tras el Abstract.
+\AtBeginDocument{%
+  \def\lstlistingautorefname{listado}%
+  \def\figureautorefname{figura}\def\tableautorefname{tabla}\def\chapterautorefname{capítulo}%
+  \addto\extrasspanish{\def\figureautorefname{figura}\def\tableautorefname{tabla}\def\chapterautorefname{capítulo}}}
+\begin{document}
+\hypersetup{pageanchor=false} % portada y preliminares sin ancla de página: no repiten page.1-7 del cuerpo
+\input{portada/portada}
+\input{portada/portada_2}
+\frontmatter % numeración romana ya en los preliminares: «Buenas prácticas» sale en el índice en romanos, no como 5
+\input{prefacios/prefacio}
+\hypersetup{pageanchor=true}
+\tableofcontents
+\listoffigures
+\listoftables
+
+\mainmatter
+\makeatletter\@openrightfalse\makeatother % los capítulos van seguidos, sin página en blanco delante
+\setlength{\parskip}{5pt}
+% El blanco sobrante de una página corta, al pie y no entre títulos.
+\raggedbottom
+
+\input{capitulos/01-Introduccion}
+\input{capitulos/02-Marco-teorico}
+\input{capitulos/03-Metodologia-y-Planificacion}
+\input{capitulos/04-Analisis-y-Especificacion-del-Sistema}
+\input{capitulos/05_Diseno_Desarrollo}
+\input{capitulos/06_Desarrollo_Futuro}
+
+%%% --- Permite partir las URL largas de la bibliografia para que no invadan el margen --- %%%
+\setcounter{biburlnumpenalty}{9000}
+\setcounter{biburllcpenalty}{9000}
+\setcounter{biburlucpenalty}{9000}
+\setlength{\emergencystretch}{3em}
+% Solo lo citado (APA).
+\printbibliography[
+title={Bibliografía},
+heading=bibintoc]
+%\bibliography{bibliografia/bibliografia}\addcontentsline{toc}{chapter}{Bibliografía}
+%\bibliographystyle{unsrt}
+
+
+%
+\appendix
+\input{apendices/manual_usuario/manual_usuario}
+%%\input{apendices/paper/paper}
+%\input{glosario/entradas_glosario}
+% \addcontentsline{toc}{chapter}{Glosario}
+% \printglossary
+
+\end{document}
