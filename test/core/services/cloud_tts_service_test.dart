@@ -154,16 +154,6 @@ void main() {
     service = build();
   });
 
-  group('camino feliz', () {
-    test('trocea, sintetiza y reproduce en orden', () async {
-      await service.speak(_threeSentences);
-
-      expect(synthesizer.requested, equals([_chunk0, _chunk1, _chunk2]));
-      expect(player.played, equals([_chunk0, _chunk1, _chunk2]));
-      expect(fallback.spoken, isEmpty);
-    });
-  });
-
   group('prefetch', () {
     test('sintetiza el fragmento siguiente mientras suena el actual',
         () async {
@@ -198,6 +188,7 @@ void main() {
           'play:$_chunk2',
         ]),
       );
+      expect(fallback.spoken, isEmpty);
     });
   });
 

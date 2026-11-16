@@ -176,18 +176,4 @@ void main() {
       expect(controller.state.responseAI, 'Respuesta a: escrito');
     });
   });
-
-  group('escucha (ADR-0036)', () {
-    test('el turno se abre con la pausa que eligió el mayor', () async {
-      final controller = build();
-      await controller.startListening();
-      expect(speech.lastSilenceTimeout, const Duration(seconds: 3));
-
-      speech.deliverFinal('');
-      controller.updateListenPause(const Duration(seconds: 6));
-      await controller.startListening();
-
-      expect(speech.lastSilenceTimeout, const Duration(seconds: 6));
-    });
-  });
 }

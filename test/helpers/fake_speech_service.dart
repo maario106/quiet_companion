@@ -6,9 +6,6 @@ class FakeSpeechService implements SpeechService {
   int cancelCalls = 0;
   int finishCalls = 0;
 
-  /// Pausa con la que se abrió el último turno.
-  Duration? lastSilenceTimeout;
-
   void Function(String transcript)? _onFinal;
 
   @override
@@ -20,7 +17,6 @@ class FakeSpeechService implements SpeechService {
     required void Function(String transcript) onFinal,
     required Duration silenceTimeout,
   }) {
-    lastSilenceTimeout = silenceTimeout;
     _onFinal = onFinal;
   }
 

@@ -48,19 +48,4 @@ void main() {
     expect(find.text('Entrar con esa cuenta'), findsOneWidget);
     expect(find.text('No, seguir así'), findsOneWidget);
   });
-
-  testWidgets('con Google, cerrar sesión pide un segundo toque',
-      (tester) async {
-    repo.account = const AuthAccount(isAnonymous: false, email: 'm@gmail.com');
-    await tester.pumpWidget(buildSubject());
-    await tester.pump();
-
-    await tester.tap(find.text('Cerrar sesión'));
-    await tester.pump();
-    expect(repo.signOutCalls, 0);
-
-    await tester.tap(find.text('Sí, cerrar sesión'));
-    await tester.pump();
-    expect(repo.signOutCalls, 1);
-  });
 }

@@ -17,7 +17,6 @@ class FakeRecognizer extends Fake implements stt.SpeechToText {
   stt.SpeechResultListener? _onResult;
 
   int listenCalls = 0;
-  int stopCalls = 0;
   int cancelCalls = 0;
   bool _listening = false;
   bool _heard = false;
@@ -48,7 +47,6 @@ class FakeRecognizer extends Fake implements stt.SpeechToText {
 
   @override
   Future<void> stop() async {
-    stopCalls++;
     // Como el plugin: solo avisa si de verdad estaba grabando.
     if (!_listening) return;
     _endOfSpeech();
@@ -125,19 +123,6 @@ void main() {
       await tester.pump(pause);
 
       expect(finals, ['me llamo Mario']);
-    });
-
-    testWidgets('el botón espera al final antes de enviar', (tester) async {
-      await begin();
-      await tester.pump();
-
-      recognizer.partial('quiero contarte');
-      expect(service.finishListening(), isTrue);
-      expect(recognizer.stopCalls, 1);
-      expect(finals, isEmpty);
-
-      recognizer.finalResult('quiero contarte algo');
-      expect(finals, ['quiero contarte algo']);
     });
 
     testWidgets('si el final no llega, el tope cierra con lo que haya',

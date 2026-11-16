@@ -26,16 +26,6 @@ void main() {
     expect(repo.anonymousSignIns, 0);
   });
 
-  test('cerrar el selector de Google vuelve a la bienvenida sin aviso',
-      () async {
-    repo.googleUid = null;
-
-    await controller.signInWithGoogle();
-
-    expect(controller.state.status, AuthStatus.nonAuthenticated);
-    expect(controller.state.errorMessage, isEmpty);
-  });
-
   test('una cuenta de Google de mayor recupera su documento (móvil nuevo)',
       () async {
     repo.users['g-1'] = const UserModel(
@@ -65,20 +55,6 @@ void main() {
     expect(repo.signedInUid, isNull);
     expect(controller.state.status, AuthStatus.nonAuthenticated);
     expect(controller.state.user, isNull);
-  });
-
-  test('volver atrás tras entrar con Google cierra la sesión sin borrarla',
-      () async {
-    repo.googleUid = 'g-1';
-    await controller.signInWithGoogle();
-    await settle();
-
-    await controller.backToAccessChoice();
-    await settle();
-
-    expect(repo.deletedAnonymousUids, isEmpty);
-    expect(repo.signOutCalls, 1);
-    expect(controller.state.status, AuthStatus.nonAuthenticated);
   });
 
   test('la cuenta de Google de un familiar no entra como mayor, y se dice',

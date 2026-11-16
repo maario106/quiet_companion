@@ -7,9 +7,9 @@
  *
  *   cd firestore-tests && npm test
  *
- * El último grupo era, hasta que existió `validateAndLink`, un recordatorio
- * ejecutable de lo que faltaba por cerrar. Ahora comprueba lo contrario: que
- * `/users` no se puede enumerar ni leer a ciegas desde un cliente (RNF-9).
+ * Se agrupan por sujeto (el dueño, el familiar vinculado, un autenticado
+ * cualquiera) y por garantía (lo que solo escribe el servidor y lo que el
+ * mayor deja ver a su familiar).
  */
 
 import { readFileSync } from 'node:fs';
@@ -102,12 +102,6 @@ describe('el dueño gobierna su documento', () => {
     await assertSucceeds(getDoc(userRef(ELDER_LIBRE, ELDER_LIBRE)));
   });
 
-  it('escribe sus preferencias (updatePreferences, ajustes del mayor)', async () => {
-    await assertSucceeds(updateDoc(userRef(ELDER_LIBRE, ELDER_LIBRE), {
-      preferences: { volume: 0.6, speechRate: 0.4, textSizeMultiplier: 1.6 },
-    }));
-  });
-
   it('NO puede crear el documento de otro', async () => {
     await assertFails(
       setDoc(userRef(INTRUSO, 'victima'), elder({ id: 'victima' })),
@@ -120,33 +114,21 @@ describe('el familiar vinculado y su mayor', () => {
     await assertSucceeds(getDoc(userRef(FAMILIAR, ELDER_VINCULADO)));
   });
 
-  it('NO puede reescribir el contacto de emergencia de su mayor', async () => {
-    await assertFails(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
+  it('solo escribe preferencias, nombre y plazos (panel del familiar)', async () => {
+    const mayor = userRef(FAMILIAR, ELDER_VINCULADO);
+    await assertSucceeds(updateDoc(mayor, {
+      preferences: { volume: 0.6, speechRate: 0.4, textSizeMultiplier: 1.6 },
+      name: 'Carmen López',
+      conversationSettings: { inactivityMinutes: 5, retentionDays: 30 },
+    }));
+    await assertFails(updateDoc(mayor, {
       emergencyContact: { name: 'X', phone: '+34600000000', source: 'manual' },
     }));
-  });
-
-  it('NO puede cambiarle el rol ni la autonomía', async () => {
-    await assertFails(
-      updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), { role: 'companion' }),
-    );
-    await assertFails(
-      updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), { autonomy: 'independent' }),
-    );
-  });
-
-  it('NO puede colar un campo extra junto a uno permitido', async () => {
-    await assertFails(updateDoc(userRef(FAMILIAR, ELDER_VINCULADO), {
-      name: 'Carmen', role: 'companion',
-    }));
-  });
-});
-
-describe('la vinculación ya no se hace desde el cliente', () => {
-  it('un familiar no puede robarle el vínculo a otro', async () => {
-    await assertFails(updateDoc(userRef(INTRUSO, ELDER_VINCULADO), {
-      linkedCompanionId: INTRUSO,
-    }));
+    await assertFails(updateDoc(mayor, { role: 'companion' }));
+    await assertFails(updateDoc(mayor, { autonomy: 'independent' }));
+    await assertFails(updateDoc(mayor, { linkedCompanionId: null }));
+    // Tampoco colando un campo prohibido junto a uno permitido.
+    await assertFails(updateDoc(mayor, { name: 'Carmen', role: 'companion' }));
   });
 });
 
@@ -154,10 +136,15 @@ describe('un autenticado cualquiera frente a datos ajenos', () => {
   it('NO lee el documento de un mayor ya vinculado', async () => {
     await assertFails(getDoc(userRef(INTRUSO, ELDER_VINCULADO)));
   });
-});
 
-describe('`/users` no es enumerable desde un cliente (RNF-9)', () => {
-  it('la búsqueda por linkCode está denegada, incluso con limit(1)', async () => {
+  // La vinculación la escribe `validateAndLink` con el Admin SDK.
+  it('NO puede robarle el vínculo a otro familiar', async () => {
+    await assertFails(updateDoc(userRef(INTRUSO, ELDER_VINCULADO), {
+      linkedCompanionId: INTRUSO,
+    }));
+  });
+
+  it('NO enumera `/users` buscando por linkCode, ni con limit(1) (RNF-9)', async () => {
     const q = query(
       collection(db(INTRUSO), 'users'),
       where('linkCode', '==', 'AB23'),

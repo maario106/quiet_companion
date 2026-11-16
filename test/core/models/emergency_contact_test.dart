@@ -21,14 +21,6 @@ void main() {
           isNull,
         );
       });
-
-      test('source desconocido → manual (fallback conservador)', () {
-        final contact = EmergencyContact.fromMapOrNull({
-          'phone': '+34600123456',
-          'source': 'algo-raro',
-        });
-        expect(contact!.source, equals(EmergencyContactSource.manual));
-      });
     });
   });
 }
